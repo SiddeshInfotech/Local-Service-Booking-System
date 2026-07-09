@@ -152,6 +152,13 @@ const CustomerLogin = () => {
               }
             />
 
+            {/* Forgot Password link */}
+            <div className="flex justify-end -mt-2">
+              <Link to="/forgot-password" className="text-sm text-blue-500 hover:text-blue-400 transition-colors">
+                Forgot Password?
+              </Link>
+            </div>
+
             {/* Small purple user silhouette icon above button */}
             <div className="text-purple-500 flex justify-start -mb-2 mt-1">
               <User size={18} className="stroke-[2.5]" />
