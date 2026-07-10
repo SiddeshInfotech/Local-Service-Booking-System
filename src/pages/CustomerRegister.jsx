@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import InputField from '../components/InputField';
 import customerRegisterIllustration from '../assets/images/customer_register_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
+import { API_BASE_URL } from '../config';
 
 const CustomerRegister = () => {
   const [fullName, setFullName] = useState('');
@@ -18,7 +19,9 @@ const CustomerRegister = () => {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFeedbackMsg('');
     setErrorMsg('');
@@ -28,23 +31,50 @@ const CustomerRegister = () => {
       return;
     }
 
+    // If the user selected provider, redirect them to the provider registration page
+    if (role === 'provider') {
+      navigate('/provider/register');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match.');
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/customer/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          password,
+          phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        setFeedbackMsg(data.message || 'Registration successful! Please check your email to verify your account.');
+        setFullName('');
+        setEmail('');
+        setPhone('');
+        setRole('');
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        setErrorMsg(data.message || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMsg('Unable to connect to the server. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-      setFeedbackMsg('Registration successful! Welcome to Fixora.');
-      setFullName('');
-      setEmail('');
-      setPhone('');
-      setRole('');
-      setPassword('');
-      setConfirmPassword('');
-    }, 1500);
+    }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">

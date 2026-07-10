@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Shield, Key, LogIn } from 'lucide-react';
 import InputField from '../components/InputField';
 import providerLoginIllustration from '../assets/images/provider_login_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
+import { API_BASE_URL } from '../config';
 
 const ProviderLogin = () => {
   const [email, setEmail] = useState('');
@@ -14,19 +15,54 @@ const ProviderLogin = () => {
   // Interaction Feedback States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Show verified message if redirected from email verification link
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('verified') === 'true') {
+      setFeedbackMsg('Email verified successfully! You can now log in as a provider.');
+    }
+  }, [location.search]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFeedbackMsg('');
+    setErrorMsg('');
 
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/provider/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        // Store provider auth tokens and provider info
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('provider', JSON.stringify(data.provider));
+        localStorage.setItem('role', 'provider');
+        setFeedbackMsg(`Welcome, ${data.provider.full_name}! Provider login successful.`);
+        setEmail('');
+        setPassword('');
+        // Future: navigate to provider dashboard when it's available
+      } else {
+        setErrorMsg(data.message || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMsg('Unable to connect to the server. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-      setFeedbackMsg('Successfully authenticated as provider (Demo Mode)! Redirecting to Dashboard...');
-      setEmail('');
-      setPassword('');
-    }, 1200);
+    }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">
@@ -36,6 +72,13 @@ const ProviderLogin = () => {
           {feedbackMsg}
         </div>
       )}
+
+      {errorMsg && (
+        <div className="mb-6 p-4 rounded-xl bg-red-950/30 border border-red-900/40 text-red-400 text-sm max-w-5xl w-full text-center">
+          {errorMsg}
+        </div>
+      )}
+
 
       {/* Split glass card container */}
       <div className="w-full max-w-5xl bg-[#131b2e]/30 border border-zinc-800/80 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md">

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, redirect
 from database.db import get_connection
 import bcrypt
 import datetime
@@ -79,8 +79,8 @@ def register_customer():
     conn.commit()
 
     # Send verification email asynchronously
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-    verification_link = f"{frontend_url}/verify-email?token={verification_token}"
+    backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
+    verification_link = f"{backend_url}/api/customer/verify-email?token={verification_token}"
     
     email_subject = "Verify Your Fixora Account"
     email_body = f"""
@@ -234,6 +234,11 @@ def verify_customer_email():
 
     cursor.close()
     conn.close()
+
+    # If browser GET request, redirect to frontend login page
+    if request.method == "GET":
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        return redirect(f"{frontend_url}/customer/login?verified=true")
 
     return jsonify({
         "status": True,

@@ -3,6 +3,7 @@ import { UserPlus, Send, ChevronDown } from 'lucide-react';
 import InputField from '../components/InputField';
 import providerRegisterIllustration from '../assets/images/provider_register_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
+import { API_BASE_URL } from '../config';
 
 const ProviderRegister = () => {
   const [fullName, setFullName] = useState('');
@@ -13,6 +14,8 @@ const ProviderRegister = () => {
   const [service, setService] = useState('');
   const [experience, setExperience] = useState('');
   const [description, setDescription] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [idProof, setIdProof] = useState(null);
 
   // Interaction Feedback States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +36,7 @@ const ProviderRegister = () => {
 
   const cities = ['Dhule', 'Shirpur', 'Nashik', 'Mumbai', 'Pune', 'Other'];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setFeedbackMsg('');
     setErrorMsg('');
@@ -48,19 +51,48 @@ const ProviderRegister = () => {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/provider/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName,
+          phone,
+          email,
+          password,
+          city,
+          service,          // backend maps this string to category_id
+          experience,
+          description,
+          // File names for reference (actual file upload endpoint can be added later)
+          profile_image: profilePhoto ? profilePhoto.name : null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        setFeedbackMsg(data.message || 'Registration successful! Please check your email to verify your account.');
+        setFullName('');
+        setPhone('');
+        setEmail('');
+        setPassword('');
+        setCity('');
+        setService('');
+        setExperience('');
+        setDescription('');
+        setProfilePhoto(null);
+        setIdProof(null);
+      } else {
+        setErrorMsg(data.message || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setErrorMsg('Unable to connect to the server. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-      setFeedbackMsg('Registration successful! Your provider profile has been submitted for review.');
-      setFullName('');
-      setPhone('');
-      setEmail('');
-      setPassword('');
-      setCity('');
-      setService('');
-      setExperience('');
-      setDescription('');
-    }, 1500);
+    }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-black text-white">
@@ -250,6 +282,7 @@ const ProviderRegister = () => {
                 <input
                   type="file"
                   accept="image/*"
+                  onChange={(e) => setProfilePhoto(e.target.files[0] || null)}
                   className="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 bg-[#262626] border border-gray-700 rounded-xl p-2.5 mt-2 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
@@ -261,6 +294,7 @@ const ProviderRegister = () => {
                 <input
                   type="file"
                   accept=".pdf,image/*"
+                  onChange={(e) => setIdProof(e.target.files[0] || null)}
                   className="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 bg-[#262626] border border-gray-700 rounded-xl p-2.5 mt-2 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>

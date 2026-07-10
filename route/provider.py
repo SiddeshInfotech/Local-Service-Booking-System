@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, redirect
 from database.db import get_connection
 import bcrypt
 import datetime
@@ -23,12 +23,14 @@ def register_provider():
     password = data.get("password")
     phone = data.get("phone")
     address = data.get("address")
-    city = data.get("city")
+    city = data.get("city")       # city string from frontend
     pincode = data.get("pincode")
 
-    # Provider Details
+    # Provider Details - accept either IDs (legacy) or string names from frontend
     category_id = data.get("category_id")
     location_id = data.get("location_id")
+    service_name = data.get("service")       # string name from frontend dropdown
+    city_name = data.get("city")             # used for location lookup too
     business_name = data.get("business_name")
     experience = data.get("experience")
     description = data.get("description")
@@ -44,17 +46,48 @@ def register_provider():
         }), 400
 
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
+
+    # Resolve category_id from service name if not provided directly
+    if not category_id and service_name:
+        cursor.execute("SELECT category_id FROM categories WHERE category_name = %s", (service_name,))
+        cat_row = cursor.fetchone()
+        if cat_row:
+            category_id = cat_row["category_id"]
+        else:
+            # Create the category if it doesn't exist
+            cursor.execute("INSERT INTO categories (category_name) VALUES (%s)", (service_name,))
+            conn.commit()
+            category_id = cursor.lastrowid
+
+    # Resolve location_id from city name if not provided directly
+    if not location_id and city_name:
+        cursor.execute("SELECT location_id FROM locations WHERE city = %s LIMIT 1", (city_name,))
+        loc_row = cursor.fetchone()
+        if loc_row:
+            location_id = loc_row["location_id"]
+        else:
+            # Create a minimal location entry using the city name
+            cursor.execute(
+                "INSERT INTO locations (city, area, state, pincode) VALUES (%s, %s, %s, %s)",
+                (city_name, city_name, city_name, pincode or "000000")
+            )
+            conn.commit()
+            location_id = cursor.lastrowid
+
+    # Fall back to non-dictionary cursor for the duplicate email check
+    cursor2 = conn.cursor()
 
     # Check duplicate email
-    cursor.execute(
+    cursor2.execute(
         "SELECT * FROM users WHERE email=%s",
         (email,)
     )
 
-    existing = cursor.fetchone()
+    existing = cursor2.fetchone()
 
     if existing:
+        cursor2.close()
         cursor.close()
         conn.close()
 
@@ -93,10 +126,14 @@ def register_provider():
         verification_expiry
     )
 
-    cursor.execute(user_query, user_values)
+    cursor2.execute(user_query, user_values)
 
     # Get generated user_id
-    user_id = cursor.lastrowid
+    user_id = cursor2.lastrowid
+
+    # Set business_name from full_name if not provided
+    if not business_name:
+        business_name = full_name
 
     # Insert into service_providers
     provider_query = """
@@ -119,13 +156,13 @@ def register_provider():
         profile_image
     )
 
-    cursor.execute(provider_query, provider_values)
+    cursor2.execute(provider_query, provider_values)
 
     conn.commit()
 
     # Send verification email asynchronously
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-    verification_link = f"{frontend_url}/verify-email?token={verification_token}"
+    backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
+    verification_link = f"{backend_url}/api/provider/verify-email?token={verification_token}"
     
     email_subject = "Verify Your Fixora Provider Account"
     email_body = f"""
@@ -142,6 +179,7 @@ def register_provider():
     
     send_email_async(email, email_subject, email_body)
 
+    cursor2.close()
     cursor.close()
     conn.close()
 
@@ -317,6 +355,11 @@ def verify_provider_email():
 
     cursor.close()
     conn.close()
+
+    # If browser GET request, redirect to frontend provider login page
+    if request.method == "GET":
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        return redirect(f"{frontend_url}/provider/login?verified=true")
 
     return jsonify({
         "status": True,
