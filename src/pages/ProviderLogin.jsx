@@ -49,12 +49,18 @@ const ProviderLogin = () => {
         localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('provider', JSON.stringify(data.provider));
         localStorage.setItem('role', 'provider');
-        setFeedbackMsg(`Welcome, ${data.provider.full_name}! Provider login successful.`);
+        setFeedbackMsg(`Welcome, ${data.provider.full_name}! Redirecting to your dashboard...`);
         setEmail('');
         setPassword('');
-        // Future: navigate to provider dashboard when it's available
+        // Navigate to provider dashboard
+        setTimeout(() => navigate('/provider/dashboard'), 800);
       } else {
-        setErrorMsg(data.message || 'Login failed. Please try again.');
+        // Show a more helpful message for unverified email
+        if (response.status === 403) {
+          setErrorMsg('Your email is not verified. Please check your inbox and click the verification link.');
+        } else {
+          setErrorMsg(data.message || 'Login failed. Please try again.');
+        }
       }
     } catch (err) {
       setErrorMsg('Unable to connect to the server. Please try again later.');

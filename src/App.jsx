@@ -65,12 +65,14 @@ const AppInner = () => {
           <Route path="/" element={<Navigate to="/customer/login" replace />} />
 
           {/* Customer Routes */}
-          <Route path="/customer/login"    element={<CustomerLogin />} />
-          <Route path="/customer/register" element={<CustomerRegister />} />
+          <Route path="/customer/login"     element={<CustomerLogin />} />
+          <Route path="/customer/register"  element={<CustomerRegister />} />
+          <Route path="/customer/dashboard" element={<PlaceholderPage title="Customer Dashboard" description="Your bookings, history, and profile settings will appear here." />} />
 
           {/* Provider Routes */}
-          <Route path="/provider/login"    element={<ProviderLogin />} />
-          <Route path="/provider/register" element={<ProviderRegister />} />
+          <Route path="/provider/login"     element={<ProviderLogin />} />
+          <Route path="/provider/register"  element={<ProviderRegister />} />
+          <Route path="/provider/dashboard" element={<PlaceholderPage title="Provider Dashboard" description="Manage your services, bookings, and customers from your provider portal." />} />
 
           {/* Navbar placeholder routes */}
           <Route path="/services" element={<PlaceholderPage title="Services" description="Explore our list of high-quality local services. Find electricians, cleaners, builders, and designers suited to your project needs." />} />

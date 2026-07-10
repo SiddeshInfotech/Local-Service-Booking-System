@@ -48,12 +48,18 @@ const CustomerLogin = () => {
         localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('role', 'customer');
-        setFeedbackMsg(`Welcome back, ${data.user.full_name}! Login successful.`);
+        setFeedbackMsg(`Welcome back, ${data.user.full_name}! Redirecting...`);
         setEmail('');
         setPassword('');
-        // Future: navigate to dashboard when it's available
+        // Navigate to customer dashboard
+        setTimeout(() => navigate('/customer/dashboard'), 800);
       } else {
-        setErrorMsg(data.message || 'Login failed. Please try again.');
+        // Show a more helpful message for unverified email
+        if (response.status === 403) {
+          setErrorMsg('Your email is not verified. Please check your inbox and click the verification link.');
+        } else {
+          setErrorMsg(data.message || 'Login failed. Please try again.');
+        }
       }
     } catch (err) {
       setErrorMsg('Unable to connect to the server. Please try again later.');
