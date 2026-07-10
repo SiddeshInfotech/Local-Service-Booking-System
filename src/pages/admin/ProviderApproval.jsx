@@ -3,19 +3,9 @@ import { useOutletContext } from 'react-router-dom';
 import { CheckCircle2, XCircle, Ban, ShieldCheck, Star, MapPin, Tag, FileText, X, Eye, Sparkles } from 'lucide-react';
 
 const initialProviders = {
-  Pending: [
-    { id: 1, name: 'TechFix Solutions', email: 'tf@techfix.com', category: 'Electronics', location: 'Mumbai',    rating: null, experience: '3 years',  doc: 'Verified', docType: 'GST License', docUrl: 'GST_TechFix_2026.pdf' },
-    { id: 2, name: 'GreenLawn Care',    email: 'gl@green.com',   category: 'Gardening',   location: 'Pune',      rating: null, experience: '5 years',  doc: 'Pending', docType: 'Trade Certificate', docUrl: 'Cert_GreenLawn.pdf'  },
-    { id: 3, name: 'QuickPipe Works',   email: 'qp@quick.com',   category: 'Plumbing',    location: 'Delhi',     rating: null, experience: '2 years',  doc: 'Verified', docType: 'ID Verification', docUrl: 'NationalID_QuickPipe.pdf' },
-  ],
-  Approved: [
-    { id: 4, name: 'Raju Works',        email: 'raju@works.com', category: 'Plumbing',    location: 'Mumbai',    rating: 4.7,  experience: '6 years',  doc: 'Verified', docType: 'Plumber License', docUrl: 'Lic_RajuWorks.pdf' },
-    { id: 5, name: 'CleanPro India',    email: 'cp@clean.com',   category: 'Cleaning',    location: 'Bangalore', rating: 4.8,  experience: '4 years',  doc: 'Verified', docType: 'Business License', docUrl: 'BizLic_CleanPro.pdf' },
-    { id: 6, name: 'BrightPaint Co.',   email: 'bp@bright.com',  category: 'Painting',    location: 'Kolkata',   rating: 4.9,  experience: '7 years',  doc: 'Verified', docType: 'Liability Insurance', docUrl: 'Ins_BrightPaint.pdf' },
-  ],
-  Blocked: [
-    { id: 7, name: 'CoolAir Services',  email: 'ca@coolair.com', category: 'AC Repair',   location: 'Pune',      rating: 4.2,  experience: '2 years',  doc: 'Expired', docType: 'Repair Certificate', docUrl: 'Cert_Expired_CoolAir.pdf'  },
-  ],
+  Pending: [],
+  Approved: [],
+  Blocked: [],
 };
 
 const ProviderApproval = () => {
@@ -85,7 +75,11 @@ const ProviderApproval = () => {
       {current.length === 0 ? (
         <div className="text-center py-20 rounded-3xl bg-[#0d1425]/40 border border-white/5 backdrop-blur-xl">
           <ShieldCheck size={40} className="mx-auto mb-4 text-zinc-700" />
-          <p className="text-zinc-500 text-xs italic">No signup applications pending in this queue.</p>
+          <p className="text-zinc-500 text-xs italic">
+            {tab === 'Pending' && 'No pending service providers found.'}
+            {tab === 'Approved' && 'No approved service providers found.'}
+            {tab === 'Blocked' && 'No blocked service providers found.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

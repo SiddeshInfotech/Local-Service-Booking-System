@@ -2,29 +2,7 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Search, Filter, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X, ShieldAlert, Sparkles } from 'lucide-react';
 
-const initialCustomers = [
-  { id: 1,  name: 'Priya Sharma',    email: 'priya@email.com',   phone: '+91 98765 43210', location: 'Mumbai',    bookings: 8,  status: 'Active',    joined: '12 Jan 2026', history: [
-    { id: 'BK-1021', service: 'Plumbing', provider: 'Raju Works', amount: '₹1,200', date: '09 Jul 2026', status: 'Confirmed' },
-    { id: 'BK-1010', service: 'Cleaning', provider: 'CleanPro India', amount: '₹2,500', date: '01 Jul 2026', status: 'Completed' }
-  ]},
-  { id: 2,  name: 'Arjun Mehta',     email: 'arjun@email.com',   phone: '+91 87654 32109', location: 'Delhi',     bookings: 3,  status: 'Active',    joined: '20 Feb 2026', history: [
-    { id: 'BK-1020', service: 'Electrician', provider: 'PowerFix Co.', amount: '₹800', date: '08 Jul 2026', status: 'Pending' }
-  ]},
-  { id: 3,  name: 'Sneha Patel',     email: 'sneha@email.com',   phone: '+91 76543 21098', location: 'Ahmedabad', bookings: 12, status: 'Active',    joined: '05 Mar 2026', history: [
-    { id: 'BK-1019', service: 'Cleaning', provider: 'CleanPro India', amount: '₹2,500', date: '07 Jul 2026', status: 'Completed' }
-  ]},
-  { id: 4,  name: 'Vikram Reddy',    email: 'vikram@email.com',  phone: '+91 65432 10987', location: 'Hyderabad', bookings: 1,  status: 'Inactive',  joined: '18 Mar 2026', history: [
-    { id: 'BK-1018', service: 'Carpentry', provider: 'WoodCraft Ltd', amount: '₹1,500', date: '06 Jul 2026', status: 'Cancelled' }
-  ]},
-  { id: 5,  name: 'Anita Joshi',     email: 'anita@email.com',   phone: '+91 54321 09876', location: 'Pune',      bookings: 5,  status: 'Active',    joined: '02 Apr 2026', history: [
-    { id: 'BK-1017', service: 'Pest Control', provider: 'PestAway', amount: '₹3,200', date: '05 Jul 2026', status: 'Confirmed' }
-  ]},
-  { id: 6,  name: 'Rohan Kapoor',    email: 'rohan@email.com',   phone: '+91 43210 98765', location: 'Bangalore', bookings: 7,  status: 'Blocked',   joined: '15 Apr 2026', history: []},
-  { id: 7,  name: 'Meera Singh',     email: 'meera@email.com',   phone: '+91 32109 87654', location: 'Chennai',   bookings: 4,  status: 'Active',    joined: '28 Apr 2026', history: []},
-  { id: 8,  name: 'Kiran Nair',      email: 'kiran@email.com',   phone: '+91 21098 76543', location: 'Kochi',     bookings: 2,  status: 'Inactive',  joined: '10 May 2026', history: []},
-  { id: 9,  name: 'Deepak Kumar',    email: 'deepak@email.com',  phone: '+91 10987 65432', location: 'Kolkata',   bookings: 9,  status: 'Active',    joined: '22 May 2026', history: []},
-  { id: 10, name: 'Pooja Agarwal',   email: 'pooja@email.com',   phone: '+91 09876 54321', location: 'Jaipur',    bookings: 6,  status: 'Active',    joined: '03 Jun 2026', history: []},
-];
+const initialCustomers = [];
 
 const statusStyle = (s) => ({
   Active:   'bg-green-500/15 text-green-400 border-green-500/20',
@@ -111,7 +89,7 @@ const ManageCustomers = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            Manage Customers <Sparkles className="text-blue-400 w-5 h-5" />
+            Manage Customers ({customers.length} Customers) <Sparkles className="text-blue-400 w-5 h-5" />
           </h1>
           <p className="text-zinc-500 text-sm mt-1">Audit credentials, profile parameters, and total booking values of registered customers.</p>
         </div>
@@ -172,7 +150,7 @@ const ManageCustomers = () => {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-zinc-500 py-12 text-xs italic">No customers match search parameters.</td>
+                  <td colSpan={7} className="text-center text-zinc-500 py-12 text-xs italic">No customers found.</td>
                 </tr>
               ) : (
                 paginated.map((c) => (

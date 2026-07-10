@@ -30,12 +30,7 @@ const AdminLayout = () => {
   const notifRef = useRef(null);
 
   // Mock Notifications State
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'New provider "CleanPro India" requested approval', time: '5 mins ago', read: false, type: 'alert' },
-    { id: 2, text: 'Booking BK-1021 has been completed', time: '1 hr ago', read: false, type: 'success' },
-    { id: 3, text: 'Review reported for service "Plumbing"', time: '3 hrs ago', read: true, type: 'warning' },
-    { id: 4, text: 'System backup completed successfully', time: '1 day ago', read: true, type: 'info' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // Click outside listener for dropdowns
   useEffect(() => {

@@ -6,79 +6,79 @@ import { DollarSign, Users, Briefcase, CalendarDays, Download, TrendingUp, Spark
 const rangesData = {
   'Last 30 Days': {
     stats: [
-      { label: 'Total Revenue', value: '₹1,86,000', sub: '+18% vs last month', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '2,840', sub: '+24% vs last month', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '3,842', sub: '+12% this month', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '486', sub: '+8% this month', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: '+0% vs last month', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: '+0% vs last month', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: '+0% this month', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: '+0% this month', icon: Briefcase, color: 'amber' },
     ],
     monthlyBookings: [
-      { m: 'Week 1', v: 420 }, { m: 'Week 2', v: 550 }, { m: 'Week 3', v: 630 }, { m: 'Week 4', v: 880 },
+      { m: 'Week 1', v: 0 }, { m: 'Week 2', v: 0 }, { m: 'Week 3', v: 0 }, { m: 'Week 4', v: 0 },
     ],
-    userGrowth: [38, 45, 52, 65, 82, 91, 110, 132],
+    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
     categoryRevenue: [
-      { name: 'Plumbing', pct: 30, color: '#3b82f6', amount: '₹55,800' },
-      { name: 'Electrician', pct: 25, color: '#8b5cf6', amount: '₹46,500' },
-      { name: 'Cleaning', pct: 20, color: '#10b981', amount: '₹37,200' },
-      { name: 'Carpentry', pct: 15, color: '#f59e0b', amount: '₹27,900' },
-      { name: 'Others', pct: 10, color: '#6b7280', amount: '₹18,600' },
+      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
+      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
+      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
+      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
+      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
     ],
     summary: [
-      { m: 'Week 4', b: 880, u: 52, r: '₹58,000' },
-      { m: 'Week 3', b: 630, u: 40, r: '₹41,000' },
-      { m: 'Week 2', b: 550, u: 28, r: '₹36,000' },
-      { m: 'Week 1', b: 420, u: 12, r: '₹27,000' },
+      { m: 'Week 4', b: 0, u: 0, r: '₹0' },
+      { m: 'Week 3', b: 0, u: 0, r: '₹0' },
+      { m: 'Week 2', b: 0, u: 0, r: '₹0' },
+      { m: 'Week 1', b: 0, u: 0, r: '₹0' },
     ]
   },
   'Last 7 Days': {
     stats: [
-      { label: 'Total Revenue', value: '₹48,200', sub: '+5% vs last week', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '620', sub: '+12% vs last week', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '1,204', sub: '+4% this week', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '312', sub: '+2% this week', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: '+0% vs last week', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: '+0% vs last week', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: '+0% this week', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: '+0% this week', icon: Briefcase, color: 'amber' },
     ],
     monthlyBookings: [
-      { m: 'Mon', v: 75 }, { m: 'Tue', v: 88 }, { m: 'Wed', v: 95 }, { m: 'Thu', v: 110 },
-      { m: 'Fri', v: 120 }, { m: 'Sat', v: 85 }, { m: 'Sun', v: 47 }
+      { m: 'Mon', v: 0 }, { m: 'Tue', v: 0 }, { m: 'Wed', v: 0 }, { m: 'Thu', v: 0 },
+      { m: 'Fri', v: 0 }, { m: 'Sat', v: 0 }, { m: 'Sun', v: 0 }
     ],
-    userGrowth: [10, 15, 22, 28, 35, 41, 48, 55],
+    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
     categoryRevenue: [
-      { name: 'Plumbing', pct: 32, color: '#3b82f6', amount: '₹15,424' },
-      { name: 'Electrician', pct: 28, color: '#8b5cf6', amount: '₹13,496' },
-      { name: 'Cleaning', pct: 18, color: '#10b981', amount: '₹8,676' },
-      { name: 'Carpentry', pct: 12, color: '#f59e0b', amount: '₹5,784' },
-      { name: 'Others', pct: 10, color: '#6b7280', amount: '₹4,820' },
+      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
+      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
+      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
+      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
+      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
     ],
     summary: [
-      { m: 'Thu, 09 Jul', b: 110, u: 8, r: '₹8,560' },
-      { m: 'Wed, 08 Jul', b: 95, u: 6, r: '₹7,400' },
-      { m: 'Tue, 07 Jul', b: 88, u: 7, r: '₹6,800' },
-      { m: 'Mon, 06 Jul', b: 75, u: 5, r: '₹5,800' },
+      { m: 'Thu, 09 Jul', b: 0, u: 0, r: '₹0' },
+      { m: 'Wed, 08 Jul', b: 0, u: 0, r: '₹0' },
+      { m: 'Tue, 07 Jul', b: 0, u: 0, r: '₹0' },
+      { m: 'Mon, 06 Jul', b: 0, u: 0, r: '₹0' },
     ]
   },
   'Year-to-Date': {
     stats: [
-      { label: 'Total Revenue', value: '₹8,42,000', sub: '+14% YTD', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '12,304', sub: '+21% YTD', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '3,842', sub: '+12% YTD', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '486', sub: '+8% YTD', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: '+0% YTD', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: '+0% YTD', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: '+0% YTD', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: '+0% YTD', icon: Briefcase, color: 'amber' },
     ],
     monthlyBookings: [
-      { m: 'Jan', v: 420 }, { m: 'Feb', v: 550 }, { m: 'Mar', v: 630 }, { m: 'Apr', v: 480 },
-      { m: 'May', v: 710 }, { m: 'Jun', v: 880 }, { m: 'Jul', v: 950 },
+      { m: 'Jan', v: 0 }, { m: 'Feb', v: 0 }, { m: 'Mar', v: 0 }, { m: 'Apr', v: 0 },
+      { m: 'May', v: 0 }, { m: 'Jun', v: 0 }, { m: 'Jul', v: 0 },
     ],
-    userGrowth: [38, 45, 52, 58, 65, 74, 82, 91],
+    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
     categoryRevenue: [
-      { name: 'Plumbing', pct: 28, color: '#3b82f6', amount: '₹2,35,760' },
-      { name: 'Electrician', pct: 22, color: '#8b5cf6', amount: '₹1,85,240' },
-      { name: 'Cleaning', pct: 20, color: '#10b981', amount: '₹1,68,400' },
-      { name: 'Carpentry', pct: 12, color: '#f59e0b', amount: '₹1,01,040' },
-      { name: 'Others', pct: 18, color: '#6b7280', amount: '₹1,51,560' },
+      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
+      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
+      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
+      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
+      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
     ],
     summary: [
-      { m: 'July YTD', b: 950, u: 82, r: '₹1,86,000' },
-      { m: 'June YTD', b: 880, u: 74, r: '₹1,72,000' },
-      { m: 'May YTD', b: 710, u: 65, r: '₹1,39,000' },
-      { m: 'April YTD', b: 480, u: 58, r: '₹94,000' },
+      { m: 'July YTD', b: 0, u: 0, r: '₹0' },
+      { m: 'June YTD', b: 0, u: 0, r: '₹0' },
+      { m: 'May YTD', b: 0, u: 0, r: '₹0' },
+      { m: 'April YTD', b: 0, u: 0, r: '₹0' },
     ]
   }
 };
@@ -92,6 +92,10 @@ const colorMap = {
 
 // Build conic-gradient string for donut/pie charts
 const buildPieGradient = (slices) => {
+  const total = slices.reduce((acc, s) => acc + s.pct, 0);
+  if (total === 0) {
+    return '#1f2937 0% 100%';
+  }
   let cum = 0;
   return slices.map(({ pct, color }) => {
     const start = cum;
@@ -201,7 +205,7 @@ const AdminReports = () => {
           <div className="flex items-end gap-2.5 h-44 mt-6">
             {activeData.monthlyBookings.map(({ m, v }) => {
               const maxVal = Math.max(...activeData.monthlyBookings.map(d => d.v));
-              const heightPct = (v / maxVal) * 100;
+              const heightPct = maxVal > 0 ? (v / maxVal) * 100 : 0;
               return (
                 <div key={m} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                   <span className="text-zinc-400 text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-[#080d19] px-1 rounded border border-white/5 mb-1">{v}</span>

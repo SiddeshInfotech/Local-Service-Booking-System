@@ -3,14 +3,11 @@ import { useOutletContext } from 'react-router-dom';
 import { Search, Plus, Pencil, Trash2, X, Check, Tag, Sparkles, AlertCircle, Filter } from 'lucide-react';
 
 const initialCategories = [
-  { id: 1, name: 'Plumbing',     icon: '🔧', services: 14, status: 'Active',   desc: 'Pipe fitting, leaks, drainage and water-related repairs.' },
-  { id: 2, name: 'Electrician',  icon: '⚡', services: 11, status: 'Active',   desc: 'Wiring, switch boards, appliance installation.' },
-  { id: 3, name: 'Cleaning',     icon: '🧹', services: 9,  status: 'Active',   desc: 'Home, office and deep cleaning services.' },
-  { id: 4, name: 'Carpentry',    icon: '🪚', services: 8,  status: 'Active',   desc: 'Furniture assembly, wood work and repairs.' },
-  { id: 5, name: 'Pest Control', icon: '🐛', services: 6,  status: 'Inactive', desc: 'Termite, rodent and insect eradication.' },
-  { id: 6, name: 'AC Repair',    icon: '❄️', services: 7,  status: 'Active',   desc: 'Installation, service and gas refilling for ACs.' },
-  { id: 7, name: 'Painting',     icon: '🎨', services: 5,  status: 'Active',   desc: 'Interior, exterior and texture painting.' },
-  { id: 8, name: 'Locksmith',    icon: '🔑', services: 0,  status: 'Inactive', desc: 'Lock repair, key duplication and door locks.' },
+  { id: 1, name: 'Cleaning',     icon: '🧹', services: 2, status: 'Active',   desc: 'Home, office and deep cleaning services.' },
+  { id: 2, name: 'Plumbing',     icon: '🔧', services: 2, status: 'Active',   desc: 'Pipe fitting, leaks, drainage and water-related repairs.' },
+  { id: 3, name: 'AC Repair',    icon: '❄️', services: 2, status: 'Active',   desc: 'Installation, service and gas refilling for ACs.' },
+  { id: 4, name: 'Carpenter',    icon: '🪚', services: 2, status: 'Active',   desc: 'Furniture assembly, wood work and repairs.' },
+  { id: 5, name: 'Electrician',  icon: '⚡', services: 2, status: 'Active',   desc: 'Wiring, switch boards, appliance installation.' },
 ];
 
 const EMPTY = { name: '', icon: '🔧', desc: '', status: 'Active' };
