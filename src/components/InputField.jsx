@@ -16,8 +16,8 @@ const InputField = ({
   return (
     <div className={`flex flex-col w-full ${className}`}>
       {label && (
-        <label htmlFor={id} className="text-gray-300 font-medium text-sm sm:text-base">
-          {label} {required && <span className="text-blue-500">*</span>}
+        <label htmlFor={id} className="text-zinc-300 font-medium text-sm sm:text-base">
+          {label} {required && <span className="text-[#D4AF37]">*</span>}
         </label>
       )}
       <div className="relative flex items-center mt-2 w-full">
@@ -33,7 +33,7 @@ const InputField = ({
           onChange={onChange}
           required={required}
           placeholder={placeholder}
-          className={`w-full p-3 bg-[#262626] border border-gray-700 rounded-xl text-white placeholder-zinc-500 outline-none transition duration-300 focus:border-blue-500 ${
+          className={`w-full p-3 bg-[#1A1D23] border border-[#D4AF37]/20 rounded-xl text-white placeholder-zinc-500 outline-none transition duration-300 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/10 ${
             Icon ? 'pl-11' : 'px-4'
           } ${rightElement ? 'pr-12' : 'pr-4'}`}
           {...props}

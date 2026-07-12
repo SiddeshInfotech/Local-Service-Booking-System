@@ -30,7 +30,7 @@ const ProviderLogin = () => {
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">
-      
+
       {feedbackMsg && (
         <div className="mb-6 p-4 rounded-xl bg-blue-950/40 border border-blue-800/40 text-blue-300 text-sm max-w-5xl w-full text-center">
           {feedbackMsg}
@@ -39,7 +39,7 @@ const ProviderLogin = () => {
 
       {/* Split glass card container */}
       <div className="w-full max-w-5xl bg-[#131b2e]/30 border border-zinc-800/80 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md">
-        
+
         {/* Left Side: Full-bleed Illustration Panel */}
         <div className="relative hidden md:block overflow-hidden min-h-[480px]">
           <img
@@ -70,13 +70,13 @@ const ProviderLogin = () => {
 
         {/* Right Side: Actionable Login Form */}
         <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#0B1220]/45 text-left">
-          
-          <h2 className="text-3xl font-bold text-[#3b82f6] mb-1">
+
+          <h2 className="text-3xl font-bold text-[#D4AF37] mb-1">
             Service Provider Login
           </h2>
-          
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 mt-6">
-            
+
             <InputField
               label="Email Address"
               id="email"
@@ -109,7 +109,7 @@ const ProviderLogin = () => {
 
             <div className="flex justify-between items-center text-sm mt-1">
               <label className="flex items-center gap-2 text-gray-400 cursor-pointer select-none">
-                <input 
+                <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}

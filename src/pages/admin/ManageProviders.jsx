@@ -2,16 +2,7 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Search, Filter, Eye, Pencil, Trash2, Star, ChevronLeft, ChevronRight, Check, X, ShieldAlert, Sparkles } from 'lucide-react';
 
-const initialProviders = [
-  { id: 1,  name: 'Raju Works',       email: 'raju@works.com',       category: 'Plumbing',     rating: 4.7, reviews: 128, location: 'Mumbai',    status: 'Active',   joined: '10 Jan 2026', details: { bio: 'Expert residential plumbing works with 8+ years experience.', ratingBreakdown: { 5: 98, 4: 20, 3: 8, 2: 2, 1: 0 }, sampleReviews: [{ reviewer: 'Amit K.', comment: 'Prompt service and fixed the leak quickly.', rating: 5 }, { reviewer: 'Sonia G.', comment: 'Good plumbing work, slightly expensive.', rating: 4 }] } },
-  { id: 2,  name: 'PowerFix Co.',     email: 'pf@powerfix.com',      category: 'Electrician',  rating: 4.5, reviews: 89,  location: 'Delhi',     status: 'Active',   joined: '22 Jan 2026', details: { bio: 'Certified electrical contractors specializing in home wiring & appliances.', ratingBreakdown: { 5: 60, 4: 20, 3: 5, 2: 4, 1: 0 }, sampleReviews: [{ reviewer: 'Ramesh R.', comment: 'Found the short circuit in minutes.', rating: 5 }] } },
-  { id: 3,  name: 'CleanPro India',   email: 'cp@cleanpro.com',      category: 'Cleaning',     rating: 4.8, reviews: 214, location: 'Bangalore', status: 'Active',   joined: '05 Feb 2026', details: { bio: 'Deep cleaning solutions for villas, apartments, and corporate offices.', ratingBreakdown: { 5: 180, 4: 24, 3: 6, 2: 4, 1: 0 }, sampleReviews: [{ reviewer: 'Pooja T.', comment: 'Superb cleaning! Highly recommend.', rating: 5 }] } },
-  { id: 4,  name: 'WoodCraft Ltd',    email: 'wc@woodcraft.com',     category: 'Carpentry',    rating: 4.3, reviews: 56,  location: 'Chennai',   status: 'Inactive', joined: '18 Feb 2026', details: { bio: 'Custom woodwork, furniture design, repairs and installations.', ratingBreakdown: { 5: 30, 4: 15, 3: 8, 2: 3, 1: 0 }, sampleReviews: [] } },
-  { id: 5,  name: 'PestAway',         email: 'pa@pestaway.com',      category: 'Pest Control', rating: 4.6, reviews: 73,  location: 'Hyderabad', status: 'Active',   joined: '01 Mar 2026', details: { bio: 'Eco-friendly pest eradication and preventive barrier treatments.', ratingBreakdown: { 5: 50, 4: 15, 3: 6, 2: 2, 1: 0 }, sampleReviews: [] } },
-  { id: 6,  name: 'CoolAir Services', email: 'ca@coolair.com',       category: 'AC Repair',    rating: 4.2, reviews: 41,  location: 'Pune',      status: 'Blocked',  joined: '14 Mar 2026', details: { bio: 'Air conditioning repairs, refilling, gas checks and cooling optimizations.', ratingBreakdown: { 5: 20, 4: 15, 3: 3, 2: 2, 1: 1 }, sampleReviews: [] } },
-  { id: 7,  name: 'BrightPaint Co.',  email: 'bp@brightpaint.com',   category: 'Painting',     rating: 4.9, reviews: 162, location: 'Kolkata',   status: 'Active',   joined: '28 Mar 2026', details: { bio: 'Wall painting, textures, waterproofing and premium color consultations.', ratingBreakdown: { 5: 145, 4: 12, 3: 5, 2: 0, 1: 0 }, sampleReviews: [] } },
-  { id: 8,  name: 'SafeLock Pro',     email: 'sl@safelock.com',      category: 'Locksmith',    rating: 4.4, reviews: 38,  location: 'Jaipur',    status: 'Inactive', joined: '10 Apr 2026', details: { bio: '24/7 emergency lockouts, duplicates, smart lock installation.', ratingBreakdown: { 5: 22, 4: 10, 3: 4, 2: 2, 1: 0 }, sampleReviews: [] } },
-];
+const initialProviders = [];
 
 const statusStyle = (s) => ({
   Active:   'bg-green-500/15 text-green-400 border-green-500/20',
@@ -188,7 +179,13 @@ const ManageProviders = () => {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-zinc-500 py-12 text-xs italic">No providers match search filters.</td>
+                  <td colSpan={7} className="text-center text-zinc-500 py-16 text-xs">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-3xl">🔧</span>
+                      <span className="font-semibold">No providers registered yet.</span>
+                      <span className="text-zinc-600 italic text-[10px]">Service provider accounts will appear here once registered.</span>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 paginated.map((p) => (

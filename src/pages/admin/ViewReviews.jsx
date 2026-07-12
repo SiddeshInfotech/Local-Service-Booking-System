@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Star, Trash2, MessageSquare } from 'lucide-react';
 
-const allReviews = [
-  { id: 1,  customer: 'Priya Sharma',  provider: 'Raju Works',       service: 'Pipe Leak Repair',   rating: 5, comment: 'Excellent work! Very professional and fixed the issue quickly. Highly recommend.',     date: '09 Jul 2026' },
-  { id: 2,  customer: 'Arjun Mehta',   provider: 'PowerFix Co.',     service: 'Switchboard Repair',  rating: 4, comment: 'Good service, arrived on time. The work was done neatly.',                          date: '08 Jul 2026' },
-  { id: 3,  customer: 'Sneha Patel',   provider: 'CleanPro India',   service: 'Full Home Cleaning',  rating: 5, comment: 'Amazing cleaning! My house looks brand new. Will definitely book again.',           date: '07 Jul 2026' },
-  { id: 4,  customer: 'Vikram Reddy',  provider: 'WoodCraft Ltd',    service: 'Furniture Assembly',  rating: 3, comment: 'Average experience. Work was done but took longer than expected.',                 date: '06 Jul 2026' },
-  { id: 5,  customer: 'Anita Joshi',   provider: 'PestAway',         service: 'Termite Treatment',   rating: 5, comment: 'Very thorough pest control treatment. No sign of termites after the service!',    date: '05 Jul 2026' },
-  { id: 6,  customer: 'Rohan Kapoor',  provider: 'BrightPaint Co.', service: 'Interior Wall Paint', rating: 4, comment: 'Beautiful finish. Colors look exactly as we wanted. Minor touch-ups needed.',      date: '04 Jul 2026' },
-  { id: 7,  customer: 'Meera Singh',   provider: 'Raju Works',       service: 'Drain Unclogging',    rating: 2, comment: 'Took too long and the initial estimate was wrong. Not very happy with service.',   date: '03 Jul 2026' },
-  { id: 8,  customer: 'Deepak Kumar',  provider: 'CleanPro India',   service: 'Bathroom Deep Clean', rating: 5, comment: 'Spotless result. The team was polite and used eco-friendly products.',             date: '02 Jul 2026' },
-  { id: 9,  customer: 'Pooja Agarwal', provider: 'PowerFix Co.',     service: 'Ceiling Fan Install', rating: 4, comment: 'Fast and clean installation. Very satisfied with the work.',                      date: '01 Jul 2026' },
-];
+const allReviews = [];
 
 const StarDisplay = ({ rating }) => (
   <div className="flex items-center gap-0.5">
@@ -39,7 +29,7 @@ const ViewReviews = () => {
 
   const deleteReview = (id) => setReviews((prev) => prev.filter((r) => r.id !== id));
 
-  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+  const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : '0.0';
 
   return (
     <div className="space-y-5">
@@ -80,7 +70,8 @@ const ViewReviews = () => {
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-zinc-500">
           <MessageSquare size={36} className="mx-auto mb-3 text-zinc-700" />
-          <p>No reviews found.</p>
+          <p className="font-semibold text-sm text-zinc-400">No reviews available.</p>
+          <p className="text-zinc-600 italic text-xs mt-1">Customer reviews will appear here once bookings are completed.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

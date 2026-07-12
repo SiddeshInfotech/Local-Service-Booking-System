@@ -1,0 +1,1010 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  Sparkles, Wrench, Snowflake, Hammer, Zap,
+  Star, Clock, Calendar, CheckCircle, X, Upload,
+  User, Phone, Mail, MapPin, Map, ChevronDown,
+  ArrowRight, Info, ShieldAlert, ClipboardList, Shield
+} from 'lucide-react';
+import fixoraLogo from '../assets/images/fixora_logo.png';
+
+/* ─── Reliable electrician fallback images (verified working Unsplash URLs) ─── */
+const ELECTRICIAN_IMG = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=600&auto=format&fit=crop';
+const ELECTRICIAN_FALLBACK = 'https://images.unsplash.com/photo-1607400201515-c2c41c07d307?q=80&w=600&auto=format&fit=crop';
+const GENERIC_FALLBACK = 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=600&auto=format&fit=crop';
+
+/* ─── Sub-services ─── */
+const serviceOptions = {
+  'Cleaning':    ['Full House Deep Cleaning','Kitchen Deep Cleaning','Bathroom Deep Cleaning','Sofa & Carpet Shampooing','Balcony & Window Cleaning'],
+  'Plumbing':    ['Tap & Leak Repair','Toilet & Sink Installation','Drain Unblocking','Water Heater Servicing','Pipeline Repair & Installation'],
+  'AC Repair':   ['AC Deep Clean & Servicing','AC Gas Refilling','AC Installation / Uninstallation','AC Compressor Repair','AC Leak Inspection'],
+  'Carpenter':   ['Furniture Assembly & Repair','Door & Window Fitting','Modular Cabinet Repair','Lock & Handle Replacement','Custom Woodwork'],
+  'Electrician': ['Fan & Light Installation','Switchboard Repair & Upgrade','House Wiring & Inspection','MCB & Fuse Box Repair','Home Appliance Setup & Repair'],
+};
+
+/* ─── Service Inclusions ─── */
+const serviceInclusions = {
+  'Cleaning':    ['Complete dust vacuuming and sanitization','Eco-friendly deep cleaning agents','Stain spot treatment on floors & tiles','Window pane cleaning & balcony scrubbing','Vetted team of 2–3 trained practitioners'],
+  'Plumbing':    ['Diagnostics and leakage location checks','High-grade washers and sealing tapes','Blockage extraction with industrial snakes','Pressure test validation post repair','30-day Post-Service Guarantee'],
+  'AC Repair':   ['Deep filter flushing and condenser coil cleanup','Gas pressure diagnostics and minor top-ups','Drainage channel leak inspection','Ampere check & performance validation','Transparent quote for spare components'],
+  'Carpenter':   ['Bespoke hardware replacement (hinges, locks, slides)','Precision alignment and leveling','Heavy-duty adhesives and anchors included','Wood shaving cleanup and dust disposal','Premium finishing touch-up'],
+  'Electrician': ['Certified safety audit of local wiring terminal','High-durability insulated wiring replacements','MCB diagnostics to prevent short circuits','Appliance grounding verification','100% compliance with local electrical safety code'],
+};
+
+/* ─── Services List ─── */
+const servicesList = [
+  {
+    id: 1,
+    category: 'Cleaning',
+    icon: Sparkles,
+    title: 'Professional Deep Cleaning',
+    desc: 'Breathe fresh air with our comprehensive deep sanitization, vacuuming, and stain removal services for spaces of all sizes.',
+    price: '₹299',
+    duration: '2–4 Hrs',
+    availability: 'Mon – Sun',
+    rating: '4.9',
+    reviewsCount: '380',
+    imgUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop',
+    accentColor: '#60a5fa',
+  },
+  {
+    id: 2,
+    category: 'Plumbing',
+    icon: Wrench,
+    title: 'Expert Plumbing Solutions',
+    desc: 'Solve leakages, blockages, and pipe repairs instantly. Our licensed plumbers provide prompt and reliable fix guarantees.',
+    price: '₹199',
+    duration: '1–3 Hrs',
+    availability: '24/7 Available',
+    rating: '4.8',
+    reviewsCount: '290',
+    imgUrl: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop',
+    accentColor: '#fb923c',
+  },
+  {
+    id: 3,
+    category: 'AC Repair',
+    icon: Snowflake,
+    title: 'AC Service & Repair',
+    desc: 'Keep cooling optimal. Complete diagnostics, filter cleaning, gas recharge, and compressor repairs at transparent rates.',
+    price: '₹349',
+    duration: '1–2 Hrs',
+    availability: 'Mon – Sat',
+    rating: '4.7',
+    reviewsCount: '195',
+    imgUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop',
+    accentColor: '#34d399',
+  },
+  {
+    id: 4,
+    category: 'Carpenter',
+    icon: Hammer,
+    title: 'Master Carpentry Work',
+    desc: 'Revitalize your woodwork. Standard repairs, cupboard assembly, hinge upgrades, or bespoke furniture installation.',
+    price: '₹249',
+    duration: '2–6 Hrs',
+    availability: 'Mon – Sat',
+    rating: '4.8',
+    reviewsCount: '210',
+    imgUrl: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop',
+    accentColor: '#f59e0b',
+  },
+  {
+    id: 5,
+    category: 'Electrician',
+    icon: Zap,
+    title: 'Certified Electrical Repair',
+    desc: 'From short circuits and wiring to appliances and modern switchboard configurations, our experts ensure safe execution.',
+    price: '₹149',
+    duration: '1–3 Hrs',
+    availability: '24/7 Available',
+    rating: '4.9',
+    reviewsCount: '420',
+    imgUrl: ELECTRICIAN_IMG,
+    fallbackImgUrl: ELECTRICIAN_FALLBACK,
+    accentColor: '#facc15',
+  },
+];
+
+/* ─── Intersection Observer hook ─── */
+const useInView = (threshold = 0.12) => {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+};
+
+/* ─── Animated Section ─── */
+const AnimSection = ({ children, className = '', delay = 0, dir = 'up' }) => {
+  const [ref, inView] = useInView();
+  const hidden = {
+    up: 'opacity-0 translate-y-10',
+    left: 'opacity-0 -translate-x-8',
+    right: 'opacity-0 translate-x-8',
+    scale: 'opacity-0 scale-95',
+  }[dir] || 'opacity-0 translate-y-10';
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 ease-out ${inView ? 'opacity-100 translate-y-0 translate-x-0 scale-100' : hidden} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </div>
+  );
+};
+
+/* ─── Ripple Button ─── */
+const RippleBtn = ({ children, className = '', onClick, type = 'button' }) => {
+  const ref = useRef(null);
+  const fire = (e) => {
+    const btn = ref.current;
+    if (!btn) return;
+    const circle = document.createElement('span');
+    const d = Math.max(btn.clientWidth, btn.clientHeight);
+    const r = d / 2;
+    const rect = btn.getBoundingClientRect();
+    Object.assign(circle.style, {
+      position: 'absolute', borderRadius: '50%', pointerEvents: 'none',
+      width: `${d}px`, height: `${d}px`,
+      left: `${e.clientX - rect.left - r}px`,
+      top: `${e.clientY - rect.top - r}px`,
+      background: 'rgba(255,255,255,0.22)',
+      transform: 'scale(0)', animation: 'ripple-anim 0.6s linear',
+    });
+    circle.className = 'ripple-circle';
+    const old = btn.querySelector('.ripple-circle');
+    if (old) old.remove();
+    btn.appendChild(circle);
+    setTimeout(() => circle.remove(), 650);
+    if (onClick) onClick(e);
+  };
+  return (
+    <button ref={ref} type={type} className={`relative overflow-hidden ${className}`} onClick={fire}>
+      {children}
+    </button>
+  );
+};
+
+/* ═══════════════════════════════
+   SERVICES PAGE COMPONENT
+   ═══════════════════════════════ */
+const ServicesPage = () => {
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [successBooking, setSuccessBooking] = useState(false);
+  const [activeCategoryTab, setActiveCategoryTab] = useState('All');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailService, setDetailService] = useState(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const loginRef = useRef(null);
+
+  /* Mouse parallax for hero */
+  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const handleMouseMove = (e) => {
+    setMouse({
+      x: (e.clientX - window.innerWidth / 2) / 55,
+      y: (e.clientY - window.innerHeight / 2) / 55,
+    });
+  };
+
+  const [formData, setFormData] = useState({
+    name: '', mobile: '', email: '', address: '', city: '',
+    category: '', subService: '', date: '', time: '', problemDesc: '',
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+
+  /* State from router (pre-select category) */
+  useEffect(() => {
+    if (location.state?.category) setActiveCategoryTab(location.state.category);
+  }, [location.state]);
+
+  useEffect(() => {
+    const h = (e) => { if (loginRef.current && !loginRef.current.contains(e.target)) setLoginOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  const openBookingModal = (service) => {
+    setSelectedService(service);
+    setFormData(prev => ({ ...prev, category: service.category, subService: serviceOptions[service.category][0] }));
+    setBookingOpen(true);
+  };
+
+  const openDetailModal = (service) => {
+    setDetailService(service);
+    setDetailOpen(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'category') {
+      setFormData(prev => ({ ...prev, subService: serviceOptions[value]?.[0] || '' }));
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBookingSubmit = (e) => {
+    e.preventDefault();
+    setSuccessBooking(true);
+    setTimeout(() => {
+      setBookingOpen(false);
+      setSuccessBooking(false);
+      setFormData({ name: '', mobile: '', email: '', address: '', city: '', category: '', subService: '', date: '', time: '', problemDesc: '' });
+      setImageFile(null);
+      setImagePreview('');
+    }, 4500);
+  };
+
+  const categories = ['All', 'Cleaning', 'Plumbing', 'AC Repair', 'Carpenter', 'Electrician'];
+  const filteredServices = activeCategoryTab === 'All' ? servicesList : servicesList.filter(s => s.category === activeCategoryTab);
+
+  const loginLinks = [
+    { name: 'Customer Login', path: '/customer/login' },
+    { name: 'Customer Registration', path: '/customer/register' },
+    { name: 'Provider Login', path: '/provider/login' },
+    { name: 'Provider Registration', path: '/provider/register' },
+    { name: 'Admin Login', path: '/admin/login' },
+  ];
+
+  return (
+    <div
+      onMouseMove={handleMouseMove}
+      className="min-h-screen bg-[#0D0D0D] text-white selection:bg-[#D4AF37]/30 selection:text-white font-sans relative overflow-x-hidden"
+    >
+
+      {/* ─── Global Styles ─── */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        * { font-family: 'Outfit', sans-serif; }
+
+        /* Ripple */
+        @keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+        /* Gold shimmer text */
+        .svc-gold-shimmer {
+          background: linear-gradient(90deg, #D4AF37 0%, #FFE89C 30%, #FFF9E0 50%, #FFE89C 70%, #D4AF37 100%);
+          background-size: 250% auto;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+          animation: svcGoldShimmer 5s linear infinite;
+        }
+        @keyframes svcGoldShimmer {
+          0% { background-position: -250% center; }
+          100% { background-position: 250% center; }
+        }
+
+        /* Gold text static gradient */
+        .gold-text-gradient {
+          background: linear-gradient(135deg, #FFE89C 0%, #D4AF37 50%, #9B8227 100%);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* Glass panel */
+        .glass-panel {
+          background: rgba(18,18,18,0.68);
+          backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+          border: 1px solid rgba(212,175,55,0.13);
+        }
+
+        /* Card hover */
+        .svc-card {
+          border: 1px solid rgba(212,175,55,0.18);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+          transition: all 0.45s cubic-bezier(0.16,1,0.3,1);
+        }
+        .svc-card:hover {
+          border-color: rgba(212,175,55,0.6);
+          box-shadow: 0 8px 40px rgba(212,175,55,0.2), 0 0 0 1px rgba(212,175,55,0.12), inset 0 0 20px rgba(212,175,55,0.03);
+          transform: translateY(-10px);
+        }
+
+        /* Light sweep on hover */
+        .light-sweep { position: relative; overflow: hidden; }
+        .light-sweep::before {
+          content: '';
+          position: absolute; top: 0; left: -75%; width: 50%; height: 100%;
+          background: linear-gradient(120deg, transparent 30%, rgba(212,175,55,0.07) 50%, transparent 70%);
+          transform: skewX(-15deg); pointer-events: none; z-index: 15;
+          transition: left 0s;
+        }
+        .light-sweep:hover::before { left: 150%; transition: left 0.75s ease; }
+
+        /* Gold fill btn */
+        .gold-btn {
+          background: linear-gradient(135deg, #F4C542 0%, #D4AF37 55%, #BCA032 100%);
+          color: #0D0D0D; font-weight: 800;
+          box-shadow: 0 4px 20px rgba(212,175,55,0.25);
+          transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .gold-btn:hover {
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 10px 35px rgba(212,175,55,0.5);
+          background: linear-gradient(135deg, #FFE89C 0%, #F4C542 55%, #D4AF37 100%);
+        }
+        .gold-btn:active { transform: translateY(-1px); }
+
+        /* Shimmer gold btn animation */
+        .gold-shimmer-btn {
+          background: linear-gradient(90deg, #D4AF37 0%, #FFE89C 25%, #D4AF37 50%, #BCA032 75%, #D4AF37 100%);
+          background-size: 300% auto; animation: shimBtn 3.5s linear infinite;
+          color: #0D0D0D; font-weight: 800;
+          transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .gold-shimmer-btn:hover {
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 10px 35px rgba(212,175,55,0.5);
+        }
+        @keyframes shimBtn { 0% { background-position: 0% center; } 100% { background-position: 300% center; } }
+
+        /* Outline btn */
+        .outline-gold-btn {
+          background: transparent;
+          border: 1.5px solid rgba(212,175,55,0.45);
+          color: #D4AF37; font-weight: 700;
+          transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .outline-gold-btn:hover {
+          background: rgba(212,175,55,0.08);
+          border-color: #D4AF37;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(212,175,55,0.15);
+        }
+
+        /* Success checkmark */
+        @keyframes checkmarkScale {
+          0% { transform: scale(0.3); opacity: 0; }
+          60% { transform: scale(1.1); }
+          80% { transform: scale(0.95); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-checkmark { animation: checkmarkScale 0.65s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        /* Sparkle */
+        @keyframes sparkFlow {
+          0% { transform: translateY(0) scale(1); opacity: 0; }
+          50% { opacity: 0.85; }
+          100% { transform: translateY(-130px) scale(0.15); opacity: 0; }
+        }
+        .sparkle-particle {
+          position: absolute; border-radius: 50%; pointer-events: none;
+          background: radial-gradient(circle, #FFE89C 0%, #D4AF37 70%, transparent 100%);
+        }
+
+        /* Dot pulse */
+        .pulse-dot { animation: dotPulse 2.5s cubic-bezier(0.4,0,0.6,1) infinite; }
+        @keyframes dotPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.5); }
+          50% { box-shadow: 0 0 0 10px rgba(212,175,55,0); }
+        }
+
+        /* Ken Burns video */
+        @keyframes heroZoom { 0%,100% { transform: scale(1.04); } 50% { transform: scale(1.1); } }
+        .hero-video-zoom { animation: heroZoom 28s ease-in-out infinite; }
+
+        /* Page vignette */
+        .page-vignette {
+          position: fixed; inset: 0;
+          background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,0.5) 100%);
+          pointer-events: none; z-index: 9998;
+        }
+
+        /* Image hover scale */
+        .img-hover { transition: transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+        .svc-card:hover .img-hover { transform: scale(1.07); }
+
+        /* Input focus */
+        .form-input {
+          background: rgba(26,29,35,0.8);
+          border: 1px solid rgba(212,175,55,0.22);
+          transition: all 0.3s ease;
+        }
+        .form-input:focus {
+          outline: none;
+          border-color: #D4AF37;
+          box-shadow: 0 0 0 3px rgba(212,175,55,0.08);
+        }
+
+        /* Select dark */
+        select option { background: #1a1a1a; color: #fff; }
+
+        /* Fade-in animation */
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-slide-up { animation: fadeSlideUp 0.45s ease both; }
+      `}</style>
+
+      {/* Page vignette */}
+      <div className="page-vignette" />
+
+      {/* ══════════════ NAVBAR ══════════════ */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        scrolled ? 'glass-panel shadow-2xl shadow-black/80 py-3.5 border-b border-[#D4AF37]/20' : 'bg-transparent py-6 border-b border-transparent'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <Link to="/" className="flex-shrink-0">
+            <img src={fixoraLogo} alt="Fixora Logo" className="h-11 w-auto object-contain hover:opacity-85 transition-all hover:scale-105" />
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <Link to="/" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">Home</Link>
+            <Link to="/services" className="text-[#D4AF37] text-sm font-semibold tracking-wide relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-[1.5px] after:bg-[#D4AF37]">Services</Link>
+            <Link to="/about" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">About Us</Link>
+            <Link to="/contact" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">Contact</Link>
+          </nav>
+
+          <div className="flex items-center gap-4">
+            <div className="relative" ref={loginRef}>
+              <RippleBtn
+                onClick={() => setLoginOpen(v => !v)}
+                className="gold-btn px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+              >
+                <span>Login</span>
+                <ChevronDown size={14} className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`} />
+              </RippleBtn>
+
+              {loginOpen && (
+                <div className="absolute right-0 top-full mt-3 w-56 glass-panel rounded-2xl p-2.5 shadow-2xl z-50 fade-slide-up border border-[#D4AF37]/22">
+                  <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Account Portal</p>
+                  </div>
+                  {loginLinks.map(l => (
+                    <Link key={l.path} to={l.path} onClick={() => setLoginOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-all group">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
+                      {l.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setMobileMenuOpen(v => !v)}
+              className="md:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <ChevronDown size={24} className="rotate-90" />}
+            </button>
+          </div>
+        </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden glass-panel border-t border-[#D4AF37]/10 mt-3 px-6 py-5 space-y-3 fade-slide-up">
+            <Link to="/" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">Home</Link>
+            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-[#D4AF37] bg-[#D4AF37]/5 font-semibold text-sm">Services</Link>
+            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">About Us</Link>
+            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">Contact</Link>
+            <div className="border-t border-[#D4AF37]/15 pt-3 space-y-1.5">
+              <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Portal Access</p>
+              {loginLinks.slice(0, 4).map(l => (
+                <Link key={l.path} to={l.path} onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-[#D4AF37] transition-all">{l.name}</Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ══════════════ HERO BANNER ══════════════ */}
+      <section className="relative min-h-[52vh] sm:min-h-[58vh] flex items-end justify-center pt-28 pb-16 overflow-hidden">
+        {/* BG Image with ken burns */}
+        <div
+          className="absolute inset-0 bg-cover bg-center z-0 hero-video-zoom brightness-[0.22] saturate-[0.8]"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1800&auto=format&fit=crop')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-[#0D0D0D]/55 z-[1]" />
+
+        {/* Parallax orbs */}
+        <div className="absolute top-[15%] left-[18%] w-[380px] h-[380px] bg-[#D4AF37]/6 rounded-full blur-[90px] z-[1] pointer-events-none"
+          style={{ transform: `translate(${mouse.x * 0.4}px, ${mouse.y * 0.4}px)` }} />
+        <div className="absolute bottom-[10%] right-[15%] w-[450px] h-[450px] bg-[#D4AF37]/4 rounded-full blur-[110px] z-[1] pointer-events-none"
+          style={{ transform: `translate(${mouse.x * -0.5}px, ${mouse.y * -0.5}px)` }} />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <AnimSection dir="up" delay={0}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-[#D4AF37]/22 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] pulse-dot" />
+              <span className="text-[10px] sm:text-xs font-semibold text-[#D4AF37] uppercase tracking-widest">Our Premium Services</span>
+            </div>
+          </AnimSection>
+          <AnimSection dir="up" delay={100}>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight mb-5 text-white leading-[1.08]">
+              Exquisite Solutions For<br />
+              <span className="svc-gold-shimmer">Every Household Task</span>
+            </h1>
+          </AnimSection>
+          <AnimSection dir="up" delay={200}>
+            <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-7">
+              Certified, vetted practitioners who bring tools, experience, and supreme quality right to your doorstep. Choose from our curated service menu below.
+            </p>
+          </AnimSection>
+          <AnimSection dir="up" delay={300}>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+                <span className="text-[#D4AF37]">⭐</span> 4.9 Avg Rating
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+                <span className="text-[#D4AF37]">✔</span> Vetted Professionals
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+                <span className="text-[#D4AF37]">⚡</span> &lt; 30 Min Response
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+                <span className="text-[#D4AF37]">🔒</span> Secure Booking
+              </div>
+            </div>
+          </AnimSection>
+        </div>
+      </section>
+
+      {/* ══════════════ SERVICES GRID ══════════════ */}
+      <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+        {/* Category Tabs */}
+        <AnimSection dir="up">
+          <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 mb-14">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategoryTab(cat)}
+                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+                  activeCategoryTab === cat
+                    ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
+                    : 'bg-[#1A1D23]/80 border border-[#D4AF37]/15 text-zinc-400 hover:text-white hover:border-[#D4AF37]/45 hover:bg-[#1A1D23]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </AnimSection>
+
+        {/* Grid — equal heights via items-stretch + flex-col within cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+          {filteredServices.map((svc, i) => {
+            const IconComponent = svc.icon;
+            return (
+              <AnimSection key={svc.id} dir="up" delay={i * 75} className="h-full">
+                <div className="svc-card glass-panel rounded-[32px] overflow-hidden flex flex-col h-full group light-sweep">
+
+                  {/* Image — fixed aspect ratio ensures uniform heights */}
+                  <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/10 to-transparent z-[2]" />
+                    <img
+                      src={svc.imgUrl}
+                      alt={svc.title}
+                      onError={(e) => {
+                        if (svc.fallbackImgUrl && e.target.src !== svc.fallbackImgUrl) {
+                          e.target.src = svc.fallbackImgUrl;
+                        } else if (e.target.src !== GENERIC_FALLBACK) {
+                          e.target.src = GENERIC_FALLBACK;
+                        }
+                      }}
+                      loading="lazy"
+                      className="img-hover w-full h-full object-cover"
+                      style={{ objectPosition: 'center center' }}
+                    />
+                    {/* Subtle color accent overlay matching category */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[1]"
+                      style={{ background: `radial-gradient(ellipse at center, ${svc.accentColor}08 0%, transparent 70%)` }} />
+
+                    {/* Category badge */}
+                    <div className="absolute top-4 left-4 z-10 bg-black/65 backdrop-blur-md border border-[#D4AF37]/22 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                      <IconComponent size={13} className="text-[#D4AF37]" />
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">{svc.category}</span>
+                    </div>
+                    {/* Rating badge */}
+                    <div className="absolute top-4 right-4 z-10 bg-[#D4AF37]/12 backdrop-blur-md border border-[#D4AF37]/32 px-3.5 py-1.5 rounded-full flex items-center gap-1">
+                      <Star size={11} className="text-[#D4AF37] fill-[#D4AF37]" />
+                      <span className="text-[10px] font-bold text-[#D4AF37]">{svc.rating}</span>
+                    </div>
+                  </div>
+
+                  {/* Card content — flex-grow fills equal space */}
+                  <div className="p-7 flex flex-col flex-grow">
+                    <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#D4AF37] transition-colors duration-300">
+                      {svc.title}
+                    </h3>
+                    <p className="text-zinc-400 text-xs leading-relaxed mb-5 flex-grow">
+                      {svc.desc}
+                    </p>
+
+                    {/* Metadata */}
+                    <div className="border-t border-[#D4AF37]/10 pt-4 space-y-3 mb-5 text-xs text-zinc-300">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500">Duration</span>
+                        <span className="flex items-center gap-1.5 font-medium text-white">
+                          <Clock size={12} className="text-[#D4AF37]" /> {svc.duration}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500">Availability</span>
+                        <span className="flex items-center gap-1.5 font-medium text-white">
+                          <Calendar size={12} className="text-[#D4AF37]" /> {svc.availability}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pricing + CTAs */}
+                    <div className="mt-auto">
+                      <div className="flex justify-between items-end border-b border-white/5 pb-3.5 mb-4">
+                        <div>
+                          <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold mb-0.5">Starting From</p>
+                          <p className="text-2xl font-black text-[#D4AF37]">{svc.price}</p>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 italic pb-1">Pre-vetted rates</span>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <RippleBtn
+                          onClick={() => openBookingModal(svc)}
+                          className="gold-shimmer-btn flex-1 py-3 rounded-full text-xs font-black tracking-wider uppercase cursor-pointer"
+                        >
+                          Book Now
+                        </RippleBtn>
+                        <RippleBtn
+                          onClick={() => openDetailModal(svc)}
+                          className="outline-gold-btn flex-1 py-3 rounded-full text-xs font-black tracking-wider uppercase cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>Learn More</span>
+                          <Info size={12} />
+                        </RippleBtn>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AnimSection>
+            );
+          })}
+        </div>
+
+        {/* Empty state when filter returns nothing */}
+        {filteredServices.length === 0 && (
+          <div className="text-center py-20 text-zinc-500">
+            <p className="text-lg font-semibold mb-2">No services found</p>
+            <p className="text-sm">Try selecting a different category.</p>
+          </div>
+        )}
+      </section>
+
+      {/* ══════════════ LEARN MORE DETAIL MODAL ══════════════ */}
+      {detailOpen && detailService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setDetailOpen(false)}
+            className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
+
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-lg overflow-hidden shadow-2xl shadow-black/80 fade-slide-up z-10 p-8 space-y-6">
+            {/* Glow top-right */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#D4AF37]/8 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-widest border border-[#D4AF37]/25 px-3 py-1 rounded-full">Service Details</span>
+                <h3 className="text-2xl font-black text-white mt-3">{detailService.title}</h3>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Star size={13} className="text-[#D4AF37] fill-[#D4AF37]" />
+                  <span className="text-sm text-[#D4AF37] font-bold">{detailService.rating}</span>
+                  <span className="text-zinc-500 text-xs">({detailService.reviewsCount} reviews)</span>
+                </div>
+              </div>
+              <button onClick={() => setDetailOpen(false)}
+                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer flex-shrink-0">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* What's included */}
+            <div className="space-y-3.5">
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-1.5">
+                <ClipboardList size={14} className="text-[#D4AF37]" /> What is Included
+              </h4>
+              <ul className="space-y-2.5">
+                {serviceInclusions[detailService.category]?.map((inc, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-400">
+                    <span className="text-[#D4AF37] font-black mt-0.5 text-base leading-none">✓</span>
+                    <span>{inc}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Safety note */}
+            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/18 flex gap-3 text-xs text-amber-500/90 leading-relaxed">
+              <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold mb-0.5">Important Guidelines</p>
+                <p>Ensure power and water supply are accessible before arrival. Free cancellations up to 2 hours before the booking.</p>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex gap-3 pt-1">
+              <RippleBtn onClick={() => setDetailOpen(false)} className="outline-gold-btn flex-1 py-3 rounded-full text-xs font-bold cursor-pointer">
+                Close Info
+              </RippleBtn>
+              <RippleBtn
+                onClick={() => { setDetailOpen(false); openBookingModal(detailService); }}
+                className="gold-btn flex-1 py-3 rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Book This Service
+              </RippleBtn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ BOOKING MODAL ══════════════ */}
+      {bookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => !successBooking && setBookingOpen(false)}
+            className="absolute inset-0 bg-black/87 backdrop-blur-2xl" />
+
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-2xl overflow-hidden shadow-2xl shadow-black/80 max-h-[92vh] flex flex-col fade-slide-up z-10">
+
+            {/* Success overlay */}
+            {successBooking && (
+              <div className="absolute inset-0 bg-[#0D0D0D]/98 flex flex-col items-center justify-center z-50 p-8 text-center">
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {[...Array(24)].map((_, i) => (
+                    <div key={i} className="sparkle-particle"
+                      style={{
+                        top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+                        width: `${Math.random() * 7 + 2}px`, height: `${Math.random() * 7 + 2}px`,
+                        animation: `sparkFlow ${Math.random() * 2 + 2.5}s linear infinite`,
+                        animationDelay: `${Math.random() * 1.5}s`
+                      }} />
+                  ))}
+                </div>
+                <div className="w-24 h-24 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/35 flex items-center justify-center mb-6 animate-checkmark">
+                  <CheckCircle size={56} className="text-[#D4AF37]" />
+                </div>
+                <h2 className="text-3xl font-black mb-3 text-white">Booking Confirmed!</h2>
+                <p className="text-zinc-400 text-sm max-w-md leading-relaxed mb-6">
+                  Your booking has been submitted. A Fixora certified expert will contact you shortly to confirm the schedule.
+                </p>
+                <div className="text-[#D4AF37] font-semibold text-xs tracking-wider uppercase border border-[#D4AF37]/22 bg-[#D4AF37]/5 px-5 py-2.5 rounded-full">
+                  Preparing your profile…
+                </div>
+              </div>
+            )}
+
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-[#D4AF37]/15 flex items-center justify-between bg-[#141414]/90 flex-shrink-0">
+              <div>
+                <h2 className="text-2xl font-black text-white">
+                  Schedule <span className="gold-text-gradient">Your Booking</span>
+                </h2>
+                <p className="text-zinc-500 text-xs mt-1">Vetted professionals at your fingertips</p>
+              </div>
+              <button onClick={() => setBookingOpen(false)}
+                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleBookingSubmit} className="flex-grow overflow-y-auto p-8 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <User size={12} className="text-[#D4AF37]" /> Full Name
+                  </label>
+                  <input type="text" name="name" required value={formData.name} onChange={handleInputChange}
+                    placeholder="Enter full name"
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <Phone size={12} className="text-[#D4AF37]" /> Mobile Number
+                  </label>
+                  <input type="tel" name="mobile" required value={formData.mobile} onChange={handleInputChange}
+                    placeholder="+91 9876543210"
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Mail size={12} className="text-[#D4AF37]" /> Email Address
+                </label>
+                <input type="email" name="email" required value={formData.email} onChange={handleInputChange}
+                  placeholder="name@example.com"
+                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="sm:col-span-2 space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin size={12} className="text-[#D4AF37]" /> Address
+                  </label>
+                  <input type="text" name="address" required value={formData.address} onChange={handleInputChange}
+                    placeholder="House No, Street, Landmark"
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <Map size={12} className="text-[#D4AF37]" /> City
+                  </label>
+                  <input type="text" name="city" required value={formData.city} onChange={handleInputChange}
+                    placeholder="City"
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Service Category</label>
+                  <select name="category" value={formData.category} onChange={handleInputChange}
+                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    {Object.keys(serviceOptions).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Specific Service</label>
+                  <select name="subService" value={formData.subService} onChange={handleInputChange}
+                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    {serviceOptions[formData.category]?.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Preferred Date</label>
+                  <input type="date" name="date" required value={formData.date} onChange={handleInputChange}
+                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Time Slot</label>
+                  <select name="time" required value={formData.time} onChange={handleInputChange}
+                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    <option value="">Choose a Slot</option>
+                    <option value="08:00 AM - 11:00 AM">08:00 AM – 11:00 AM (Morning)</option>
+                    <option value="11:00 AM - 02:00 PM">11:00 AM – 02:00 PM (Midday)</option>
+                    <option value="02:00 PM - 05:00 PM">02:00 PM – 05:00 PM (Afternoon)</option>
+                    <option value="05:00 PM - 08:00 PM">05:00 PM – 08:00 PM (Evening)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Explain the Problem</label>
+                <textarea name="problemDesc" rows="3" required value={formData.problemDesc} onChange={handleInputChange}
+                  placeholder="Describe what you need help with (e.g. leaky faucet, AC not cooling, wiring issue…)"
+                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600 resize-none" />
+              </div>
+
+              {/* Image upload */}
+              <div className="space-y-2">
+                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Upload Problem Image (Optional)</label>
+                <label className="flex flex-col items-center justify-center w-full h-32 border border-dashed border-[#D4AF37]/32 rounded-2xl cursor-pointer bg-[#1A1D23]/50 hover:bg-[#1A1D23]/80 hover:border-[#D4AF37]/60 transition-all">
+                  {imagePreview ? (
+                    <div className="relative w-full h-full flex items-center justify-center p-2">
+                      <img src={imagePreview} alt="Preview" className="h-full max-w-[180px] object-contain rounded-xl" />
+                      <button type="button"
+                        onClick={(e) => { e.preventDefault(); setImageFile(null); setImagePreview(''); }}
+                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Upload size={22} className="text-[#D4AF37]" />
+                      <p className="text-xs text-zinc-400"><span className="font-bold text-[#D4AF37]">Click to upload</span> or drag & drop</p>
+                      <p className="text-[10px] text-zinc-500">PNG, JPG, JPEG — Max 5MB</p>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                </label>
+              </div>
+            </form>
+
+            {/* Footer */}
+            <div className="px-8 py-5 border-t border-[#D4AF37]/15 flex justify-end gap-3 bg-[#141414]/90 flex-shrink-0">
+              <RippleBtn onClick={() => setBookingOpen(false)} className="outline-gold-btn px-6 py-3 rounded-full text-xs cursor-pointer">
+                Cancel
+              </RippleBtn>
+              <RippleBtn onClick={handleBookingSubmit} className="gold-btn px-8 py-3 rounded-full text-xs uppercase tracking-wider font-bold cursor-pointer">
+                Confirm Booking
+              </RippleBtn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ FOOTER ══════════════ */}
+      <footer className="pt-20 pb-8 bg-[#080808] border-t border-[#D4AF37]/15">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+            <div className="space-y-4">
+              <Link to="/">
+                <img src={fixoraLogo} alt="Fixora" className="h-11 w-auto object-contain hover:opacity-85 transition-opacity" />
+              </Link>
+              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed max-w-sm">
+                Fixora is India's most luxurious and dependable digital concierge connecting homeowners with certified local practitioners.
+              </p>
+              <div className="flex gap-3 pt-2">
+                {['t', 'i', 'f', 'in'].map(s => (
+                  <a key={s} href="#" className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/45 transition-all text-[10px] font-black uppercase">
+                    {s}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Company</h4>
+              <ul className="space-y-2.5 text-xs text-zinc-400">
+                <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
+                <li><Link to="/services" className="hover:text-white transition-colors">All Services</Link></li>
+                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Offerings</h4>
+              <ul className="space-y-2.5 text-xs text-zinc-400">
+                {categories.slice(1).map(s => (
+                  <li key={s}>
+                    <button
+                      onClick={() => { setActiveCategoryTab(s); window.scrollTo({ top: 600, behavior: 'smooth' }); }}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      {s} Services
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Headquarters</h4>
+              <ul className="space-y-3.5 text-xs text-zinc-400">
+                <li className="flex items-start gap-2.5"><MapPin size={13} className="text-[#D4AF37] shrink-0 mt-0.5" /><span>100 Service Plaza, Suite 400, New York, NY 10001</span></li>
+                <li className="flex items-center gap-2.5"><Phone size={13} className="text-[#D4AF37] shrink-0" /><span>+1 (800) 555-0199</span></li>
+                <li className="flex items-center gap-2.5"><Mail size={13} className="text-[#D4AF37] shrink-0" /><span>support@fixora.com</span></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-zinc-600">
+            <p>© {new Date().getFullYear()} Fixora Inc. All rights reserved.</p>
+            <div className="flex gap-5">
+              <a href="#" className="hover:text-zinc-400 transition-colors">Terms of Use</a>
+              <a href="#" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  );
+};
+
+export default ServicesPage;

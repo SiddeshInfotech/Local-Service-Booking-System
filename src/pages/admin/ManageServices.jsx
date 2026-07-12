@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, Pencil, Trash2, X, Check, IndianRupee } from 'lucide-react';
 
-const categories = ['All', 'Plumbing', 'Electrician', 'Cleaning', 'Carpentry', 'Pest Control', 'AC Repair', 'Painting'];
+const categories = ['All', 'Cleaning', 'Plumbing', 'AC Repair', 'Carpenter', 'Electrician'];
 
 const initialServices = [
   { id: 1,  name: 'Pipe Leak Repair',       category: 'Plumbing',    price: 499,  duration: '1–2 hrs', status: 'Active'   },
@@ -10,12 +10,9 @@ const initialServices = [
   { id: 4,  name: 'Ceiling Fan Install',     category: 'Electrician', price: 349,  duration: '45 min',  status: 'Active'   },
   { id: 5,  name: 'Full Home Cleaning',      category: 'Cleaning',    price: 999,  duration: '3–4 hrs', status: 'Active'   },
   { id: 6,  name: 'Bathroom Deep Clean',     category: 'Cleaning',    price: 499,  duration: '2 hrs',   status: 'Inactive' },
-  { id: 7,  name: 'Furniture Assembly',      category: 'Carpentry',   price: 599,  duration: '2–3 hrs', status: 'Active'   },
-  { id: 8,  name: 'Wood Polish',             category: 'Carpentry',   price: 799,  duration: '3 hrs',   status: 'Active'   },
-  { id: 9,  name: 'Termite Treatment',       category: 'Pest Control', price: 1299, duration: '2 hrs',   status: 'Active'   },
+  { id: 7,  name: 'Furniture Assembly',      category: 'Carpenter',   price: 599,  duration: '2–3 hrs', status: 'Active'   },
+  { id: 8,  name: 'Wood Polish',             category: 'Carpenter',   price: 799,  duration: '3 hrs',   status: 'Active'   },
   { id: 10, name: 'AC Service (Regular)',    category: 'AC Repair',   price: 599,  duration: '1 hr',    status: 'Active'   },
-  { id: 11, name: 'Interior Wall Paint',     category: 'Painting',    price: 1499, duration: '1 day',   status: 'Active'   },
-  { id: 12, name: 'Rodent Control',          category: 'Pest Control', price: 899,  duration: '1.5 hrs', status: 'Inactive' },
 ];
 
 const EMPTY_SVC = { name: '', category: 'Plumbing', price: '', duration: '', status: 'Active' };

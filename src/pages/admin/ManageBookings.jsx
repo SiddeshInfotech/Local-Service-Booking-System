@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, ChevronLeft, ChevronRight, Eye, XCircle, ChevronDown } from 'lucide-react';
 
-const allBookings = [
-  { id: 'BK-1021', customer: 'Priya Sharma',  customerEmail: 'priya@email.com',  provider: 'Raju Works',       service: 'Pipe Leak Repair',   date: '09 Jul 2026', time: '10:00 AM', amount: 499,  status: 'Confirmed'  },
-  { id: 'BK-1020', customer: 'Arjun Mehta',   customerEmail: 'arjun@email.com',  provider: 'PowerFix Co.',     service: 'Switchboard Repair',  date: '08 Jul 2026', time: '02:00 PM', amount: 299,  status: 'Pending'    },
-  { id: 'BK-1019', customer: 'Sneha Patel',   customerEmail: 'sneha@email.com',  provider: 'CleanPro India',   service: 'Full Home Cleaning',  date: '07 Jul 2026', time: '09:00 AM', amount: 999,  status: 'Completed'  },
-  { id: 'BK-1018', customer: 'Vikram Reddy',  customerEmail: 'vikram@email.com', provider: 'WoodCraft Ltd',    service: 'Furniture Assembly',  date: '06 Jul 2026', time: '11:30 AM', amount: 599,  status: 'Cancelled'  },
-  { id: 'BK-1017', customer: 'Anita Joshi',   customerEmail: 'anita@email.com',  provider: 'PestAway',         service: 'Termite Treatment',   date: '05 Jul 2026', time: '03:00 PM', amount: 1299, status: 'Confirmed'  },
-  { id: 'BK-1016', customer: 'Rohan Kapoor',  customerEmail: 'rohan@email.com',  provider: 'BrightPaint Co.', service: 'Interior Wall Paint', date: '04 Jul 2026', time: '08:00 AM', amount: 1499, status: 'Completed'  },
-  { id: 'BK-1015', customer: 'Meera Singh',   customerEmail: 'meera@email.com',  provider: 'Raju Works',       service: 'Drain Unclogging',    date: '03 Jul 2026', time: '01:00 PM', amount: 399,  status: 'Completed'  },
-  { id: 'BK-1014', customer: 'Deepak Kumar',  customerEmail: 'deepak@email.com', provider: 'CleanPro India',   service: 'Bathroom Deep Clean', date: '02 Jul 2026', time: '11:00 AM', amount: 499,  status: 'Pending'    },
-];
+const allBookings = [];
 
 const STATUS_OPTIONS = ['Pending', 'Confirmed', 'Completed', 'Cancelled'];
 
