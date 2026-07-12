@@ -5,6 +5,7 @@ import {
   CalendarDays, Star, BarChart2, ChevronLeft, ChevronRight,
   Bell, Search, LogOut, Menu, X, ShieldCheck, Check, Sparkles, AlertTriangle, AlertCircle
 } from 'lucide-react';
+import fixoraLogo from '../../assets/images/fixora_logo.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
@@ -30,7 +31,12 @@ const AdminLayout = () => {
   const notifRef = useRef(null);
 
   // Mock Notifications State
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: 'New provider "CleanPro India" requested approval', time: '5 mins ago', read: false, type: 'alert' },
+    { id: 2, text: 'Booking BK-1021 has been completed', time: '1 hr ago', read: false, type: 'success' },
+    { id: 3, text: 'Review reported for service "Plumbing"', time: '3 hrs ago', read: true, type: 'warning' },
+    { id: 4, text: 'System backup completed successfully', time: '1 day ago', read: true, type: 'info' }
+  ]);
 
   // Click outside listener for dropdowns
   useEffect(() => {
@@ -83,13 +89,15 @@ const AdminLayout = () => {
     <div className="flex flex-col h-full bg-[#080d1a] border-r border-white/5">
       {/* Brand */}
       <div className={`flex items-center gap-3 px-5 py-6 border-b border-white/5 flex-shrink-0 ${collapsed ? 'justify-center px-3' : ''}`}>
-        <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/10">
-          <ShieldCheck size={18} className="text-blue-400" />
-        </div>
+        <img
+          src={fixoraLogo}
+          alt="Fixora Logo"
+          className="h-9 w-auto object-contain flex-shrink-0"
+        />
         {!collapsed && (
           <div>
             <p className="text-white font-bold text-sm leading-none tracking-wide">Fixora</p>
-            <p className="text-blue-400 text-[10px] font-bold tracking-widest uppercase mt-1">Admin Panel</p>
+            <p className="text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mt-1">Admin Panel</p>
           </div>
         )}
       </div>

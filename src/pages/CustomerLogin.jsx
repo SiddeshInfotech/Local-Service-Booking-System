@@ -160,7 +160,7 @@ const CustomerLogin = () => {
 
             {/* Forgot Password link */}
             <div className="flex justify-end -mt-2">
-              <Link to="/forgot-password" className="text-sm text-blue-500 hover:text-blue-400 transition-colors">
+              <Link to="/customer/forgot-password" className="text-sm text-[#D4AF37] hover:text-[#F4C542] transition-colors">
                 Forgot Password?
               </Link>
             </div>

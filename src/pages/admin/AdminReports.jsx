@@ -2,85 +2,44 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { DollarSign, Users, Briefcase, CalendarDays, Download, TrendingUp, Sparkles, Loader2, ArrowRight, ArrowUpRight, Search } from 'lucide-react';
 
-// Monthly report data variations based on range
+// Monthly report data — zeroed until backend integration
 const rangesData = {
   'Last 30 Days': {
     stats: [
-      { label: 'Total Revenue', value: '₹0', sub: '+0% vs last month', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '0', sub: '+0% vs last month', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '0', sub: '+0% this month', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '0', sub: '+0% this month', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: 'No data yet', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: 'No data yet', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: 'No data yet', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: 'No data yet', icon: Briefcase, color: 'amber' },
     ],
-    monthlyBookings: [
-      { m: 'Week 1', v: 0 }, { m: 'Week 2', v: 0 }, { m: 'Week 3', v: 0 }, { m: 'Week 4', v: 0 },
-    ],
-    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
-    categoryRevenue: [
-      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
-      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
-      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
-      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
-      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
-    ],
-    summary: [
-      { m: 'Week 4', b: 0, u: 0, r: '₹0' },
-      { m: 'Week 3', b: 0, u: 0, r: '₹0' },
-      { m: 'Week 2', b: 0, u: 0, r: '₹0' },
-      { m: 'Week 1', b: 0, u: 0, r: '₹0' },
-    ]
+    monthlyBookings: [],
+    userGrowth: [],
+    categoryRevenue: [],
+    summary: [],
   },
   'Last 7 Days': {
     stats: [
-      { label: 'Total Revenue', value: '₹0', sub: '+0% vs last week', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '0', sub: '+0% vs last week', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '0', sub: '+0% this week', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '0', sub: '+0% this week', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: 'No data yet', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: 'No data yet', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: 'No data yet', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: 'No data yet', icon: Briefcase, color: 'amber' },
     ],
-    monthlyBookings: [
-      { m: 'Mon', v: 0 }, { m: 'Tue', v: 0 }, { m: 'Wed', v: 0 }, { m: 'Thu', v: 0 },
-      { m: 'Fri', v: 0 }, { m: 'Sat', v: 0 }, { m: 'Sun', v: 0 }
-    ],
-    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
-    categoryRevenue: [
-      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
-      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
-      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
-      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
-      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
-    ],
-    summary: [
-      { m: 'Thu, 09 Jul', b: 0, u: 0, r: '₹0' },
-      { m: 'Wed, 08 Jul', b: 0, u: 0, r: '₹0' },
-      { m: 'Tue, 07 Jul', b: 0, u: 0, r: '₹0' },
-      { m: 'Mon, 06 Jul', b: 0, u: 0, r: '₹0' },
-    ]
+    monthlyBookings: [],
+    userGrowth: [],
+    categoryRevenue: [],
+    summary: [],
   },
   'Year-to-Date': {
     stats: [
-      { label: 'Total Revenue', value: '₹0', sub: '+0% YTD', icon: DollarSign, color: 'green' },
-      { label: 'Total Bookings', value: '0', sub: '+0% YTD', icon: CalendarDays, color: 'blue' },
-      { label: 'Active Customers', value: '0', sub: '+0% YTD', icon: Users, color: 'purple' },
-      { label: 'Active Providers', value: '0', sub: '+0% YTD', icon: Briefcase, color: 'amber' },
+      { label: 'Total Revenue', value: '₹0', sub: 'No data yet', icon: DollarSign, color: 'green' },
+      { label: 'Total Bookings', value: '0', sub: 'No data yet', icon: CalendarDays, color: 'blue' },
+      { label: 'Active Customers', value: '0', sub: 'No data yet', icon: Users, color: 'purple' },
+      { label: 'Active Providers', value: '0', sub: 'No data yet', icon: Briefcase, color: 'amber' },
     ],
-    monthlyBookings: [
-      { m: 'Jan', v: 0 }, { m: 'Feb', v: 0 }, { m: 'Mar', v: 0 }, { m: 'Apr', v: 0 },
-      { m: 'May', v: 0 }, { m: 'Jun', v: 0 }, { m: 'Jul', v: 0 },
-    ],
-    userGrowth: [0, 0, 0, 0, 0, 0, 0, 0],
-    categoryRevenue: [
-      { name: 'Cleaning', pct: 0, color: '#10b981', amount: '₹0' },
-      { name: 'Plumbing', pct: 0, color: '#3b82f6', amount: '₹0' },
-      { name: 'AC Repair', pct: 0, color: '#6b7280', amount: '₹0' },
-      { name: 'Carpenter', pct: 0, color: '#f59e0b', amount: '₹0' },
-      { name: 'Electrician', pct: 0, color: '#8b5cf6', amount: '₹0' },
-    ],
-    summary: [
-      { m: 'July YTD', b: 0, u: 0, r: '₹0' },
-      { m: 'June YTD', b: 0, u: 0, r: '₹0' },
-      { m: 'May YTD', b: 0, u: 0, r: '₹0' },
-      { m: 'April YTD', b: 0, u: 0, r: '₹0' },
-    ]
-  }
+    monthlyBookings: [],
+    userGrowth: [],
+    categoryRevenue: [],
+    summary: [],
+  },
 };
 
 const colorMap = {
@@ -92,10 +51,6 @@ const colorMap = {
 
 // Build conic-gradient string for donut/pie charts
 const buildPieGradient = (slices) => {
-  const total = slices.reduce((acc, s) => acc + s.pct, 0);
-  if (total === 0) {
-    return '#1f2937 0% 100%';
-  }
   let cum = 0;
   return slices.map(({ pct, color }) => {
     const start = cum;
@@ -203,9 +158,15 @@ const AdminReports = () => {
             <p className="text-zinc-500 text-xs mt-1">Bookings traffic volume - {selectedRange}</p>
           </div>
           <div className="flex items-end gap-2.5 h-44 mt-6">
-            {activeData.monthlyBookings.map(({ m, v }) => {
+            {activeData.monthlyBookings.length === 0 ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600">
+                <span className="text-2xl mb-2">📊</span>
+                <p className="text-xs font-semibold text-zinc-500">No reports available.</p>
+                <p className="text-[10px] italic text-zinc-600 mt-1">Data will populate after backend integration.</p>
+              </div>
+            ) : activeData.monthlyBookings.map(({ m, v }) => {
               const maxVal = Math.max(...activeData.monthlyBookings.map(d => d.v));
-              const heightPct = maxVal > 0 ? (v / maxVal) * 100 : 0;
+              const heightPct = (v / maxVal) * 100;
               return (
                 <div key={m} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                   <span className="text-zinc-400 text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-[#080d19] px-1 rounded border border-white/5 mb-1">{v}</span>
@@ -306,47 +267,54 @@ const AdminReports = () => {
 
         {/* Donut chart: Category revenue */}
         <div className="rounded-3xl bg-[#0d1425]/40 border border-white/5 p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row gap-8 items-center">
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            {/* Donut circle container */}
-            <div
-              className="w-full h-full rounded-full transition-all duration-500 shadow-xl"
-              style={{ background: `conic-gradient(${pieGradient})` }}
-            />
-            {/* Center cutout */}
-            <div className="absolute w-[70%] h-[70%] rounded-full bg-[#0d1527] flex flex-col justify-center items-center p-2 border border-white/5">
-              <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Category</span>
-              <span className="text-white text-xs font-bold mt-1 text-center truncate w-full">
-                {hoveredCategory !== null ? activeData.categoryRevenue[hoveredCategory].name : 'Overall'}
-              </span>
-              <span className="text-blue-400 text-xs font-black mt-0.5">
-                {hoveredCategory !== null ? `${activeData.categoryRevenue[hoveredCategory].pct}%` : '100%'}
-              </span>
+          {activeData.categoryRevenue.length === 0 ? (
+            <div className="w-full flex flex-col items-center justify-center py-10 text-zinc-600">
+              <span className="text-2xl mb-2">🍩</span>
+              <p className="text-xs font-semibold text-zinc-500">No reports available.</p>
+              <p className="text-[10px] italic text-zinc-600 mt-1">Revenue breakdown will appear after integration.</p>
             </div>
-          </div>
-          
-          <div className="flex-1 flex flex-col gap-2.5 w-full text-left">
-            <h2 className="text-white font-bold text-sm">Revenue by Category</h2>
-            <p className="text-zinc-500 text-xs mb-2">Distribution of earnings per service type</p>
-            <div className="space-y-2">
-              {activeData.categoryRevenue.map(({ name, pct, color, amount }, index) => (
-                <div 
-                  key={name} 
-                  onMouseEnter={() => setHoveredCategory(index)}
-                  onMouseLeave={() => setHoveredCategory(null)}
-                  className={`flex items-center justify-between p-2 rounded-xl border border-transparent transition-colors cursor-pointer ${hoveredCategory === index ? 'bg-white/5 border-white/5' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-zinc-300 text-xs font-semibold">{name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-zinc-400 text-xs font-bold">{amount}</span>
-                    <span className="text-blue-400 text-xs font-bold">{pct}%</span>
-                  </div>
+          ) : (
+            <>
+              <div className="relative w-36 h-36 flex items-center justify-center">
+                <div
+                  className="w-full h-full rounded-full transition-all duration-500 shadow-xl"
+                  style={{ background: `conic-gradient(${pieGradient})` }}
+                />
+                <div className="absolute w-[70%] h-[70%] rounded-full bg-[#0d1527] flex flex-col justify-center items-center p-2 border border-white/5">
+                  <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Category</span>
+                  <span className="text-white text-xs font-bold mt-1 text-center truncate w-full">
+                    {hoveredCategory !== null ? activeData.categoryRevenue[hoveredCategory].name : 'Overall'}
+                  </span>
+                  <span className="text-blue-400 text-xs font-black mt-0.5">
+                    {hoveredCategory !== null ? `${activeData.categoryRevenue[hoveredCategory].pct}%` : '100%'}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+              <div className="flex-1 flex flex-col gap-2.5 w-full text-left">
+                <h2 className="text-white font-bold text-sm">Revenue by Category</h2>
+                <p className="text-zinc-500 text-xs mb-2">Distribution of earnings per service type</p>
+                <div className="space-y-2">
+                  {activeData.categoryRevenue.map(({ name, pct, color, amount }, index) => (
+                    <div 
+                      key={name} 
+                      onMouseEnter={() => setHoveredCategory(index)}
+                      onMouseLeave={() => setHoveredCategory(null)}
+                      className={`flex items-center justify-between p-2 rounded-xl border border-transparent transition-colors cursor-pointer ${hoveredCategory === index ? 'bg-white/5 border-white/5' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="text-zinc-300 text-xs font-semibold">{name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-400 text-xs font-bold">{amount}</span>
+                        <span className="text-blue-400 text-xs font-bold">{pct}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Summary Table */}
@@ -366,7 +334,14 @@ const AdminReports = () => {
                 </tr>
               </thead>
               <tbody>
-                {activeData.summary.map(({ m, b, u, r }) => (
+                {activeData.summary.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-10 text-zinc-600">
+                      <p className="text-xs font-semibold text-zinc-500">No reports available.</p>
+                      <p className="text-[10px] italic mt-1">Timeline data will appear after backend integration.</p>
+                    </td>
+                  </tr>
+                ) : activeData.summary.map(({ m, b, u, r }) => (
                   <tr key={m} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3 text-white font-bold">{m}</td>
                     <td className="px-4 py-3 text-zinc-400 font-semibold">{b}</td>

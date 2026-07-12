@@ -1,5 +1,54 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary-bg: #0F1115;
+  --color-secondary-bg: #1A1D23;
+  --color-card-bg: rgba(26, 29, 35, 0.92);
+  --color-gold-accent: #D4AF37;
+  --color-gold-hover: #F4C542;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #B0B3B8;
+  --color-border-gold: rgba(212, 175, 55, 0.18);
+  --color-hover-bg: #232831;
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+
+  /* Global background / surface overrides */
+  --color-black: #0F1115;
+  --color-bg-dark: #0F1115;
+  --color-bg-secondary: #1A1D23;
+  --color-card-dark: rgba(26, 29, 35, 0.92);
+  
+  /* Overwrite blue classes to map to gold accents */
+  --color-blue-50: #FCF9EC;
+  --color-blue-100: #F7F1CD;
+  --color-blue-200: #EFE29A;
+  --color-blue-300: #E7CE5F;
+  --color-blue-400: #F4C542;
+  --color-blue-500: #D4AF37;
+  --color-blue-600: #BCA032;
+  --color-blue-700: #9B8227;
+  --color-blue-800: #74611B;
+  --color-blue-900: #4B3F11;
+  --color-blue-950: #292209;
+
+  /* Overwrite zinc dark grays to look premium charcoal */
+  --color-zinc-950: #0F1115;
+  --color-zinc-900: #1A1D23;
+  --color-zinc-800: rgba(212, 175, 55, 0.18);
+  --color-zinc-700: rgba(212, 175, 55, 0.12);
+  
+  /* Text and shadows */
+  --color-zinc-500: #B0B3B8;
+  --color-zinc-400: #B0B3B8;
+  --color-zinc-300: #FFFFFF;
+  --color-zinc-200: #FFFFFF;
+
+  /* Soft gold shadows and outlines */
+  --shadow-2xl: 0 25px 50px -12px rgba(212, 175, 55, 0.15);
+  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+}
+
 /* Custom Scrollbar Styles for Dark Theme */
 ::-webkit-scrollbar {
   width: 8px;
@@ -7,23 +56,31 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #0F1115;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #182237;
+  background: #1A1D23;
   border-radius: 9999px;
-  border: 2px solid #000000;
+  border: 2px solid #0F1115;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+  background: #D4AF37;
 }
 
 /* Base settings */
 html, body {
   scroll-behavior: smooth;
-  background-color: #0b111e;
-  color: #ffffff;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  background-color: #0F1115;
+  color: #FFFFFF;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* Global premium glassmorphism classes */
+.glass-card {
+  background: rgba(26, 29, 35, 0.92) !important;
+  border: 1px solid rgba(212, 175, 55, 0.18) !important;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.08);
 }

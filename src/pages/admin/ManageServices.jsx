@@ -4,16 +4,15 @@ import { Search, Filter, Plus, Pencil, Trash2, X, Check, IndianRupee } from 'luc
 const categories = ['All', 'Cleaning', 'Plumbing', 'AC Repair', 'Carpenter', 'Electrician'];
 
 const initialServices = [
-  { id: 1,  name: 'Home Cleaning',          category: 'Cleaning',    price: 499,  duration: '2 hrs',   status: 'Active' },
-  { id: 2,  name: 'Deep Cleaning',          category: 'Cleaning',    price: 999,  duration: '4 hrs',   status: 'Active' },
-  { id: 3,  name: 'Tap Repair',             category: 'Plumbing',    price: 299,  duration: '1 hr',    status: 'Active' },
-  { id: 4,  name: 'Pipe Leak Repair',       category: 'Plumbing',    price: 499,  duration: '1.5 hrs', status: 'Active' },
-  { id: 5,  name: 'AC Service',             category: 'AC Repair',   price: 699,  duration: '1.5 hrs', status: 'Active' },
-  { id: 6,  name: 'AC Installation',        category: 'AC Repair',   price: 1499, duration: '2.5 hrs', status: 'Active' },
-  { id: 7,  name: 'Furniture Repair',       category: 'Carpenter',   price: 599,  duration: '2 hrs',   status: 'Active' },
-  { id: 8,  name: 'Door Installation',      category: 'Carpenter',   price: 799,  duration: '3 hrs',   status: 'Active' },
-  { id: 9,  name: 'Switchboard Repair',     category: 'Electrician', price: 399,  duration: '1 hr',    status: 'Active' },
-  { id: 10, name: 'Fan Installation',       category: 'Electrician', price: 499,  duration: '1 hr',    status: 'Active' },
+  { id: 1,  name: 'Pipe Leak Repair',       category: 'Plumbing',    price: 499,  duration: '1–2 hrs', status: 'Active'   },
+  { id: 2,  name: 'Drain Unclogging',        category: 'Plumbing',    price: 399,  duration: '1 hr',    status: 'Active'   },
+  { id: 3,  name: 'Switchboard Repair',      category: 'Electrician', price: 299,  duration: '30 min',  status: 'Active'   },
+  { id: 4,  name: 'Ceiling Fan Install',     category: 'Electrician', price: 349,  duration: '45 min',  status: 'Active'   },
+  { id: 5,  name: 'Full Home Cleaning',      category: 'Cleaning',    price: 999,  duration: '3–4 hrs', status: 'Active'   },
+  { id: 6,  name: 'Bathroom Deep Clean',     category: 'Cleaning',    price: 499,  duration: '2 hrs',   status: 'Inactive' },
+  { id: 7,  name: 'Furniture Assembly',      category: 'Carpenter',   price: 599,  duration: '2–3 hrs', status: 'Active'   },
+  { id: 8,  name: 'Wood Polish',             category: 'Carpenter',   price: 799,  duration: '3 hrs',   status: 'Active'   },
+  { id: 10, name: 'AC Service (Regular)',    category: 'AC Repair',   price: 599,  duration: '1 hr',    status: 'Active'   },
 ];
 
 const EMPTY_SVC = { name: '', category: 'Plumbing', price: '', duration: '', status: 'Active' };

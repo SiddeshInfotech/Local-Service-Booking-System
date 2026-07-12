@@ -9,6 +9,23 @@ import CustomerLogin from './pages/CustomerLogin';
 import CustomerRegister from './pages/CustomerRegister';
 import ProviderLogin from './pages/ProviderLogin';
 import ProviderRegister from './pages/ProviderRegister';
+import ForgotPassword from './pages/ForgotPassword';
+import LandingPage from './pages/LandingPage';
+
+// Admin Pages
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageCustomers from './pages/admin/ManageCustomers';
+import ManageProviders from './pages/admin/ManageProviders';
+import ProviderApproval from './pages/admin/ProviderApproval';
+import ManageCategories from './pages/admin/ManageCategories';
+import ManageServices from './pages/admin/ManageServices';
+import ManageBookings from './pages/admin/ManageBookings';
+import ViewReviews from './pages/admin/ViewReviews';
+import AdminReports from './pages/admin/AdminReports';
+
+import ServicesPage from './pages/ServicesPage';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -52,30 +69,31 @@ const PlaceholderPage = ({ title, description }) => {
 const AppInner = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isLandingRoute = location.pathname === '/';
+  const isServicesRoute = location.pathname === '/services';
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-black text-white flex flex-col selection:bg-[#D4AF37]/30 selection:text-white">
 
-      {/* Main Navbar — hidden on all admin pages */}
-      {!isAdminRoute && <Navbar />}
+      {/* Main Navbar — hidden on admin pages, landing page, and services page (they have their own) */}
+      {!isAdminRoute && !isLandingRoute && !isServicesRoute && <Navbar />}
 
       <main className="flex-grow">
         <Routes>
-          {/* Redirect root to Customer Login */}
-          <Route path="/" element={<Navigate to="/customer/login" replace />} />
+          {/* Landing Page — default route */}
+          <Route path="/" element={<LandingPage />} />
 
           {/* Customer Routes */}
-          <Route path="/customer/login"     element={<CustomerLogin />} />
-          <Route path="/customer/register"  element={<CustomerRegister />} />
-          <Route path="/customer/dashboard" element={<PlaceholderPage title="Customer Dashboard" description="Your bookings, history, and profile settings will appear here." />} />
+          <Route path="/customer/login"           element={<CustomerLogin />} />
+          <Route path="/customer/register"        element={<CustomerRegister />} />
+          <Route path="/customer/forgot-password" element={<ForgotPassword />} />
 
           {/* Provider Routes */}
-          <Route path="/provider/login"     element={<ProviderLogin />} />
-          <Route path="/provider/register"  element={<ProviderRegister />} />
-          <Route path="/provider/dashboard" element={<PlaceholderPage title="Provider Dashboard" description="Manage your services, bookings, and customers from your provider portal." />} />
+          <Route path="/provider/login"    element={<ProviderLogin />} />
+          <Route path="/provider/register" element={<ProviderRegister />} />
 
           {/* Navbar placeholder routes */}
-          <Route path="/services" element={<PlaceholderPage title="Services" description="Explore our list of high-quality local services. Find electricians, cleaners, builders, and designers suited to your project needs." />} />
+          <Route path="/services" element={<ServicesPage />} />
           <Route path="/about"    element={<PlaceholderPage title="About Us" description="Fixora is on a mission to simplify home service bookings. By verifying trades and protecting customer transactions, we deliver peace of mind." />} />
           <Route path="/contact"  element={<PlaceholderPage title="Contact Support" description="Have questions? Get in touch with our helpdesk. Our support agents are here to assist with billing, verification, or service issues." />} />
           <Route path="/terms"    element={<PlaceholderPage title="Terms & Policy" description="Read our safety rules, terms of operations, and privacy protections designed to keep homeowners and local partners secure." />} />
@@ -97,13 +115,13 @@ const AppInner = () => {
             <Route path="reports"           element={<AdminReports />} />
           </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/customer/login" replace />} />
+          {/* Catch-all → back to landing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
-      {/* Footer — hidden on all admin pages */}
-      {!isAdminRoute && <Footer />}
+      {/* Footer — hidden on admin pages, landing page, and services page (they have their own) */}
+      {!isAdminRoute && !isLandingRoute && !isServicesRoute && <Footer />}
 
     </div>
   );

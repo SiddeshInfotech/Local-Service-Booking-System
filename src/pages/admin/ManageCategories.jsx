@@ -3,11 +3,11 @@ import { useOutletContext } from 'react-router-dom';
 import { Search, Plus, Pencil, Trash2, X, Check, Tag, Sparkles, AlertCircle, Filter } from 'lucide-react';
 
 const initialCategories = [
-  { id: 1, name: 'Cleaning',     icon: '🧹', services: 2, status: 'Active',   desc: 'Home, office and deep cleaning services.' },
-  { id: 2, name: 'Plumbing',     icon: '🔧', services: 2, status: 'Active',   desc: 'Pipe fitting, leaks, drainage and water-related repairs.' },
-  { id: 3, name: 'AC Repair',    icon: '❄️', services: 2, status: 'Active',   desc: 'Installation, service and gas refilling for ACs.' },
-  { id: 4, name: 'Carpenter',    icon: '🪚', services: 2, status: 'Active',   desc: 'Furniture assembly, wood work and repairs.' },
-  { id: 5, name: 'Electrician',  icon: '⚡', services: 2, status: 'Active',   desc: 'Wiring, switch boards, appliance installation.' },
+  { id: 1, name: 'Cleaning',     icon: '🧹', services: 0, status: 'Active',   desc: 'Home, office and deep cleaning services.' },
+  { id: 2, name: 'Plumbing',     icon: '🔧', services: 0, status: 'Active',   desc: 'Pipe fitting, leaks, drainage and water-related repairs.' },
+  { id: 3, name: 'AC Repair',    icon: '❄️', services: 0, status: 'Active',   desc: 'Installation, service and gas refilling for ACs.' },
+  { id: 4, name: 'Carpenter',    icon: '🪚', services: 0, status: 'Active',   desc: 'Furniture assembly, wood work and repairs.' },
+  { id: 5, name: 'Electrician',  icon: '⚡', services: 0, status: 'Active',   desc: 'Wiring, switch boards, appliance installation.' },
 ];
 
 const EMPTY = { name: '', icon: '🔧', desc: '', status: 'Active' };

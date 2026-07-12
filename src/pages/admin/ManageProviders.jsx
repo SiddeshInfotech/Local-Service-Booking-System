@@ -94,7 +94,7 @@ const ManageProviders = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          Manage Service Providers ({providers.length} Providers) <Sparkles className="text-blue-400 w-5 h-5" />
+          Manage Service Providers <Sparkles className="text-blue-400 w-5 h-5" />
         </h1>
         <p className="text-zinc-500 text-sm mt-1">Regulate professional registrations, service category mappings, verification flags, and aggregate metrics.</p>
       </div>
@@ -179,7 +179,13 @@ const ManageProviders = () => {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-zinc-500 py-12 text-xs italic">No service providers found.</td>
+                  <td colSpan={7} className="text-center text-zinc-500 py-16 text-xs">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-3xl">🔧</span>
+                      <span className="font-semibold">No providers registered yet.</span>
+                      <span className="text-zinc-600 italic text-[10px]">Service provider accounts will appear here once registered.</span>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 paginated.map((p) => (

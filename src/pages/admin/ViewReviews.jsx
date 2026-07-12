@@ -70,7 +70,8 @@ const ViewReviews = () => {
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-zinc-500">
           <MessageSquare size={36} className="mx-auto mb-3 text-zinc-700" />
-          <p>No reviews found.</p>
+          <p className="font-semibold text-sm text-zinc-400">No reviews available.</p>
+          <p className="text-zinc-600 italic text-xs mt-1">Customer reviews will appear here once bookings are completed.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

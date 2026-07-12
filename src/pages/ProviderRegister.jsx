@@ -131,7 +131,7 @@ const ProviderRegister = () => {
           </div>
           {/* Caption at the bottom */}
           <div className="absolute bottom-8 left-8 right-8">
-            <h2 className="text-2xl font-bold text-white tracking-tight leading-snug drop-shadow-md">
+            <h2 className="text-2xl font-bold text-[#D4AF37] tracking-tight leading-snug drop-shadow-md">
               Become a Service Provider
             </h2>
             <p className="text-white/70 mt-2 text-sm leading-relaxed drop-shadow-md">
@@ -152,9 +152,9 @@ const ProviderRegister = () => {
             />
           </div>
           
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2.5 mb-8">
-            <UserPlus size={24} className="text-blue-500" />
-            <span className="text-blue-500">Provider Registration</span>
+          <h2 className="text-2xl font-bold text-[#D4AF37] flex items-center gap-2.5 mb-8">
+            <UserPlus size={24} className="text-[#D4AF37]" />
+            <span className="text-[#D4AF37]">Provider Registration</span>
           </h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -209,7 +209,7 @@ const ProviderRegister = () => {
               {/* City Dropdown */}
               <div className="flex flex-col w-full">
                 <label htmlFor="city" className="text-gray-300 font-medium text-sm sm:text-base">
-                  City <span className="text-blue-500">*</span>
+                  City <span className="text-[#D4AF37]">*</span>
                 </label>
                 <div className="relative flex items-center mt-2 w-full">
                   <select
@@ -236,7 +236,7 @@ const ProviderRegister = () => {
             {/* Row 3: Select Service Dropdown */}
             <div className="flex flex-col w-full">
               <label htmlFor="service" className="text-gray-300 font-medium text-sm sm:text-base">
-                Select Your Service <span className="text-blue-500">*</span>
+                Select Your Service <span className="text-[#D4AF37]">*</span>
               </label>
               <div className="relative flex items-center mt-2 w-full">
                 <select
@@ -329,9 +329,9 @@ const ProviderRegister = () => {
             {/* Disclaimer */}
             <p className="text-zinc-500 text-xs text-center">
               By registering, you agree to Fixora{' '}
-              <a href="#" className="text-blue-500 hover:underline">Terms & Conditions</a>{' '}
+              <a href="#" className="text-[#D4AF37] hover:text-[#F4C542] hover:underline">Terms & Conditions</a>{' '}
               and{' '}
-              <a href="#" className="text-blue-500 hover:underline">Privacy Policy</a>.
+              <a href="#" className="text-[#D4AF37] hover:text-[#F4C542] hover:underline">Privacy Policy</a>.
             </p>
 
           </form>

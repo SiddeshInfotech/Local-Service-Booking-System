@@ -42,7 +42,7 @@ const SocialButton = ({ provider, onClick, children, ...props }) => {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center gap-3 w-full py-3 bg-transparent border border-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition duration-300 cursor-pointer active:scale-[0.98]"
+      className="flex items-center justify-center gap-3 w-full py-3 bg-[#1A1D23] border border-[#D4AF37]/20 hover:bg-[#232831] text-white font-medium rounded-xl transition duration-300 cursor-pointer active:scale-[0.98]"
       {...props}
     >
       {getProviderIcon()}

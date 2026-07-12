@@ -75,11 +75,8 @@ const ProviderApproval = () => {
       {current.length === 0 ? (
         <div className="text-center py-20 rounded-3xl bg-[#0d1425]/40 border border-white/5 backdrop-blur-xl">
           <ShieldCheck size={40} className="mx-auto mb-4 text-zinc-700" />
-          <p className="text-zinc-500 text-xs italic">
-            {tab === 'Pending' && 'No pending service providers found.'}
-            {tab === 'Approved' && 'No approved service providers found.'}
-            {tab === 'Blocked' && 'No blocked service providers found.'}
-          </p>
+          <p className="text-zinc-400 text-sm font-semibold">No provider approvals pending.</p>
+          <p className="text-zinc-600 italic text-xs mt-1">Applications will appear here once providers register.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

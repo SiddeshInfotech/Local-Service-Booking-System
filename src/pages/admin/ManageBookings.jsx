@@ -34,7 +34,7 @@ const ManageBookings = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Manage Bookings ({bookings.length} Bookings)</h1>
+        <h1 className="text-2xl font-bold text-white">Manage Bookings</h1>
         <p className="text-zinc-500 text-sm mt-1">View, filter, update and cancel service bookings.</p>
       </div>
 
