@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "Local Service Booking System API",
+    "_postman_id": "local-service-booking-v3-fixed",
+    "description": "Complete Postman collection for all APIs — Customer, Provider, and Admin.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000", "type": "string" },
+    { "key": "customer_token", "value": "", "type": "string" },
+    { "key": "provider_token", "value": "", "type": "string" },
+    { "key": "admin_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Bob Customer\",\n  \"email\": \"bob_cust_test@example.com\",\n  \"password\": \"TestPass123!\",\n  \"phone\": \"9822222230\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Email (POST)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/verify-email",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"<verification_token>\"\n}" }
+          }
+        },
+        {
+          "name": "Login Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bob_cust_test@example.com\",\n  \"password\": \"TestPass123!\"\n}" }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/forgot-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bob_cust_test@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/reset-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"<reset_token>\",\n  \"new_password\": \"NewSecurePass123!\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/refresh-token",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"<refresh_token>\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/customer/logout",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"<refresh_token>\"\n}" }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/customer/profile",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/customer/profile",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Bob Customer Updated\",\n  \"phone\": \"9822222231\",\n  \"gender\": \"Male\",\n  \"city\": \"Nashik\",\n  \"pincode\": \"422001\"\n}" }
+          }
+        },
+        {
+          "name": "List Categories",
+          "request": { "method": "GET", "url": "{{base_url}}/api/category" }
+        },
+        {
+          "name": "List Services",
+          "request": { "method": "GET", "url": "{{base_url}}/api/service?category_id=1" }
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"provider_id\": 1,\n  \"service_id\": 1,\n  \"booking_date\": \"2026-08-01\",\n  \"booking_time\": \"10:00\",\n  \"service_address\": \"456 Oak Lane\",\n  \"city\": \"Nashik\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"422001\",\n  \"problem_description\": \"Need full wiring repair\"\n}" }
+          }
+        },
+        {
+          "name": "Booking History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/booking/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/1/cancel",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Changed my mind\"\n}" }
+          }
+        },
+        {
+          "name": "Submit Review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/review",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": 1,\n  \"rating\": 5,\n  \"review_text\": \"Excellent service!\"\n}" }
+          }
+        },
+        {
+          "name": "Get Provider Reviews",
+          "request": { "method": "GET", "url": "{{base_url}}/api/review/provider/1" }
+        },
+        {
+          "name": "List Providers Directory",
+          "request": { "method": "GET", "url": "{{base_url}}/api/provider?city=Nashik" }
+        },
+        {
+          "name": "Get Provider Details",
+          "request": { "method": "GET", "url": "{{base_url}}/api/provider/1" }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/notification",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/notification/1/read",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+          }
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/payment/create",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": 1\n}" }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/payment/1/status"
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/payment/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provider",
+      "item": [
+        {
+          "name": "Register Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/provider/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Alice Electrician\",\n  \"phone\": \"9811111230\",\n  \"email\": \"alice_elec_test@example.com\",\n  \"password\": \"TestPass123!\",\n  \"city\": \"Nashik\",\n  \"service\": \"Electrician\",\n  \"experience\": \"5\",\n  \"description\": \"Expert electrical work\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/provider/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice_elec_test@example.com\",\n  \"password\": \"TestPass123!\"\n}" }
+          }
+        },
+        {
+          "name": "Get Provider Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/provider/profile",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Update Provider Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/provider/profile",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"business_name\": \"Alice Pro Electrical Services\",\n  \"owner_name\": \"Alice Electrician\",\n  \"experience_years\": 6,\n  \"description\": \"Updated electrician profile\"\n}" }
+          }
+        },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/provider/documents",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "document_file", "type": "file", "src": [] },
+                { "key": "document_type", "value": "Aadhaar", "type": "text" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Link Service to Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/service/provider",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"service_id\": 1,\n  \"experience_years\": 5,\n  \"service_charge\": 500.0\n}" }
+          }
+        },
+        {
+          "name": "List Linked Services",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/service/provider",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Unlink Service",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/service/provider/1",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Provider Booking History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/booking/provider/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Accept Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/provider/1/accept",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/provider/1/reject",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Start Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/provider/1/start",
+            "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+          }
+        },
+        {
+          "name": "Complete Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/provider/1/complete",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"final_price\": 500.0\n}" }
+          }
+        },
+        {
+          "name": "Cancel Booking (Provider)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/booking/provider/1/cancel",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Unavailable at this slot\"\n}" }
+          }
+        },
+        {
+          "name": "Reply to Review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/review/1/reply",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reply_text\": \"Thank you for the kind words!\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/admin/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"admin123\"\n}" }
+          }
+        },
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/dashboard",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "List All Providers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/providers?status=Pending",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Approve Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/admin/provider/1/approve",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Reject Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/admin/provider/1/reject",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Suspend Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/admin/provider/1/suspend",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "List All Customers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/customers",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Suspend Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/admin/customer/1/suspend",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/categories",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/category",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"category_name\": \"Pest Control\",\n  \"description\": \"Professional pest control services\"\n}" }
+          }
+        },
+        {
+          "name": "List Services",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/services",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Create Service",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/service",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"service_name\": \"Termite Treatment\",\n  \"category_id\": 8,\n  \"description\": \"Eco-friendly termite treatment\",\n  \"estimated_price\": 1500.0,\n  \"estimated_duration\": 180\n}" }
+          }
+        },
+        {
+          "name": "List Bookings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/bookings",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "List Reviews",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/reviews",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Reports",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/reports",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Activity Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/activity-logs",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/payment/1/refund",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

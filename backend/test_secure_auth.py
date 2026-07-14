@@ -33,13 +33,19 @@ def make_request(url, method="GET", data=None, token=None):
 def fetch_token_from_db(email, token_column):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT {token_column} FROM users WHERE email = %s", (email,))
-    row = cursor.fetchone()
+    if token_column == "verification_token":
+        cursor.execute("SELECT verification_token FROM email_verification_tokens WHERE email = %s AND verified = 0 LIMIT 1", (email,))
+        row = cursor.fetchone()
+        val = row["verification_token"] if row else None
+    elif token_column == "password_reset_token":
+        cursor.execute("SELECT reset_token FROM password_reset_tokens WHERE email = %s AND used = 0 LIMIT 1", (email,))
+        row = cursor.fetchone()
+        val = row["reset_token"] if row else None
+    else:
+        val = None
     cursor.close()
     conn.close()
-    if row:
-        return row[token_column]
-    return None
+    return val
 
 def ensure_category_and_location():
     """
@@ -66,8 +72,8 @@ def ensure_category_and_location():
     if not loc:
         print("No location found. Inserting test location...")
         cursor.execute(
-            "INSERT INTO locations (city, area, state, pincode) VALUES (%s, %s, %s, %s)",
-            ("TestCity", "TestArea", "TestState", "110022")
+            "INSERT INTO locations (city, state, pincode) VALUES (%s, %s, %s)",
+            ("TestCity", "TestState", "110022")
         )
         conn.commit()
         location_id = cursor.lastrowid
@@ -82,6 +88,7 @@ def test_customer_flow():
     print("=== STARTING CUSTOMER AUTH FLOW TESTS ===")
     rand_id = random.randint(10000, 99999)
     email = f"cust_{rand_id}@example.com"
+    phone = f"9{rand_id:05d}1234"
     password = "CustomerPassword123"
     
     # 1. Register Customer
@@ -89,7 +96,7 @@ def test_customer_flow():
         "full_name": "Test Customer Upgraded",
         "email": email,
         "password": password,
-        "phone": "9998887776",
+        "phone": phone,
         "address": "123 Test Ave",
         "city": "Testville",
         "pincode": "110022"
@@ -185,6 +192,7 @@ def test_provider_flow(category_id, location_id):
     print("=== STARTING PROVIDER AUTH FLOW TESTS ===")
     rand_id = random.randint(10000, 99999)
     email = f"prov_{rand_id}@example.com"
+    phone = f"8{rand_id:05d}5678"
     password = "ProviderPassword123"
     
     # 1. Register Provider
@@ -192,18 +200,13 @@ def test_provider_flow(category_id, location_id):
         "full_name": "Test Provider Upgraded",
         "email": email,
         "password": password,
-        "phone": "8887776665",
+        "phone": phone,
         "address": "456 Service St",
         "city": "Testville",
+        "state": "TestState",
         "pincode": "110022",
-        "category_id": category_id,
-        "location_id": location_id,
-        "business_name": "Upgraded Repairs",
-        "experience": "5 Years",
-        "description": "Premium service repairs",
-        "price_per_hour": 150.00,
-        "availability": "9 AM - 6 PM",
-        "profile_image": "http://example.com/profile.jpg"
+        "experience_years": 5,
+        "description": "Premium service repairs"
     }
     
     status, res = make_request(f"{BASE_URL}/api/provider/register", "POST", reg_data)

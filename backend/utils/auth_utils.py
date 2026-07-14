@@ -35,7 +35,7 @@ def generate_access_token(user_id, email, role, provider_id=None):
         payload["provider_id"] = provider_id
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
-def generate_and_save_refresh_token(user_id):
+def generate_and_save_refresh_token(user_id, role):
     """
     Generates a secure cryptographically random Refresh Token and saves it to the database.
     """
@@ -45,19 +45,29 @@ def generate_and_save_refresh_token(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Clean up expired refresh tokens first
-    cursor.execute(
-        "DELETE FROM refresh_tokens WHERE expires_at < NOW()"
-    )
-    
-    # Save the new refresh token
-    cursor.execute(
-        "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)",
-        (user_id, token, expires_at)
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        # Clean up expired refresh tokens first
+        cursor.execute(
+            "DELETE FROM refresh_tokens WHERE expires_at < NOW()"
+        )
+        
+        # Save the new refresh token
+        normalized_role = role.lower()
+        if "admin" in normalized_role:
+            query = "INSERT INTO refresh_tokens (admin_id, refresh_token, expires_at) VALUES (%s, %s, %s)"
+        elif "provider" in normalized_role:
+            query = "INSERT INTO refresh_tokens (provider_id, refresh_token, expires_at) VALUES (%s, %s, %s)"
+        else:
+            query = "INSERT INTO refresh_tokens (customer_id, refresh_token, expires_at) VALUES (%s, %s, %s)"
+            
+        cursor.execute(query, (user_id, token, expires_at))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+        conn.close()
     
     return token
 
