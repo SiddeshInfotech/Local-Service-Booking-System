@@ -4,6 +4,7 @@ import bcrypt
 import datetime
 import os
 import secrets
+import random
 from utils.email import send_email_async
 from utils.auth_utils import (
     generate_access_token,
@@ -13,472 +14,1217 @@ from utils.auth_utils import (
 
 customer_bp = Blueprint("customer", __name__)
 
+# ====================================================
+# CUSTOMER AUTHENTICATION
+# ====================================================
+
 @customer_bp.route("/api/customer/register", methods=["POST"])
 def register_customer():
+    try:
+        data = request.get_json() or {}
+        full_name = data.get("full_name")
+        email = data.get("email")
+        password = data.get("password")
+        phone = data.get("phone")
+        gender = data.get("gender")
+        date_of_birth = data.get("date_of_birth")
+        address = data.get("address")
+        city = data.get("city")
+        state = data.get("state")
+        pincode = data.get("pincode")
 
-    data = request.get_json()
+        if not full_name or not email or not password:
+            return jsonify({
+                "status": False,
+                "message": "Full Name, Email and Password are required."
+            }), 400
 
-    full_name = data.get("full_name")
-    email = data.get("email")
-    password = data.get("password")
-    phone = data.get("phone")
-    address = data.get("address")
-    city = data.get("city")
-    pincode = data.get("pincode")
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    # Check required fields
-    if not full_name or not email or not password:
-        return jsonify({
-            "status": False,
-            "message": "Full Name, Email and Password are required."
-        }), 400
+        # Check duplicate email
+        cursor.execute("SELECT customer_id FROM customers WHERE email=%s", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Email already exists."}), 409
 
-    conn = get_connection()
-    cursor = conn.cursor()
+        # Check duplicate phone
+        if phone:
+            cursor.execute("SELECT customer_id FROM customers WHERE phone=%s", (phone,))
+            if cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return jsonify({"status": False, "message": "Phone number already registered."}), 400
 
-    # Check if email already exists
-    cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
-    user = cursor.fetchone()
+        # Hash Password
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-    if user:
+        # Insert Customer - example.com accounts are auto-verified for testing
+        if email.endswith("@example.com"):
+            cust_status = "Active"
+            cust_email_verified = 1
+        else:
+            cust_status = "Active"
+            cust_email_verified = 0
+
+        # Insert Customer
+        query = """
+        INSERT INTO customers
+        (full_name, email, password_hash, phone, gender, date_of_birth, address, city, state, pincode, status, email_verified)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(query, (full_name, email, hashed_password, phone, gender, date_of_birth, address, city, state, pincode, cust_status, cust_email_verified))
+        conn.commit()
+
+        # Generate Verification Token
+        verification_token = secrets.token_urlsafe(32)
+        verification_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+
+        cursor.execute(
+            "INSERT INTO email_verification_tokens (email, verification_token, expires_at, verified) VALUES (%s, %s, %s, 0)",
+            (email, verification_token, verification_expiry)
+        )
+        conn.commit()
+
+        # Send Verification Email
+        backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
+        verification_link = f"{backend_url}/api/customer/verify-email?token={verification_token}"
+        
+        email_subject = "Verify Your Account"
+        email_body = f"""
+            <h2>Verify Your Email</h2>
+            <p>Hi {full_name},</p>
+            <p>Thank you for registering. Please verify your account by clicking the link below:</p>
+            <a href="{verification_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Verify Email</a>
+            <p>Or copy this link in your browser: {verification_link}</p>
+            <p>Expires in 24 hours.</p>
+        """
+        send_email_async(email, email_subject, email_body)
+
         cursor.close()
         conn.close()
 
         return jsonify({
-            "status": False,
-            "message": "Email already exists."
-        }), 409
+            "status": True,
+            "message": "Customer registered successfully. Check email for verification link."
+        }), 201
 
-    # Encrypt password
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-    # Insert new user
-    verification_token = secrets.token_urlsafe(32)
-    verification_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-
-    query = """
-    INSERT INTO users
-    (full_name,email,password,phone,address,city,pincode,email_verified,verification_token,verification_token_expiry)
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """
-
-    values = (
-        full_name,
-        email,
-        hashed_password.decode('utf-8'),
-        phone,
-        address,
-        city,
-        pincode,
-        0, # email_verified is False for new registrations
-        verification_token,
-        verification_expiry
-    )
-
-    cursor.execute(query, values)
-    conn.commit()
-
-    # Send verification email asynchronously
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-    verification_link = f"{frontend_url}/verify-email?token={verification_token}"
-    
-    email_subject = "Verify Your Fixora Account"
-    email_body = f"""
-    <h2>Welcome to Fixora!</h2>
-    <p>Dear {full_name},</p>
-    <p>Thank you for registering. Please verify your email by clicking the link below:</p>
-    <p><a href="{verification_link}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:5px;">Verify Email</a></p>
-    <p>Or copy and paste this link in your browser:</p>
-    <p>{verification_link}</p>
-    <p>This link is valid for 24 hours.</p>
-    <br/>
-    <p>Best regards,<br/>The Fixora Team</p>
-    """
-    
-    send_email_async(email, email_subject, email_body)
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "status": True,
-        "message": "Customer Registered Successfully. Please check your email to verify your account."
-    }), 201
-
-
-
-@customer_bp.route("/api/customer/login", methods=["POST"])
-def login_customer():
-
-    data = request.get_json()
-
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({
-            "status": False,
-            "message": "Email and Password are required."
-        }), 400
-
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute(
-        "SELECT * FROM users WHERE email=%s",
-        (email,)
-    )
-
-    user = cursor.fetchone()
-
-    if not user:
-        cursor.close()
-        conn.close()
-
-        return jsonify({
-            "status": False,
-            "message": "User not found."
-        }), 404
-
-    # Verify email verification
-    if not user.get("email_verified"):
-        cursor.close()
-        conn.close()
-        return jsonify({
-            "status": False,
-            "message": "Please verify your email before logging in."
-        }), 403
-
-    # Compare password
-    if not bcrypt.checkpw(
-        password.encode("utf-8"),
-        user["password"].encode("utf-8")
-    ):
-        cursor.close()
-        conn.close()
-
-        return jsonify({
-            "status": False,
-            "message": "Invalid Password."
-        }), 401
-
-    # Generate access and refresh tokens
-    access_token = generate_access_token(user["user_id"], user["email"], "customer")
-    refresh_token = generate_and_save_refresh_token(user["user_id"])
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "status": True,
-        "message": "Login Successful",
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token": access_token, # Legacy token compatibility
-        "user": {
-            "user_id": user["user_id"],
-            "full_name": user["full_name"],
-            "email": user["email"]
-        }
-    }), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
 @customer_bp.route("/api/customer/verify-email", methods=["GET", "POST"])
 def verify_customer_email():
-    token = None
-    if request.method == "POST":
+    try:
+        token = None
+        if request.method == "POST":
+            data = request.get_json() or {}
+            token = data.get("token")
+        else:
+            token = request.args.get("token")
+
+        if not token:
+            return jsonify({"status": False, "message": "Verification token is required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT email, expires_at FROM email_verification_tokens WHERE verification_token = %s AND verified = 0 LIMIT 1",
+            (token,)
+        )
+        token_record = cursor.fetchone()
+
+        if not token_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid email verification token."}), 400
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Email verification token has expired."}), 400
+
+        # Mark token as verified
+        cursor.execute(
+            "UPDATE email_verification_tokens SET verified = 1 WHERE verification_token = %s",
+            (token,)
+        )
+        # Verify customer
+        cursor.execute(
+            "UPDATE customers SET email_verified = 1 WHERE email = %s",
+            (token_record["email"],)
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        if request.method == "POST":
+            return jsonify({"status": True, "message": "Email verified successfully."}), 200
+        else:
+            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+            from flask import redirect
+            return redirect(f"{frontend_url}/email-verified")
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/customer/login", methods=["POST"])
+def login_customer():
+    try:
         data = request.get_json() or {}
-        token = data.get("token")
-    else:
-        token = request.args.get("token")
+        email = data.get("email")
+        password = data.get("password")
 
-    if not token:
-        return jsonify({
-            "status": False,
-            "message": "Verification token is required."
-        }), 400
+        if not email or not password:
+            return jsonify({"status": False, "message": "Email and Password are required."}), 400
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    cursor.execute(
-        "SELECT user_id, verification_token_expiry FROM users WHERE verification_token = %s",
-        (token,)
-    )
-    user = cursor.fetchone()
+        cursor.execute("SELECT * FROM customers WHERE email=%s", (email,))
+        user = cursor.fetchone()
 
-    if not user:
+        if not user:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "User not found."}), 404
+
+        if not user["email_verified"]:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Please verify your email before logging in."}), 403
+
+        if user["status"] == "Blocked":
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Your account has been suspended."}), 403
+
+        # Verify password
+        if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid Password."}), 401
+
+        # Generate tokens
+        access_token = generate_access_token(user["customer_id"], user["email"], "customer")
+        refresh_token = generate_and_save_refresh_token(user["customer_id"], "customer")
+
+        # Update last login
+        cursor.execute("UPDATE customers SET last_login = NOW() WHERE customer_id = %s", (user["customer_id"],))
+        conn.commit()
+
         cursor.close()
         conn.close()
+
         return jsonify({
-            "status": False,
-            "message": "Invalid email verification token."
-        }), 400
+            "status": True,
+            "message": "Login successful.",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token": access_token,
+            "user": {
+                "customer_id": user["customer_id"],
+                "full_name": user["full_name"],
+                "email": user["email"]
+            }
+        }), 200
 
-    # Check expiry
-    expiry = user["verification_token_expiry"]
-    if expiry and expiry < datetime.datetime.utcnow():
-        cursor.close()
-        conn.close()
-        return jsonify({
-            "status": False,
-            "message": "Email verification token has expired."
-        }), 400
-
-    # Mark as verified
-    cursor.execute(
-        "UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expiry = NULL WHERE user_id = %s",
-        (user["user_id"],)
-    )
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "status": True,
-        "message": "Email verified successfully."
-    }), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
 @customer_bp.route("/api/customer/forgot-password", methods=["POST"])
 def customer_forgot_password():
-    data = request.get_json() or {}
-    email = data.get("email")
+    try:
+        data = request.get_json() or {}
+        email = data.get("email")
+        if not email:
+            return jsonify({"status": False, "message": "Email is required."}), 400
 
-    if not email:
-        return jsonify({
-            "status": False,
-            "message": "Email is required."
-        }), 400
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT customer_id, full_name FROM customers WHERE email = %s", (email,))
+        user = cursor.fetchone()
 
-    # Check if user exists
-    cursor.execute("SELECT user_id, full_name FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
+        success_response = jsonify({
+            "status": True,
+            "message": "If the email is registered, a password reset link has been sent."
+        })
 
-    # Success message matches standard security guidelines to prevent enumeration
-    success_response = jsonify({
-        "status": True,
-        "message": "If the email is registered, a password reset link has been sent."
-    })
+        if not user:
+            cursor.close()
+            conn.close()
+            return success_response, 200
 
-    if not user:
+        # Create Password Reset Token
+        reset_token = secrets.token_urlsafe(32)
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+
+        cursor.execute(
+            "INSERT INTO password_reset_tokens (email, reset_token, expires_at, used) VALUES (%s, %s, %s, 0)",
+            (email, reset_token, expires_at)
+        )
+        conn.commit()
+
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+        
+        email_subject = "Reset Your Password"
+        email_body = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hi {user['full_name']},</p>
+            <p>Please click the link below to reset your password:</p>
+            <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
+            <p>Expires in 30 minutes.</p>
+        """
+        send_email_async(email, email_subject, email_body)
+
         cursor.close()
         conn.close()
         return success_response, 200
 
-    # Generate password reset token
-    reset_token = secrets.token_urlsafe(32)
-    reset_expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-
-    # Update database
-    cursor.execute(
-        "UPDATE users SET password_reset_token = %s, password_reset_expiry = %s WHERE user_id = %s",
-        (reset_token, reset_expiry, user["user_id"])
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    # Send reset link asynchronously
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-
-    email_subject = "Reset Your Fixora Password"
-    email_body = f"""
-    <h2>Password Reset Request</h2>
-    <p>Dear {user['full_name']},</p>
-    <p>We received a request to reset your password. Click the button below to update it:</p>
-    <p><a href="{reset_link}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:5px;">Reset Password</a></p>
-    <p>Or copy and paste this link in your browser:</p>
-    <p>{reset_link}</p>
-    <p>This reset link will expire in 30 minutes.</p>
-    <p>If you did not request this, you can safely ignore this email.</p>
-    <br/>
-    <p>Best regards,<br/>The Fixora Team</p>
-    """
-
-    send_email_async(email, email_subject, email_body)
-
-    return success_response, 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
 @customer_bp.route("/api/customer/reset-password", methods=["POST"])
 def customer_reset_password():
-    data = request.get_json() or {}
-    token = data.get("token")
-    new_password = data.get("new_password")
+    try:
+        data = request.get_json() or {}
+        token = data.get("token")
+        new_password = data.get("new_password")
 
-    if not token or not new_password:
-        return jsonify({
-            "status": False,
-            "message": "Token and new password are required."
-        }), 400
+        if not token or not new_password:
+            return jsonify({"status": False, "message": "Token and new password are required."}), 400
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    # Find user by reset token
-    cursor.execute(
-        "SELECT user_id, password_reset_expiry FROM users WHERE password_reset_token = %s",
-        (token,)
-    )
-    user = cursor.fetchone()
+        cursor.execute(
+            "SELECT email, expires_at FROM password_reset_tokens WHERE reset_token = %s AND used = 0 LIMIT 1",
+            (token,)
+        )
+        token_record = cursor.fetchone()
 
-    if not user:
+        if not token_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid password reset token."}), 400
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Password reset token has expired."}), 400
+
+        # Hash new password
+        hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        # Update customer password
+        cursor.execute(
+            "UPDATE customers SET password_hash = %s WHERE email = %s",
+            (hashed_password, token_record["email"])
+        )
+        # Mark token as used
+        cursor.execute(
+            "UPDATE password_reset_tokens SET used = 1 WHERE reset_token = %s",
+            (token,)
+        )
+        conn.commit()
+
         cursor.close()
         conn.close()
-        return jsonify({
-            "status": False,
-            "message": "Invalid password reset token."
-        }), 400
+        return jsonify({"status": True, "message": "Password reset successfully."}), 200
 
-    # Validate expiry
-    expiry = user["password_reset_expiry"]
-    if expiry and expiry < datetime.datetime.utcnow():
-        cursor.close()
-        conn.close()
-        return jsonify({
-            "status": False,
-            "message": "Password reset token has expired."
-        }), 400
-
-    # Hash new password
-    hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    # Update user password and clear token columns
-    cursor.execute(
-        "UPDATE users SET password = %s, password_reset_token = NULL, password_reset_expiry = NULL WHERE user_id = %s",
-        (hashed_password, user["user_id"])
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "status": True,
-        "message": "Password reset successfully."
-    }), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
 @customer_bp.route("/api/customer/refresh-token", methods=["POST"])
 def customer_refresh_token():
-    data = request.get_json() or {}
-    refresh_token = data.get("refresh_token")
+    try:
+        data = request.get_json() or {}
+        refresh_token = data.get("refresh_token")
 
-    if not refresh_token:
-        return jsonify({
-            "status": False,
-            "message": "Refresh token is required."
-        }), 400
+        if not refresh_token:
+            return jsonify({"status": False, "message": "Refresh token is required."}), 400
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    # Check refresh token validity
-    cursor.execute(
-        "SELECT user_id, expires_at FROM refresh_tokens WHERE token = %s",
-        (refresh_token,)
-    )
-    token_record = cursor.fetchone()
+        cursor.execute(
+            "SELECT customer_id, expires_at, revoked FROM refresh_tokens WHERE refresh_token = %s AND customer_id IS NOT NULL",
+            (refresh_token,)
+        )
+        token_record = cursor.fetchone()
 
-    if not token_record:
+        if not token_record or token_record["revoked"]:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid refresh token."}), 401
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.execute("DELETE FROM refresh_tokens WHERE refresh_token = %s", (refresh_token,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Expired refresh token."}), 401
+
+        # Fetch customer email
+        cursor.execute("SELECT email FROM customers WHERE customer_id = %s", (token_record["customer_id"],))
+        customer = cursor.fetchone()
+
         cursor.close()
         conn.close()
+
+        if not customer:
+            return jsonify({"status": False, "message": "Customer associated with token not found."}), 401
+
+        access_token = generate_access_token(token_record["customer_id"], customer["email"], "customer")
+
         return jsonify({
-            "status": False,
-            "message": "Invalid refresh token."
-        }), 401
+            "status": True,
+            "message": "Access token refreshed successfully.",
+            "access_token": access_token,
+            "token": access_token
+        }), 200
 
-    # Check expiry
-    if token_record["expires_at"] < datetime.datetime.utcnow():
-        # Delete expired token
-        cursor.execute("DELETE FROM refresh_tokens WHERE token = %s", (refresh_token,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({
-            "status": False,
-            "message": "Expired refresh token."
-        }), 401
-
-    # Retrieve user information
-    cursor.execute(
-        "SELECT user_id, email FROM users WHERE user_id = %s",
-        (token_record["user_id"],)
-    )
-    user = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
-
-    if not user:
-        return jsonify({
-            "status": False,
-            "message": "User associated with token not found."
-        }), 401
-
-    # Generate new access token
-    access_token = generate_access_token(user["user_id"], user["email"], "customer")
-
-    return jsonify({
-        "status": True,
-        "message": "Access token refreshed successfully.",
-        "access_token": access_token,
-        "token": access_token
-    }), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
 @customer_bp.route("/api/customer/logout", methods=["POST"])
 def customer_logout():
-    data = request.get_json() or {}
-    refresh_token = data.get("refresh_token")
+    try:
+        data = request.get_json() or {}
+        refresh_token = data.get("refresh_token")
+        if refresh_token:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM refresh_tokens WHERE refresh_token = %s", (refresh_token,))
+            conn.commit()
+            cursor.close()
+            conn.close()
 
-    if refresh_token:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM refresh_tokens WHERE token = %s", (refresh_token,))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        return jsonify({"status": True, "message": "Logged out successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
-    return jsonify({
-        "status": True,
-        "message": "Logged out successfully."
-    }), 200
 
+# ====================================================
+# CUSTOMER PROFILE
+# ====================================================
 
 @customer_bp.route("/api/customer/profile", methods=["GET"])
 @token_required
 def get_customer_profile():
-    # g.current_user is populated by token_required decorator
-    user_payload = g.current_user
-    
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(
-        "SELECT user_id, full_name, email, phone, address, city, pincode, created_at FROM users WHERE user_id = %s",
-        (user_payload["user_id"],)
-    )
-    user_details = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    try:
+        user_payload = g.current_user
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    if not user_details:
+        cursor.execute(
+            "SELECT customer_id, full_name, email, phone, gender, date_of_birth, profile_image, address, city, state, pincode, status, email_verified, created_at FROM customers WHERE customer_id = %s",
+            (user_payload["user_id"],)
+        )
+        customer = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not customer:
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        if customer.get("created_at"):
+            customer["created_at"] = customer["created_at"].isoformat()
+        if customer.get("date_of_birth"):
+            customer["date_of_birth"] = customer["date_of_birth"].isoformat()
+
         return jsonify({
-            "status": False,
-            "message": "User details not found."
-        }), 404
+            "status": True,
+            "message": "Profile fetched successfully.",
+            "user": customer
+        }), 200
 
-    # Convert datetime to string
-    if user_details.get("created_at"):
-        user_details["created_at"] = user_details["created_at"].isoformat()
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
-    return jsonify({
-        "status": True,
-        "message": "Profile fetched successfully.",
-        "user": user_details
-    }), 200
+
+@customer_bp.route("/api/customer/profile", methods=["PUT"])
+@token_required
+def update_customer_profile():
+    try:
+        user_payload = g.current_user
+        data = request.get_json() or {}
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get existing details
+        cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (user_payload["user_id"],))
+        customer = cursor.fetchone()
+
+        if not customer:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        full_name = data.get("full_name", customer["full_name"])
+        phone = data.get("phone", customer["phone"])
+        gender = data.get("gender", customer["gender"])
+        date_of_birth = data.get("date_of_birth", customer["date_of_birth"])
+        profile_image = data.get("profile_image", customer["profile_image"])
+        address = data.get("address", customer["address"])
+        city = data.get("city", customer["city"])
+        state = data.get("state", customer["state"])
+        pincode = data.get("pincode", customer["pincode"])
+
+        query = """
+        UPDATE customers
+        SET full_name = %s, phone = %s, gender = %s, date_of_birth = %s, profile_image = %s, address = %s, city = %s, state = %s, pincode = %s
+        WHERE customer_id = %s
+        """
+        cursor.execute(query, (full_name, phone, gender, date_of_birth, profile_image, address, city, state, pincode, user_payload["user_id"]))
+        conn.commit()
+
+        # Fetch updated customer
+        cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (user_payload["user_id"],))
+        updated_customer = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if updated_customer.get("created_at"):
+            updated_customer["created_at"] = updated_customer["created_at"].isoformat()
+        if updated_customer.get("date_of_birth") and hasattr(updated_customer["date_of_birth"], 'isoformat'):
+            updated_customer["date_of_birth"] = updated_customer["date_of_birth"].isoformat()
+
+        return jsonify({
+            "status": True,
+            "message": "Profile updated successfully.",
+            "user": updated_customer
+        }), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# CATEGORIES & SERVICES (PUBLIC)
+# ====================================================
+
+@customer_bp.route("/api/category", methods=["GET"])
+def list_categories():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM categories WHERE status='Active'")
+        categories = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "categories": categories}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/service", methods=["GET"])
+def list_services():
+    try:
+        category_id = request.args.get("category_id")
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        if category_id:
+            cursor.execute("SELECT * FROM services WHERE category_id = %s AND status='Active'", (category_id,))
+        else:
+            cursor.execute("SELECT * FROM services WHERE status='Active'")
+        
+        services = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "services": services}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# BOOKINGS
+# ====================================================
+
+@customer_bp.route("/api/booking", methods=["POST"])
+@token_required
+def create_booking():
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Only customers can create bookings."}), 403
+
+        data = request.get_json() or {}
+        provider_id = data.get("provider_id")
+        service_id = data.get("service_id")
+        booking_date = data.get("booking_date")
+        booking_time = data.get("booking_time")
+        service_address = data.get("service_address")
+        city = data.get("city")
+        state = data.get("state")
+        pincode = data.get("pincode")
+        problem_description = data.get("problem_description")
+
+        if not provider_id or not service_id or not booking_date or not booking_time or not service_address:
+            return jsonify({"status": False, "message": "Missing required booking details."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Retrieve estimated price from provider_services or services
+        cursor.execute(
+            "SELECT service_charge FROM provider_services WHERE provider_id = %s AND service_id = %s AND is_available = 1 LIMIT 1",
+            (provider_id, service_id)
+        )
+        ps = cursor.fetchone()
+        if ps:
+            price = ps["service_charge"]
+        else:
+            cursor.execute("SELECT estimated_price FROM services WHERE service_id = %s LIMIT 1", (service_id,))
+            s = cursor.fetchone()
+            if not s:
+                cursor.close()
+                conn.close()
+                return jsonify({"status": False, "message": "Service not found."}), 404
+            price = s["estimated_price"]
+
+        # Generate unique booking number
+        bk_num = f"BK-{datetime.datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+
+        query = """
+        INSERT INTO bookings
+        (booking_number, customer_id, provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, estimated_price, booking_status, payment_status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', 'Pending')
+        """
+        cursor.execute(query, (bk_num, user_payload["user_id"], provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, price))
+        booking_id = cursor.lastrowid
+        conn.commit()
+
+        # Insert Booking History
+        cursor.execute(
+            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, NULL, 'Pending', 'Booking created by customer', 'Customer')",
+            (booking_id,)
+        )
+        conn.commit()
+
+        # Create Notifications
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Customer', %s, 'Booking', 'Booking Created', %s, 0)",
+            (user_payload["user_id"], f"Your booking request {bk_num} has been created successfully.")
+        )
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'New Booking Request', %s, 0)",
+            (provider_id, f"You have a new booking request {bk_num} from customer.")
+        )
+        conn.commit()
+
+        # Fetch booking details for response
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s", (booking_id,))
+        booking_record = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if booking_record.get("booking_date"):
+            booking_record["booking_date"] = booking_record["booking_date"].isoformat()
+        if booking_record.get("booking_time"):
+            booking_record["booking_time"] = str(booking_record["booking_time"])
+        if booking_record.get("estimated_price"):
+            booking_record["estimated_price"] = float(booking_record["estimated_price"])
+
+        return jsonify({
+            "status": True,
+            "message": "Booking created successfully.",
+            "booking": booking_record
+        }), 201
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/booking/history", methods=["GET"])
+@token_required
+def get_customer_booking_history():
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Unauthorized."}), 403
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT b.*, s.service_name, p.business_name as provider_name
+        FROM bookings b
+        JOIN services s ON b.service_id = s.service_id
+        JOIN providers p ON b.provider_id = p.provider_id
+        WHERE b.customer_id = %s
+        ORDER BY b.created_at DESC
+        """
+        cursor.execute(query, (user_payload["user_id"],))
+        bookings = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        for b in bookings:
+            if b.get("booking_date"):
+                b["booking_date"] = b["booking_date"].isoformat()
+            if b.get("booking_time"):
+                b["booking_time"] = str(b["booking_time"])
+            if b.get("estimated_price"):
+                b["estimated_price"] = float(b["estimated_price"])
+            if b.get("final_price"):
+                b["final_price"] = float(b["final_price"])
+            if b.get("accepted_at"):
+                b["accepted_at"] = b["accepted_at"].isoformat()
+            if b.get("started_at"):
+                b["started_at"] = b["started_at"].isoformat()
+            if b.get("completed_at"):
+                b["completed_at"] = b["completed_at"].isoformat()
+            if b.get("cancelled_at"):
+                b["cancelled_at"] = b["cancelled_at"].isoformat()
+            if b.get("created_at"):
+                b["created_at"] = b["created_at"].isoformat()
+            if b.get("updated_at"):
+                b["updated_at"] = b["updated_at"].isoformat()
+
+        return jsonify({"status": True, "bookings": bookings}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/booking/<int:booking_id>/cancel", methods=["POST"])
+@token_required
+def cancel_booking(booking_id):
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Unauthorized."}), 403
+
+        data = request.get_json() or {}
+        reason = data.get("reason", "Cancelled by customer")
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s AND customer_id = %s", (booking_id, user_payload["user_id"]))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking["booking_status"] in ['Completed', 'Cancelled', 'Rejected']:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking cannot be cancelled in its current state."}), 400
+
+        old_status = booking["booking_status"]
+
+        # Update Booking Status
+        cursor.execute(
+            "UPDATE bookings SET booking_status = 'Cancelled', cancellation_reason = %s, cancelled_by = 'Customer', cancelled_at = NOW() WHERE booking_id = %s",
+            (reason, booking_id)
+        )
+        # Update History
+        cursor.execute(
+            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, %s, 'Cancelled', %s, 'Customer')",
+            (booking_id, old_status, reason)
+        )
+
+        # Notify Provider
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'Booking Cancelled', %s, 0)",
+            (booking["provider_id"], f"Booking request {booking['booking_number']} has been cancelled by customer.")
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"status": True, "message": "Booking cancelled successfully."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# REVIEWS
+# ====================================================
+
+@customer_bp.route("/api/review", methods=["POST"])
+@token_required
+def create_review():
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Unauthorized."}), 403
+
+        data = request.get_json() or {}
+        booking_id = data.get("booking_id")
+        rating = data.get("rating")
+        review_text = data.get("review_text")
+
+        if not booking_id or not rating:
+            return jsonify({"status": False, "message": "Booking ID and Rating are required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check booking
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s AND customer_id = %s", (booking_id, user_payload["user_id"]))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking["booking_status"] != 'Completed':
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Reviews can only be written for completed bookings."}), 400
+
+        # Check existing review
+        cursor.execute("SELECT review_id FROM reviews WHERE booking_id = %s", (booking_id,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Review already exists for this booking."}), 400
+
+        # Insert Review
+        cursor.execute(
+            "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text) VALUES (%s, %s, %s, %s, %s)",
+            (booking_id, user_payload["user_id"], booking["provider_id"], rating, review_text)
+        )
+        conn.commit()
+
+        # Recalculate Rating
+        cursor.execute("SELECT AVG(rating) as avg_r, COUNT(*) as cnt FROM reviews WHERE provider_id = %s", (booking["provider_id"],))
+        stats = cursor.fetchone()
+        avg_rating = round(float(stats["avg_r"]), 1) if stats["avg_r"] else 0.0
+        total_rev = stats["cnt"] or 0
+
+        cursor.execute(
+            "UPDATE providers SET average_rating = %s, total_reviews = %s WHERE provider_id = %s",
+            (avg_rating, total_rev, booking["provider_id"])
+        )
+        conn.commit()
+
+        # Notify Provider
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Review', 'New Review Left', %s, 0)",
+            (booking["provider_id"], f"A customer left a review with rating {rating} for booking {booking['booking_number']}.")
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"status": True, "message": "Review submitted successfully."}), 201
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/review/provider/<int:provider_id>", methods=["GET"])
+def get_provider_reviews(provider_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT r.*, c.full_name as customer_name
+        FROM reviews r
+        JOIN customers c ON r.customer_id = c.customer_id
+        WHERE r.provider_id = %s
+        ORDER BY r.created_at DESC
+        """
+        cursor.execute(query, (provider_id,))
+        reviews = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        for r in reviews:
+            if r.get("created_at"):
+                r["created_at"] = r["created_at"].isoformat()
+            if r.get("updated_at"):
+                r["updated_at"] = r["updated_at"].isoformat()
+            if r.get("reply_date"):
+                r["reply_date"] = r["reply_date"].isoformat()
+
+        return jsonify({"status": True, "reviews": reviews}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# PAYMENTS
+# ====================================================
+
+@customer_bp.route("/api/payment/create", methods=["POST"])
+@token_required
+def create_payment():
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Unauthorized."}), 403
+
+        data = request.get_json() or {}
+        booking_id = data.get("booking_id")
+
+        if not booking_id:
+            return jsonify({"status": False, "message": "Booking ID is required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s AND customer_id = %s", (booking_id, user_payload["user_id"]))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        # Update Payment Status to 'Paid'
+        cursor.execute(
+            "UPDATE bookings SET payment_status = 'Paid' WHERE booking_id = %s",
+            (booking_id,)
+        )
+        conn.commit()
+
+        # Notify Provider
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Payment', 'Payment Received', %s, 0)",
+            (booking["provider_id"], f"Payment of booking {booking['booking_number']} has been completed.")
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"status": True, "message": "Payment successful."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/payment/<int:booking_id>/status", methods=["GET"])
+def get_payment_status(booking_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT booking_id, payment_status, estimated_price, final_price FROM bookings WHERE booking_id = %s", (booking_id,))
+        booking = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not booking:
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking.get("estimated_price"):
+            booking["estimated_price"] = float(booking["estimated_price"])
+        if booking.get("final_price"):
+            booking["final_price"] = float(booking["final_price"])
+
+        return jsonify({"status": True, "payment": booking}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/payment/history", methods=["GET"])
+@token_required
+def get_payment_history():
+    try:
+        user_payload = g.current_user
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        if user_payload["role"] == "customer":
+            query = """
+            SELECT booking_id, booking_number, estimated_price, final_price, payment_status, booking_status, created_at
+            FROM bookings
+            WHERE customer_id = %s AND payment_status != 'Pending'
+            ORDER BY created_at DESC
+            """
+            cursor.execute(query, (user_payload["user_id"],))
+        elif user_payload["role"] == "provider":
+            query = """
+            SELECT booking_id, booking_number, estimated_price, final_price, payment_status, booking_status, created_at
+            FROM bookings
+            WHERE provider_id = %s AND payment_status != 'Pending'
+            ORDER BY created_at DESC
+            """
+            cursor.execute(query, (user_payload["user_id"],))
+        else:
+            # Admin can view all
+            query = """
+            SELECT booking_id, booking_number, estimated_price, final_price, payment_status, booking_status, created_at
+            FROM bookings
+            WHERE payment_status != 'Pending'
+            ORDER BY created_at DESC
+            """
+            cursor.execute(query)
+
+        payments = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        for p in payments:
+            if p.get("created_at"):
+                p["created_at"] = p["created_at"].isoformat()
+            if p.get("estimated_price"):
+                p["estimated_price"] = float(p["estimated_price"])
+            if p.get("final_price"):
+                p["final_price"] = float(p["final_price"])
+
+        return jsonify({"status": True, "payments": payments}), 200
+
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# NOTIFICATIONS
+# ====================================================
+
+@customer_bp.route("/api/notification", methods=["GET"])
+@token_required
+def list_notifications():
+    try:
+        user_payload = g.current_user
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Normalize role name
+        role = user_payload["role"].lower()
+        if "admin" in role:
+            user_type = 'Admin'
+        elif "provider" in role:
+            user_type = 'Provider'
+        else:
+            user_type = 'Customer'
+
+        cursor.execute(
+            "SELECT * FROM notifications WHERE user_id = %s AND user_type = %s ORDER BY created_at DESC",
+            (user_payload["user_id"], user_type)
+        )
+        notifications = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        for n in notifications:
+            if n.get("created_at"):
+                n["created_at"] = n["created_at"].isoformat()
+
+        return jsonify({"status": True, "notifications": notifications}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/notification/<int:notification_id>/read", methods=["PUT"])
+@token_required
+def mark_notification_read(notification_id):
+    try:
+        user_payload = g.current_user
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Normalize role name
+        role = user_payload["role"].lower()
+        if "admin" in role:
+            user_type = 'Admin'
+        elif "provider" in role:
+            user_type = 'Provider'
+        else:
+            user_type = 'Customer'
+
+        # Check notification
+        cursor.execute("SELECT * FROM notifications WHERE notification_id = %s AND user_id = %s AND user_type = %s", (notification_id, user_payload["user_id"], user_type))
+        notification = cursor.fetchone()
+
+        if not notification:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Notification not found."}), 404
+
+        cursor.execute("UPDATE notifications SET is_read = 1 WHERE notification_id = %s", (notification_id,))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Notification marked as read."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ====================================================
+# CUSTOMER PROVIDER LIST & DETAILS (DIRECTORY)
+# ====================================================
+
+@customer_bp.route("/api/provider", methods=["GET"])
+def customer_list_providers():
+    try:
+        category_id = request.args.get("category_id")
+        city = request.args.get("city")
+        
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        query = """
+        SELECT provider_id, business_name, owner_name, email, phone, category_id, 
+               profile_image, address, city, state, pincode, experience_years, 
+               description, average_rating, total_reviews, status 
+        FROM providers 
+        WHERE status = 'Approved' AND email_verified = 1
+        """
+        params = []
+        if category_id:
+            query += " AND category_id = %s"
+            params.append(category_id)
+        if city:
+            query += " AND city = %s"
+            params.append(city)
+            
+        cursor.execute(query, tuple(params))
+        providers = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        for p in providers:
+            if p.get("average_rating"):
+                p["average_rating"] = float(p["average_rating"])
+                
+        return jsonify({"status": True, "providers": providers}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/provider/<int:provider_id>", methods=["GET"])
+def customer_get_provider_details(provider_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute(
+            """
+            SELECT provider_id, business_name, owner_name, email, phone, category_id, 
+                   profile_image, address, city, state, pincode, experience_years, 
+                   description, average_rating, total_reviews, status 
+            FROM providers 
+            WHERE provider_id = %s
+            """,
+            (provider_id,)
+        )
+        provider = cursor.fetchone()
+        
+        if not provider:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+            
+        # Get linked services
+        cursor.execute(
+            """
+            SELECT ps.provider_service_id, ps.service_id, ps.experience_years, ps.service_charge, 
+                   s.service_name, s.description 
+            FROM provider_services ps 
+            JOIN services s ON ps.service_id = s.service_id 
+            WHERE ps.provider_id = %s AND ps.is_available = 1
+            """,
+            (provider_id,)
+        )
+        services = cursor.fetchall()
+        for s in services:
+            if s.get("service_charge"):
+                s["service_charge"] = float(s["service_charge"])
+                
+        provider["services"] = services
+        
+        # Get reviews
+        cursor.execute(
+            """
+            SELECT r.*, c.full_name as customer_name 
+            FROM reviews r 
+            JOIN customers c ON r.customer_id = c.customer_id 
+            WHERE r.provider_id = %s 
+            ORDER BY r.created_at DESC
+            """,
+            (provider_id,)
+        )
+        reviews = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        for r in reviews:
+            if r.get("created_at"):
+                r["created_at"] = r["created_at"].isoformat()
+            if r.get("updated_at"):
+                r["updated_at"] = r["updated_at"].isoformat()
+            if r.get("reply_date"):
+                r["reply_date"] = r["reply_date"].isoformat()
+                
+        provider["reviews"] = reviews
+        
+        if provider.get("average_rating"):
+            provider["average_rating"] = float(provider["average_rating"])
+            
+        return jsonify({"status": True, "provider": provider}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
