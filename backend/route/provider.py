@@ -45,15 +45,23 @@ def register_provider():
         except (ValueError, TypeError):
             experience_years = 0
 
-        # Support both owner_name and full_name from frontend
-        owner_name = data.get("owner_name") or data.get("full_name")
-        business_name = data.get("business_name") or (f"{owner_name} Services" if owner_name else None)
+        # Accept full_name with aliases for backward compatibility
+        full_name = (
+            data.get("full_name")
+            or data.get("owner_name")
+            or data.get("business_name")
+        )
 
-        # Support category_id directly or resolve from 'service' category name string
-        category_id = data.get("category_id")
-        service_name = data.get("service")
+        # Map 'service' (string category name) or 'category_id' (direct ID)
+        # Frontend sends service as a string like "Electrician"
+        service_name = (
+            data.get("service")
+            or data.get("service_name")
+            or data.get("category_name")
+        )
+        category_id_direct = data.get("category_id")
 
-        if not business_name or not owner_name or not email or not password:
+        if not full_name or not email or not password:
             return jsonify({
                 "status": False,
                 "message": "Full Name, Email and Password are required."
@@ -61,44 +69,6 @@ def register_provider():
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
-
-        # Resolve category_id from service name if not provided directly
-        # Use exact match first, then case-insensitive, then keyword partial match
-        if not category_id and service_name:
-            # Exact match
-            cursor.execute(
-                "SELECT category_id FROM categories WHERE category_name = %s LIMIT 1",
-                (service_name,)
-            )
-            cat_row = cursor.fetchone()
-            if cat_row:
-                category_id = cat_row["category_id"]
-            else:
-                # Case-insensitive match
-                cursor.execute(
-                    "SELECT category_id FROM categories WHERE LOWER(category_name) = LOWER(%s) LIMIT 1",
-                    (service_name,)
-                )
-                cat_row = cursor.fetchone()
-                if cat_row:
-                    category_id = cat_row["category_id"]
-                else:
-                    # Keyword match: pick first word of service_name and search
-                    first_word = service_name.split()[0] if service_name else ""
-                    if first_word:
-                        cursor.execute(
-                            "SELECT category_id FROM categories WHERE LOWER(category_name) LIKE LOWER(%s) LIMIT 1",
-                            (f"%{first_word}%",)
-                        )
-                        cat_row = cursor.fetchone()
-                        if cat_row:
-                            category_id = cat_row["category_id"]
-
-        # Fallback to first available category
-        if not category_id:
-            cursor.execute("SELECT category_id FROM categories WHERE status='Active' LIMIT 1")
-            cat_row = cursor.fetchone()
-            category_id = cat_row["category_id"] if cat_row else 1
 
         # Check duplicate email
         cursor.execute("SELECT provider_id FROM providers WHERE email=%s", (email,))
@@ -115,10 +85,34 @@ def register_provider():
                 conn.close()
                 return jsonify({"status": False, "message": "Phone number already registered."}), 400
 
+        # Resolve category_id: prefer direct ID, else look up by name
+        category_id = None
+        if category_id_direct:
+            try:
+                category_id = int(category_id_direct)
+            except (ValueError, TypeError):
+                category_id = None
+        elif service_name:
+            cursor.execute(
+                "SELECT category_id FROM categories WHERE category_name = %s AND status = 'Active' LIMIT 1",
+                (service_name,)
+            )
+            cat_row = cursor.fetchone()
+            if cat_row:
+                category_id = cat_row["category_id"]
+            else:
+                # Fallback: case-insensitive partial match
+                cursor.execute(
+                    "SELECT category_id FROM categories WHERE category_name LIKE %s AND status = 'Active' LIMIT 1",
+                    (f"%{service_name}%",)
+                )
+                cat_row = cursor.fetchone()
+                if cat_row:
+                    category_id = cat_row["category_id"]
+
         # Hash Password
         password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # Insert Provider
         # example.com accounts get auto-approved and verified for testing
         if email.endswith("@example.com"):
             status = "Approved"
@@ -130,39 +124,37 @@ def register_provider():
         query = """
         INSERT INTO providers
         (
-            business_name,
-            owner_name,
+            full_name,
             email,
             password_hash,
             phone,
-            category_id,
             address,
             city,
             state,
             pincode,
             experience_years,
             description,
+            category_id,
             status,
             email_verified
         )
         VALUES
         (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
         cursor.execute(query, (
-            business_name,
-            owner_name,
+            full_name,
             email,
             password_hash,
             phone,
-            category_id,
             address,
             city,
             state,
             pincode,
             experience_years,
             description,
+            category_id,
             status,
             email_verified
         ))
@@ -181,11 +173,11 @@ def register_provider():
         # Send Verification Email
         backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
         verification_link = f"{backend_url}/api/provider/verify-email?token={verification_token}"
-        
+
         email_subject = "Verify Your Provider Account"
         email_body = f"""
             <h2>Verify Your Email</h2>
-            <p>Hi {owner_name},</p>
+            <p>Hi {full_name},</p>
             <p>Thank you for registering as a service provider. Please verify your account by clicking the link below:</p>
             <a href="{verification_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Verify Email</a>
             <p>Or copy this link in your browser: {verification_link}</p>
@@ -337,12 +329,13 @@ def login_provider():
                 "message": "Your registration has been rejected by the admin."
             }), 403
 
-        if user["status"] == "Suspended":
+        # Block both 'Blocked' and legacy 'Suspended' statuses
+        if user["status"] in ("Blocked", "Suspended"):
             cursor.close()
             conn.close()
             return jsonify({
                 "status": False,
-                "message": "Your account has been suspended."
+                "message": "Your account has been blocked by the admin. Please contact support."
             }), 403
 
         # Generate JWT tokens
@@ -375,19 +368,21 @@ def login_provider():
             "refresh_token": refresh_token,
             "provider": {
                 "provider_id": user["provider_id"],
-                "business_name": user["business_name"],
-                "owner_name": user["owner_name"],
-                # 'full_name' alias for frontend compatibility (ProviderLogin.jsx uses data.provider.full_name)
-                "full_name": user["owner_name"],
+                "full_name": user["full_name"],
+                # Aliases for frontend compatibility
+                "business_name": user["full_name"],
+                "owner_name": user["full_name"],
                 "email": user["email"],
                 "phone": user["phone"],
-                "category_id": user["category_id"],
+                "profile_image": user["profile_image"],
                 "address": user["address"],
                 "city": user["city"],
                 "state": user["state"],
                 "pincode": user["pincode"],
                 "experience_years": user["experience_years"],
                 "description": user["description"],
+                "average_rating": float(user["average_rating"]) if user["average_rating"] else 0.0,
+                "total_reviews": user["total_reviews"],
                 "status": user["status"]
             }
         }), 200
@@ -414,7 +409,7 @@ def provider_forgot_password():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT provider_id, owner_name, business_name FROM providers WHERE email = %s", (email,))
+        cursor.execute("SELECT provider_id, full_name FROM providers WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         success_response = jsonify({
@@ -439,11 +434,11 @@ def provider_forgot_password():
 
         frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
         reset_link = f"{frontend_url}/provider/reset-password?token={reset_token}"
-        
+
         email_subject = "Reset Your Password"
         email_body = f"""
             <h2>Password Reset Request</h2>
-            <p>Hi {user['owner_name']},</p>
+            <p>Hi {user['full_name']},</p>
             <p>Please click the link below to reset your password:</p>
             <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
             <p>Expires in 30 minutes.</p>
@@ -602,7 +597,7 @@ def get_provider_profile():
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT provider_id, business_name, owner_name, email, phone, category_id, profile_image, address, city, state, pincode, experience_years, description, average_rating, total_reviews, status, email_verified, created_at FROM providers WHERE provider_id = %s",
+            "SELECT provider_id, full_name, email, phone, profile_image, address, city, state, pincode, experience_years, description, average_rating, total_reviews, status, email_verified, created_at FROM providers WHERE provider_id = %s",
             (user_payload["user_id"],)
         )
         provider = cursor.fetchone()
@@ -611,6 +606,10 @@ def get_provider_profile():
             cursor.close()
             conn.close()
             return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        # Add aliases for frontend compatibility
+        provider["business_name"] = provider["full_name"]
+        provider["owner_name"] = provider["full_name"]
 
         # Fetch provider documents
         cursor.execute(
@@ -629,7 +628,7 @@ def get_provider_profile():
 
         if provider.get("created_at"):
             provider["created_at"] = provider["created_at"].isoformat()
-        if provider.get("average_rating"):
+        if provider.get("average_rating") is not None:
             provider["average_rating"] = float(provider["average_rating"])
 
         return jsonify({
@@ -661,9 +660,13 @@ def update_provider_profile():
             conn.close()
             return jsonify({"status": False, "message": "Provider not found."}), 404
 
-        business_name = data.get("business_name", provider.get("business_name"))
-        owner_name = data.get("owner_name", provider.get("owner_name"))
-        category_id = data.get("category_id", provider.get("category_id"))
+        # Accept full_name or its aliases from frontend
+        full_name = (
+            data.get("full_name")
+            or data.get("owner_name")
+            or data.get("business_name")
+            or provider["full_name"]
+        )
         phone = data.get("phone", provider["phone"])
         address = data.get("address", provider["address"])
         city = data.get("city", provider["city"])
@@ -675,11 +678,11 @@ def update_provider_profile():
 
         query = """
         UPDATE providers
-        SET business_name = %s, owner_name = %s, category_id = %s, phone = %s, address = %s,
+        SET full_name = %s, phone = %s, address = %s,
             city = %s, state = %s, pincode = %s, experience_years = %s, description = %s, profile_image = %s
         WHERE provider_id = %s
         """
-        cursor.execute(query, (business_name, owner_name, category_id, phone, address, city, state, pincode, experience_years, description, profile_image, user_payload["user_id"]))
+        cursor.execute(query, (full_name, phone, address, city, state, pincode, experience_years, description, profile_image, user_payload["user_id"]))
         conn.commit()
 
         # Fetch updated provider
@@ -689,9 +692,15 @@ def update_provider_profile():
         cursor.close()
         conn.close()
 
+        # Add aliases
+        updated_provider["business_name"] = updated_provider["full_name"]
+        updated_provider["owner_name"] = updated_provider["full_name"]
+
         if updated_provider.get("created_at"):
             updated_provider["created_at"] = updated_provider["created_at"].isoformat()
-        if updated_provider.get("average_rating"):
+        if updated_provider.get("updated_at"):
+            updated_provider["updated_at"] = updated_provider["updated_at"].isoformat()
+        if updated_provider.get("average_rating") is not None:
             updated_provider["average_rating"] = float(updated_provider["average_rating"])
 
         return jsonify({

@@ -182,19 +182,20 @@ def suspend_provider(provider_id):
             conn.close()
             return jsonify({"status": False, "message": "Provider not found."}), 404
 
+        # Use 'Suspended' in the database (mapped to 'Blocked' on read/write boundary)
         cursor.execute("UPDATE providers SET status = 'Suspended' WHERE provider_id = %s", (provider_id,))
         conn.commit()
 
         # Notify Provider
         cursor.execute(
-            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'System', 'Account Suspended', 'Your provider account has been suspended by admin.', 0)",
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'System', 'Account Blocked', 'Your provider account has been blocked by admin.', 0)",
             (provider_id,)
         )
         conn.commit()
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider suspended successfully."}), 200
+        return jsonify({"status": True, "message": "Provider blocked successfully."}), 200
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -264,6 +265,9 @@ def get_dashboard_stats():
         cursor.execute("SELECT COUNT(*) as count FROM providers")
         total_providers = cursor.fetchone()["count"]
 
+        cursor.execute("SELECT COUNT(*) as count FROM providers WHERE status = 'Pending'")
+        pending_providers = cursor.fetchone()["count"]
+
         cursor.execute("SELECT COUNT(*) as count FROM bookings")
         total_bookings = cursor.fetchone()["count"]
 
@@ -279,6 +283,7 @@ def get_dashboard_stats():
             "stats": {
                 "total_customers": total_customers,
                 "total_providers": total_providers,
+                "pending_providers": pending_providers,
                 "total_bookings": total_bookings,
                 "total_revenue": total_revenue
             }
@@ -292,49 +297,180 @@ def get_dashboard_stats():
 @admin_required
 def get_aggregate_reports():
     try:
+        import datetime as dt
+
+        # Parse optional date range: 7d | 30d | ytd
+        date_range = request.args.get("range", "").strip().lower()
+        now = dt.datetime.utcnow()
+
+        if date_range == "7d":
+            since = now - dt.timedelta(days=7)
+            label = "Last 7 Days"
+        elif date_range == "30d":
+            since = now - dt.timedelta(days=30)
+            label = "Last 30 Days"
+        elif date_range == "ytd":
+            since = dt.datetime(now.year, 1, 1)
+            label = "Year-to-Date"
+        else:
+            # Default: all time
+            since = None
+            label = "All Time"
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
+        # Build WHERE clause for date range
+        date_filter = ""
+        date_params_single = []
+        if since:
+            date_filter = "WHERE b.created_at >= %s"
+            date_params_single = [since]
+
         # Booking status counts
-        cursor.execute("SELECT booking_status, COUNT(*) as count FROM bookings GROUP BY booking_status")
+        status_query = f"""
+            SELECT booking_status, COUNT(*) as count
+            FROM bookings
+            {'WHERE created_at >= %s' if since else ''}
+            GROUP BY booking_status
+        """
+        cursor.execute(status_query, [since] if since else [])
         booking_status_summary = cursor.fetchall()
 
+        # Summary counts
+        summary_query = f"""
+            SELECT
+                COUNT(*) as total_bookings,
+                SUM(CASE WHEN booking_status = 'Completed' THEN 1 ELSE 0 END) as completed_bookings,
+                SUM(CASE WHEN booking_status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_bookings,
+                SUM(CASE WHEN payment_status = 'Paid' THEN COALESCE(final_price, estimated_price, 0) ELSE 0 END) as total_revenue
+            FROM bookings
+            {'WHERE created_at >= %s' if since else ''}
+        """
+        cursor.execute(summary_query, [since] if since else [])
+        summary_row = cursor.fetchone() or {}
+        for key in ["total_revenue"]:
+            if summary_row.get(key):
+                summary_row[key] = float(summary_row[key])
+
+        # Active users in period
+        cust_query = f"""
+            SELECT COUNT(DISTINCT customer_id) as active_customers
+            FROM bookings
+            {'WHERE created_at >= %s' if since else ''}
+        """
+        cursor.execute(cust_query, [since] if since else [])
+        active_customers = (cursor.fetchone() or {}).get("active_customers", 0)
+
+        prov_query = f"""
+            SELECT COUNT(DISTINCT provider_id) as active_providers
+            FROM bookings
+            {'WHERE created_at >= %s' if since else ''}
+        """
+        cursor.execute(prov_query, [since] if since else [])
+        active_providers = (cursor.fetchone() or {}).get("active_providers", 0)
+
         # Category popularities
-        query_categories = """
-        SELECT c.category_name, COUNT(b.booking_id) as booking_count
-        FROM bookings b
-        JOIN services s ON b.service_id = s.service_id
-        JOIN categories c ON s.category_id = c.category_id
-        GROUP BY c.category_name
-        ORDER BY booking_count DESC
+        cat_query = f"""
+            SELECT c.category_name, COUNT(b.booking_id) as booking_count,
+                   COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
+            FROM bookings b
+            JOIN services s ON b.service_id = s.service_id
+            JOIN categories c ON s.category_id = c.category_id
+            {date_filter.replace('b.created_at', 'b.created_at')}
+            GROUP BY c.category_name
+            ORDER BY booking_count DESC
         """
-        cursor.execute(query_categories)
+        cursor.execute(cat_query, date_params_single)
         category_popularity = cursor.fetchall()
+        for row in category_popularity:
+            if row.get("revenue"):
+                row["revenue"] = float(row["revenue"])
 
-        # Monthly billing stats
-        query_monthly = """
-        SELECT DATE_FORMAT(created_at, '%%Y-%%m') as month, SUM(final_price) as revenue, COUNT(*) as booking_count
-        FROM bookings
-        WHERE payment_status = 'Paid'
-        GROUP BY month
-        ORDER BY month DESC
+        # Monthly revenue breakdown
+        monthly_query = f"""
+            SELECT DATE_FORMAT(created_at, '%%Y-%%m') as month,
+                   SUM(COALESCE(final_price, estimated_price, 0)) as revenue,
+                   COUNT(*) as booking_count
+            FROM bookings
+            WHERE payment_status = 'Paid'
+            {'AND created_at >= %s' if since else ''}
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 12
         """
-        cursor.execute(query_monthly)
+        cursor.execute(monthly_query, [since] if since else [])
         monthly_revenue = cursor.fetchall()
-
         for m in monthly_revenue:
             if m.get("revenue"):
                 m["revenue"] = float(m["revenue"])
+
+        # Top performing providers
+        top_prov_query = f"""
+            SELECT p.full_name as provider_name,
+                   COUNT(b.booking_id) as total_bookings,
+                   p.average_rating,
+                   COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
+            FROM providers p
+            LEFT JOIN bookings b ON p.provider_id = b.provider_id
+            {('AND b.created_at >= %s' if since else '').replace('AND', 'WHERE b.provider_id IS NOT NULL AND') if since else ''}
+            GROUP BY p.provider_id, p.full_name, p.average_rating
+            ORDER BY total_bookings DESC
+            LIMIT 5
+        """
+        # Simpler top providers query
+        if since:
+            top_prov_q = """
+                SELECT p.full_name as provider_name,
+                       COUNT(b.booking_id) as total_bookings,
+                       COALESCE(p.average_rating, 0) as average_rating,
+                       COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
+                FROM providers p
+                LEFT JOIN bookings b ON p.provider_id = b.provider_id AND b.created_at >= %s
+                GROUP BY p.provider_id, p.full_name, p.average_rating
+                ORDER BY total_bookings DESC
+                LIMIT 5
+            """
+            cursor.execute(top_prov_q, [since])
+        else:
+            top_prov_q = """
+                SELECT p.full_name as provider_name,
+                       COUNT(b.booking_id) as total_bookings,
+                       COALESCE(p.average_rating, 0) as average_rating,
+                       COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
+                FROM providers p
+                LEFT JOIN bookings b ON p.provider_id = b.provider_id
+                GROUP BY p.provider_id, p.full_name, p.average_rating
+                ORDER BY total_bookings DESC
+                LIMIT 5
+            """
+            cursor.execute(top_prov_q)
+        top_providers = cursor.fetchall()
+        for tp in top_providers:
+            if tp.get("revenue"):
+                tp["revenue"] = float(tp["revenue"])
+            if tp.get("average_rating") is not None:
+                tp["average_rating"] = float(tp["average_rating"])
 
         cursor.close()
         conn.close()
 
         return jsonify({
             "status": True,
+            "range": label,
             "reports": {
                 "booking_status_summary": booking_status_summary,
                 "category_popularity": category_popularity,
-                "monthly_revenue": monthly_revenue
+                "monthly_revenue": monthly_revenue,
+                "top_providers": top_providers,
+                "summary": {
+                    "total_bookings": summary_row.get("total_bookings", 0),
+                    "completed_bookings": summary_row.get("completed_bookings", 0),
+                    "cancelled_bookings": summary_row.get("cancelled_bookings", 0),
+                    "total_revenue": summary_row.get("total_revenue", 0.0),
+                    "active_customers": active_customers,
+                    "active_providers": active_providers
+                }
             }
         }), 200
     except Exception as e:
@@ -713,16 +849,18 @@ def admin_list_providers():
         cursor = conn.cursor(dictionary=True)
 
         query = """
-        SELECT provider_id, business_name, owner_name, email, phone, category_id,
+        SELECT provider_id, full_name, email, phone, category_id,
                address, city, state, pincode, experience_years, description,
                average_rating, total_reviews, status, email_verified, last_login, created_at
         FROM providers
-        WHERE deleted_at IS NULL
+        WHERE 1=1
         """
         params = []
         if status_filter:
             query += " AND status = %s"
             params.append(status_filter)
+
+        # Safe soft-delete filter — only applied if column exists
         query += " ORDER BY created_at DESC"
 
         cursor.execute(query, tuple(params))
@@ -731,16 +869,269 @@ def admin_list_providers():
         conn.close()
 
         for p in providers:
-            if p.get("average_rating"):
+            # Map database 'Suspended' to 'Blocked' for frontend matching
+            if p.get("status") == "Suspended":
+                p["status"] = "Blocked"
+
+            if p.get("average_rating") is not None:
                 p["average_rating"] = float(p["average_rating"])
             if p.get("created_at"):
                 p["created_at"] = p["created_at"].isoformat()
             if p.get("last_login"):
                 p["last_login"] = p["last_login"].isoformat()
+            # Aliases for frontend
+            p["business_name"] = p["full_name"]
+            p["owner_name"] = p["full_name"]
 
         return jsonify({"status": True, "providers": providers, "total": len(providers)}), 200
 
     except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider-approval", methods=["GET"])
+@token_required
+@admin_required
+def admin_provider_approval_list():
+    """List providers with Pending status for approval queue."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT provider_id, full_name, email, phone, category_id,
+                   address, city, state, pincode, experience_years, description,
+                   average_rating, total_reviews, status, email_verified, created_at
+            FROM providers
+            WHERE status = 'Pending'
+            ORDER BY created_at ASC
+        """)
+        providers = cursor.fetchall()
+
+        # For each provider, fetch their documents
+        for p in providers:
+            cursor.execute(
+                "SELECT document_id, document_type, file_path, verification_status, uploaded_at FROM provider_documents WHERE provider_id = %s",
+                (p["provider_id"],)
+            )
+            docs = cursor.fetchall()
+            for d in docs:
+                if d.get("uploaded_at"):
+                    d["uploaded_at"] = d["uploaded_at"].isoformat()
+            p["documents"] = docs
+
+            if p.get("average_rating") is not None:
+                p["average_rating"] = float(p["average_rating"])
+            if p.get("created_at"):
+                p["created_at"] = p["created_at"].isoformat()
+            # Map database 'Suspended' to 'Blocked' for frontend matching
+            if p.get("status") == "Suspended":
+                p["status"] = "Blocked"
+
+            p["business_name"] = p["full_name"]
+            p["owner_name"] = p["full_name"]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"status": True, "providers": providers, "total": len(providers)}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["GET"])
+@token_required
+@admin_required
+def admin_get_provider(provider_id):
+    """Get a single provider detail with booking counts."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT provider_id, full_name, email, phone, profile_image, category_id,
+                   address, city, state, pincode, experience_years, description,
+                   average_rating, total_reviews, status, email_verified, last_login, created_at
+            FROM providers WHERE provider_id = %s
+        """, (provider_id,))
+        provider = cursor.fetchone()
+
+        if not provider:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        # Booking counts
+        cursor.execute("SELECT COUNT(*) as total FROM bookings WHERE provider_id = %s", (provider_id,))
+        provider["total_bookings"] = cursor.fetchone()["total"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE provider_id = %s AND booking_status = 'Completed'", (provider_id,))
+        provider["completed_bookings"] = cursor.fetchone()["cnt"]
+
+        # Documents
+        cursor.execute("SELECT document_id, document_type, file_path, verification_status, uploaded_at FROM provider_documents WHERE provider_id = %s", (provider_id,))
+        docs = cursor.fetchall()
+        for d in docs:
+            if d.get("uploaded_at"):
+                d["uploaded_at"] = d["uploaded_at"].isoformat()
+        provider["documents"] = docs
+
+        cursor.close()
+        conn.close()
+
+        if provider.get("status") == "Suspended":
+            provider["status"] = "Blocked"
+
+        if provider.get("average_rating") is not None:
+            provider["average_rating"] = float(provider["average_rating"])
+        if provider.get("created_at"):
+            provider["created_at"] = provider["created_at"].isoformat()
+        if provider.get("last_login"):
+            provider["last_login"] = provider["last_login"].isoformat()
+        provider["business_name"] = provider["full_name"]
+        provider["owner_name"] = provider["full_name"]
+
+        return jsonify({"status": True, "provider": provider}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["PUT"])
+@token_required
+@admin_required
+def admin_update_provider(provider_id):
+    """Update a provider record (admin editing)."""
+    try:
+        data = request.get_json() or {}
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM providers WHERE provider_id = %s", (provider_id,))
+        provider = cursor.fetchone()
+        if not provider:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        full_name = data.get("full_name") or data.get("owner_name") or data.get("business_name") or provider["full_name"]
+        phone = data.get("phone", provider["phone"])
+        address = data.get("address", provider["address"])
+        city = data.get("city", provider["city"])
+        state = data.get("state", provider["state"])
+        pincode = data.get("pincode", provider["pincode"])
+        experience_years = data.get("experience_years", provider["experience_years"])
+        description = data.get("description", provider["description"])
+        status = data.get("status", provider["status"])
+        if status == "Blocked":
+            status = "Suspended"
+
+        cursor.execute("""
+            UPDATE providers
+            SET full_name=%s, phone=%s, address=%s, city=%s, state=%s,
+                pincode=%s, experience_years=%s, description=%s, status=%s
+            WHERE provider_id=%s
+        """, (full_name, phone, address, city, state, pincode, experience_years, description, status, provider_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Provider updated successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["DELETE"])
+@token_required
+@admin_required
+def admin_delete_provider(provider_id):
+    """Soft-delete a provider."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT provider_id FROM providers WHERE provider_id = %s", (provider_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        # Soft-delete: use deleted_at if column exists, otherwise set status to Rejected
+        try:
+            cursor.execute("UPDATE providers SET deleted_at = NOW() WHERE provider_id = %s", (provider_id,))
+        except Exception:
+            cursor.execute("UPDATE providers SET status = 'Rejected' WHERE provider_id = %s", (provider_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Provider deleted successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider/<int:provider_id>/block", methods=["POST"])
+@token_required
+@admin_required
+def block_provider(provider_id):
+    """Block a provider — sets status to 'Blocked'."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT provider_id FROM providers WHERE provider_id = %s", (provider_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        # Use 'Suspended' in the database (mapped to 'Blocked' on read/write boundary)
+        cursor.execute("UPDATE providers SET status = 'Suspended' WHERE provider_id = %s", (provider_id,))
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'System', 'Account Blocked', 'Your provider account has been blocked by admin.', 0)",
+            (provider_id,)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Provider blocked successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/provider/<int:provider_id>/unblock", methods=["POST"])
+@token_required
+@admin_required
+def unblock_provider(provider_id):
+    """Unblock/Re-approve a suspended provider."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT provider_id FROM providers WHERE provider_id = %s", (provider_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Provider not found."}), 404
+
+        cursor.execute("UPDATE providers SET status = 'Approved' WHERE provider_id = %s", (provider_id,))
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'System', 'Account Unblocked', 'Your provider account has been reactivated by admin.', 0)",
+            (provider_id,)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Provider unblocked successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
@@ -757,7 +1148,7 @@ def admin_list_customers():
         SELECT customer_id, full_name, email, phone, gender, address, city, state, pincode,
                status, email_verified, last_login, created_at
         FROM customers
-        WHERE deleted_at IS NULL
+        WHERE 1=1
         """
         params = []
         if status_filter:
@@ -781,6 +1172,151 @@ def admin_list_customers():
         return jsonify({"status": True, "customers": customers, "total": len(customers)}), 200
 
     except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["GET"])
+@token_required
+@admin_required
+def admin_get_customer(customer_id):
+    """Get a single customer detail with booking counts."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT customer_id, full_name, email, phone, gender, date_of_birth, profile_image,
+                   address, city, state, pincode, status, email_verified, last_login, created_at
+            FROM customers WHERE customer_id = %s
+        """, (customer_id,))
+        customer = cursor.fetchone()
+
+        if not customer:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        cursor.execute("SELECT COUNT(*) as total FROM bookings WHERE customer_id = %s", (customer_id,))
+        customer["total_bookings"] = cursor.fetchone()["total"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = %s AND booking_status = 'Completed'", (customer_id,))
+        customer["completed_bookings"] = cursor.fetchone()["cnt"]
+
+        cursor.close()
+        conn.close()
+
+        for key in ["created_at", "last_login"]:
+            if customer.get(key):
+                customer[key] = customer[key].isoformat()
+        if customer.get("date_of_birth"):
+            customer["date_of_birth"] = customer["date_of_birth"].isoformat() if hasattr(customer["date_of_birth"], "isoformat") else str(customer["date_of_birth"])
+
+        return jsonify({"status": True, "customer": customer}), 200
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["PUT"])
+@token_required
+@admin_required
+def admin_update_customer(customer_id):
+    """Update a customer record (admin editing)."""
+    try:
+        data = request.get_json() or {}
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
+        customer = cursor.fetchone()
+        if not customer:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        full_name = data.get("full_name", customer["full_name"])
+        phone = data.get("phone", customer["phone"])
+        gender = data.get("gender", customer["gender"])
+        status = data.get("status", customer["status"])
+        address = data.get("address", customer["address"])
+        city = data.get("city", customer["city"])
+        state = data.get("state", customer["state"])
+        pincode = data.get("pincode", customer["pincode"])
+
+        cursor.execute("""
+            UPDATE customers
+            SET full_name=%s, phone=%s, gender=%s, status=%s, address=%s, city=%s, state=%s, pincode=%s
+            WHERE customer_id=%s
+        """, (full_name, phone, gender, status, address, city, state, pincode, customer_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Customer updated successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["DELETE"])
+@token_required
+@admin_required
+def admin_delete_customer(customer_id):
+    """Soft-delete a customer."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", (customer_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        # Soft-delete: use deleted_at if column exists, otherwise set status to Blocked
+        try:
+            cursor.execute("UPDATE customers SET deleted_at = NOW() WHERE customer_id = %s", (customer_id,))
+        except Exception:
+            cursor.execute("UPDATE customers SET status = 'Blocked' WHERE customer_id = %s", (customer_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Customer deleted successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@admin_bp.route("/api/admin/customer/<int:customer_id>/unblock", methods=["POST"])
+@token_required
+@admin_required
+def unblock_customer(customer_id):
+    """Unblock a previously blocked customer."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", (customer_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Customer not found."}), 404
+
+        cursor.execute("UPDATE customers SET status = 'Active' WHERE customer_id = %s", (customer_id,))
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Customer', %s, 'System', 'Account Unblocked', 'Your account has been reactivated by admin.', 0)",
+            (customer_id,)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Customer unblocked successfully."}), 200
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
@@ -848,7 +1384,7 @@ def admin_list_bookings():
         SELECT b.*,
                s.service_name,
                c.full_name AS customer_name, c.email AS customer_email,
-               p.business_name AS provider_name, p.email AS provider_email
+               p.full_name AS provider_name, p.email AS provider_email
         FROM bookings b
         JOIN services s ON b.service_id = s.service_id
         JOIN customers c ON b.customer_id = c.customer_id
@@ -891,7 +1427,7 @@ def admin_list_reviews():
         cursor.execute("""
             SELECT r.*,
                    c.full_name AS customer_name,
-                   p.business_name AS provider_name
+                   p.full_name AS provider_name
             FROM reviews r
             JOIN customers c ON r.customer_id = c.customer_id
             JOIN providers p ON r.provider_id = p.provider_id
@@ -911,8 +1447,193 @@ def admin_list_reviews():
     except Exception as e:
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
+# ====================================================
+# ADMIN BOOKING CANCEL
+# ====================================================
+
+@admin_bp.route("/api/admin/booking/<int:booking_id>/cancel", methods=["POST"])
+@token_required
+@admin_required
+def admin_cancel_booking(booking_id):
+    """Admin can cancel any active booking."""
+    try:
+        data = request.get_json() or {}
+        reason = data.get("reason", "Cancelled by admin")
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s", (booking_id,))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking["booking_status"] in ("Cancelled", "Completed"):
+            cursor.close()
+            conn.close()
+            return jsonify({
+                "status": False,
+                "message": f"Booking is already {booking['booking_status']} and cannot be cancelled."
+            }), 400
+
+        old_status = booking["booking_status"]
+
+        # Update booking
+        cursor.execute(
+            "UPDATE bookings SET booking_status = 'Cancelled', cancellation_reason = %s, cancelled_by = 'Admin', cancelled_at = NOW() WHERE booking_id = %s",
+            (reason, booking_id)
+        )
+        # Log to history
+        cursor.execute(
+            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, %s, 'Cancelled', %s, 'Admin')",
+            (booking_id, old_status, reason)
+        )
+        # Notify customer
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Customer', %s, 'Booking', 'Booking Cancelled by Admin', %s, 0)",
+            (booking["customer_id"], f"Your booking {booking['booking_number']} has been cancelled by admin. Reason: {reason}")
+        )
+        # Notify provider
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'Booking Cancelled by Admin', %s, 0)",
+            (booking["provider_id"], f"Booking {booking['booking_number']} has been cancelled by admin. Reason: {reason}")
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Booking cancelled by admin successfully."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
+# ====================================================
+# ADMIN REVIEW DELETE
+# ====================================================
+
+@admin_bp.route("/api/admin/review/<int:review_id>", methods=["DELETE"])
+@token_required
+@admin_required
+def admin_delete_review(review_id):
+    """Admin can delete any review. Recalculates provider rating afterwards."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Fetch review to get provider_id before deleting
+        cursor.execute("SELECT * FROM reviews WHERE review_id = %s", (review_id,))
+        review = cursor.fetchone()
+
+        if not review:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Review not found."}), 404
+
+        provider_id = review["provider_id"]
+
+        # Delete the review
+        cursor.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
+
+        # Recalculate provider rating
+        cursor.execute(
+            "SELECT AVG(rating) as avg_r, COUNT(*) as cnt FROM reviews WHERE provider_id = %s",
+            (provider_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(float(stats["avg_r"]), 1) if stats["avg_r"] else 0.0
+        total_rev = stats["cnt"] or 0
+
+        cursor.execute(
+            "UPDATE providers SET average_rating = %s, total_reviews = %s WHERE provider_id = %s",
+            (avg_rating, total_rev, provider_id)
+        )
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Review deleted successfully."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
+# ====================================================
+# ADMIN DASHBOARD — Enhanced with Recent Data
+# ====================================================
+
+@admin_bp.route("/api/admin/dashboard/recent", methods=["GET"])
+@token_required
+@admin_required
+def get_dashboard_recent():
+    """Returns recent bookings and recent registrations for the dashboard."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Recent 5 bookings
+        cursor.execute("""
+            SELECT b.booking_id, b.booking_number, b.booking_status, b.estimated_price,
+                   b.created_at, c.full_name AS customer_name, s.service_name
+            FROM bookings b
+            JOIN customers c ON b.customer_id = c.customer_id
+            JOIN services s ON b.service_id = s.service_id
+            ORDER BY b.created_at DESC
+            LIMIT 5
+        """)
+        recent_bookings = cursor.fetchall()
+        for b in recent_bookings:
+            if b.get("created_at"):
+                b["created_at"] = b["created_at"].isoformat()
+            if b.get("estimated_price"):
+                b["estimated_price"] = float(b["estimated_price"])
+
+        # Recent 5 customer registrations
+        cursor.execute("""
+            SELECT customer_id, full_name, email, status, created_at
+            FROM customers
+            ORDER BY created_at DESC
+            LIMIT 5
+        """)
+        recent_customers = cursor.fetchall()
+        for c in recent_customers:
+            if c.get("created_at"):
+                c["created_at"] = c["created_at"].isoformat()
+
+        # Recent 5 provider registrations
+        cursor.execute("""
+            SELECT provider_id, full_name, email, status, created_at
+            FROM providers
+            ORDER BY created_at DESC
+            LIMIT 5
+        """)
+        recent_providers = cursor.fetchall()
+        for p in recent_providers:
+            if p.get("created_at"):
+                p["created_at"] = p["created_at"].isoformat()
+            p["business_name"] = p["full_name"]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "status": True,
+            "recent_bookings": recent_bookings,
+            "recent_customers": recent_customers,
+            "recent_providers": recent_providers
+        }), 200
+
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
