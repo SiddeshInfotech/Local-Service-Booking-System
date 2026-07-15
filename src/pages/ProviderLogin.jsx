@@ -53,7 +53,7 @@ const ProviderLogin = () => {
         setEmail('');
         setPassword('');
         // Navigate to provider dashboard
-        setTimeout(() => navigate('/provider/dashboard'), 800);
+        setTimeout(() => navigate('/services'), 800);
       } else {
         // Show a more helpful message for unverified email
         if (response.status === 403) {
@@ -71,7 +71,7 @@ const ProviderLogin = () => {
 
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">
 
       {feedbackMsg && (
         <div className="mb-6 p-4 rounded-xl bg-blue-950/40 border border-blue-800/40 text-blue-300 text-sm max-w-5xl w-full text-center">
@@ -98,14 +98,7 @@ const ProviderLogin = () => {
           />
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a]/30 to-transparent" />
-          {/* Logo pinned to the top-left */}
-          <div className="absolute top-8 left-8">
-            <img
-              src={fixoraLogo}
-              alt="Fixora Logo"
-              className="h-14 w-auto object-contain drop-shadow-lg"
-            />
-          </div>
+
           {/* Caption at the bottom */}
           <div className="absolute bottom-8 left-8 right-8">
             <h2 className="text-2xl font-bold text-blue-400 tracking-tight leading-snug drop-shadow-md">

@@ -17,7 +17,7 @@ const Footer = () => {
               <img
                 src={fixoraLogo}
                 alt="Fixora Logo"
-                className="h-10 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
+                className="h-16 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
               />
             </Link>
             <p className="text-[#B0B3B8] text-sm leading-relaxed">
@@ -40,7 +40,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Customer Links */}
           <div>
             <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">For Customers</h3>
             <ul className="flex flex-col gap-3.5">
@@ -54,7 +53,13 @@ const Footer = () => {
                 <Link to="/services" className="text-[#B0B3B8] hover:text-white text-sm transition-colors">Browse Services</Link>
               </li>
               <li>
-                <a href="#" className="text-[#B0B3B8] hover:text-white text-sm transition-colors">Safety Guidelines</a>
+                <Link to="/about" className="text-[#B0B3B8] hover:text-white text-sm transition-colors">About Us</Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-[#B0B3B8] hover:text-white text-sm transition-colors">Contact Us</Link>
+              </li>
+              <li>
+                <Link to="/terms" className="text-[#B0B3B8] hover:text-white text-sm transition-colors">Terms &amp; Policies</Link>
               </li>
             </ul>
           </div>
@@ -99,14 +104,14 @@ const Footer = () => {
 
         </div>
 
-        {/* Divider & Copyright */}
         <div className="border-t border-[#D4AF37]/10 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-zinc-500 text-xs">
             &copy; {currentYear} Fixora Inc. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-zinc-500 hover:text-zinc-400 text-xs transition-colors">Privacy Policy</a>
-            <a href="#" className="text-zinc-500 hover:text-zinc-400 text-xs transition-colors">Terms of Service</a>
+            <Link to="/terms" className="text-zinc-500 hover:text-zinc-400 text-xs transition-colors">Terms &amp; Policies</Link>
+            <Link to="/terms" className="text-zinc-500 hover:text-zinc-400 text-xs transition-colors">Privacy Policy</Link>
+            <Link to="/contact" className="text-zinc-500 hover:text-zinc-400 text-xs transition-colors">Contact Us</Link>
           </div>
         </div>
       </div>

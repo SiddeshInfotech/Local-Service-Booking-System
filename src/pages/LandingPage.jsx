@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom';
 import {
   Sparkles, Wrench, Snowflake, Hammer, Zap,
   ShieldCheck, DollarSign, Clock, Star,
-  HelpCircle, ChevronDown, ArrowRight,
+  HelpCircle, ArrowRight, ChevronDown,
   TrendingUp, Award, Users, Calendar, Lock, CheckCircle, Eye
 } from 'lucide-react';
-import fixoraLogo from '../assets/images/fixora_logo.png';
 
 /* ─── Intersection Observer hook ─── */
 const useInView = (threshold = 0.15) => {
@@ -182,11 +181,6 @@ const AnimatedWords = ({ text, className = '', goldWords = [], delay = 0 }) => {
    LANDING PAGE COMPONENT
    ════════════════════════════════════ */
 const LandingPage = () => {
-  const [scrolled, setScrolled] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const loginRef = useRef(null);
-
   /* Mouse parallax */
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
   const handleMouseMove = useCallback((e) => {
@@ -211,37 +205,6 @@ const LandingPage = () => {
     const t = setInterval(() => setLiveBookingIdx(p => (p + 1) % liveBookings.length), 3500);
     return () => clearInterval(t);
   }, []);
-
-  /* Scroll sticky nav */
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', fn);
-    return () => window.removeEventListener('scroll', fn);
-  }, []);
-
-  /* Close login dropdown on outside click */
-  useEffect(() => {
-    const fn = (e) => { if (loginRef.current && !loginRef.current.contains(e.target)) setLoginOpen(false); };
-    document.addEventListener('mousedown', fn);
-    return () => document.removeEventListener('mousedown', fn);
-  }, []);
-
-  const navLinks = [
-    { name: 'Home', href: '#hero' },
-    { name: 'Services', href: '/services', isRoute: true },
-    { name: 'Categories', href: '#services' },
-    { name: 'How It Works', href: '#how-it-works' },
-    { name: 'About', href: '#why-fixora' },
-    { name: 'Contact', href: '#footer' },
-  ];
-
-  const loginLinks = [
-    { name: 'Customer Login', path: '/customer/login' },
-    { name: 'Customer Registration', path: '/customer/register' },
-    { name: 'Provider Login', path: '/provider/login' },
-    { name: 'Provider Registration', path: '/provider/register' },
-    { name: 'Admin Login', path: '/admin/login' },
-  ];
 
   const services = [
     { icon: Sparkles, name: 'Cleaning', desc: 'Immaculate deep cleaning, sanitizing, and organizing for residential & commercial spaces.', price: '₹299', imgUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=500&auto=format&fit=crop' },
@@ -510,98 +473,7 @@ const LandingPage = () => {
       {/* Page vignette */}
       <div className="page-vignette" />
 
-      {/* ═══ NAVBAR ═══ */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
-            ? 'glass-panel-luxury shadow-2xl py-3.5 border-b border-[#D4AF37]/20 shadow-black/90'
-            : 'bg-transparent py-6 border-b border-transparent'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <a href="#hero" className="flex-shrink-0">
-            <img src={fixoraLogo} alt="Fixora Logo" className="h-11 w-auto object-contain transition-all duration-300 hover:opacity-80 hover:scale-105" />
-          </a>
-
-          <nav className="hidden md:flex items-center gap-7 lg:gap-8">
-            {navLinks.map(l => (
-              l.isRoute ? (
-                <Link key={l.name} to={l.href}
-                  className="text-zinc-300 hover:text-[#D4AF37] text-xs lg:text-sm font-medium tracking-wider uppercase transition-all duration-300 hover:translate-y-[-1px]">
-                  {l.name}
-                </Link>
-              ) : (
-                <a key={l.name} href={l.href}
-                  className="text-zinc-300 hover:text-[#D4AF37] text-xs lg:text-sm font-medium tracking-wider uppercase transition-all duration-300 hover:translate-y-[-1px]">
-                  {l.name}
-                </a>
-              )
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={loginRef}>
-              <button
-                onClick={() => setLoginOpen(v => !v)}
-                className="gold-filled-btn px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer relative overflow-hidden"
-              >
-                <span>Login</span>
-                <ChevronDown size={14} className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {loginOpen && (
-                <div className="absolute right-0 top-full mt-3.5 w-58 glass-panel-luxury rounded-2xl p-2.5 shadow-2xl z-50 border border-[#D4AF37]/25 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
-                    <p className="text-[9px] text-[#B0B3B8] font-bold uppercase tracking-widest">Select Dashboard</p>
-                  </div>
-                  {loginLinks.map(l => (
-                    <Link key={l.path} to={l.path} onClick={() => setLoginOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-all group">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
-                      {l.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setMobileMenuOpen(v => !v)}
-              className="md:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              {mobileMenuOpen ? <span className="text-lg font-bold">✕</span> : <ChevronDown size={24} className="rotate-90" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden glass-panel-luxury border-t border-[#D4AF37]/10 mt-3 px-6 py-5 space-y-4 animate-in slide-in-from-top duration-300">
-            <div className="flex flex-col gap-2.5">
-              {navLinks.map(l => (
-                l.isRoute ? (
-                  <Link key={l.name} to={l.href} onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2.5 rounded-xl text-sm text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 transition-all">
-                    {l.name}
-                  </Link>
-                ) : (
-                  <a key={l.name} href={l.href} onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2.5 rounded-xl text-sm text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 transition-all">
-                    {l.name}
-                  </a>
-                )
-              ))}
-            </div>
-            <div className="pt-3.5 border-t border-white/5 space-y-2">
-              {loginLinks.slice(0, 4).map(l => (
-                <Link key={l.path} to={l.path} onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-[#D4AF37] transition-all">
-                  {l.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
+      {/* Navbar spacer — shared Navbar is rendered by App.jsx */}
 
       {/* ═══ HERO SECTION ═══ */}
       <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16 lg:pb-0">
@@ -648,7 +520,6 @@ const LandingPage = () => {
                 delay={100}
                 className="block"
               />
-              <br />
               <AnimatedWords
                 text="Delivered with Trust."
                 goldWords={['Delivered', 'Trust.']}
@@ -679,9 +550,8 @@ const LandingPage = () => {
 
             {/* Trust badges */}
             <div className="pt-6 border-t border-white/10 max-w-lg" style={{ animation: 'feedFadeIn 0.9s 0.8s ease both' }}>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {[
-                  { icon: '⭐', text: '4.9 Client Rating' },
                   { icon: '✔', text: 'Vetted Pros' },
                   { icon: '⚡', text: 'Fast Booking' },
                   { icon: '🔒', text: 'Secure Service' },
@@ -774,13 +644,10 @@ const LandingPage = () => {
               </div>
 
               {/* Footer */}
-              <div className="pt-3 border-t border-white/6 flex items-center justify-between text-xs text-zinc-400">
+              <div className="pt-3 border-t border-white/6 flex items-center text-xs text-zinc-400">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck size={13} className="text-[#D4AF37]" />
                   <span>Vetted Providers: <strong className="text-white">{dashboardVisible ? providersVal.toLocaleString() : '0'}+</strong></span>
-                </span>
-                <span className="flex items-center gap-1 text-[#D4AF37] font-bold text-xs">
-                  ⭐ 4.9 / 5
                 </span>
               </div>
             </div>
@@ -1081,60 +948,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ═══ FOOTER ═══ */}
-      <footer id="footer" className="pt-20 pb-8 bg-[#0A0A0A] border-t border-[#D4AF37]/15">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-            <div className="space-y-4">
-              <a href="#hero" className="inline-block">
-                <img src={fixoraLogo} alt="Fixora Logo" className="h-11 w-auto object-contain" />
-              </a>
-              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed max-w-sm">
-                Fixora connects discerning homeowners with vetted local service practitioners. SaaS-quality home maintenance.
-              </p>
-              <div className="flex gap-3 pt-2">
-                {['t', 'i', 'f', 'in'].map(s => (
-                  <a key={s} href="#" className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/45 transition-all text-[10px] font-black uppercase">
-                    {s}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Company</h4>
-              <ul className="space-y-2.5 text-xs text-zinc-400">
-                <li><a href="#hero" className="hover:text-white transition-colors">Home</a></li>
-                <li><Link to="/services" className="hover:text-white transition-colors">Services</Link></li>
-                <li><a href="#why-fixora" className="hover:text-white transition-colors">Why Fixora</a></li>
-                <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Offerings</h4>
-              <ul className="space-y-2.5 text-xs text-zinc-400">
-                {services.map(s => (
-                  <li key={s.name}><Link to="/services" className="hover:text-white transition-colors">{s.name}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Contact</h4>
-              <ul className="space-y-3.5 text-xs text-zinc-400">
-                <li className="flex items-start gap-2.5"><span className="text-[#D4AF37] shrink-0 mt-0.5">📍</span><span>100 Service Plaza, Suite 400, New York, NY 10001</span></li>
-                <li className="flex items-center gap-2.5"><span className="text-[#D4AF37]">📞</span><span>+1 (800) 555-0199</span></li>
-                <li className="flex items-center gap-2.5"><span className="text-[#D4AF37]">✉️</span><span>support@fixora.com</span></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-zinc-600">
-            <p>© {new Date().getFullYear()} Fixora Inc. All rights reserved.</p>
-            <div className="flex gap-5">
-              <a href="#" className="hover:text-zinc-400 transition-colors">Terms of Use</a>
-              <a href="#" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer is rendered by App.jsx */}
 
     </div>
   );

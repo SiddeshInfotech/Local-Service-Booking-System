@@ -1,8 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import Button from './components/Button';
 
 // Existing Pages
 import CustomerLogin from './pages/CustomerLogin';
@@ -11,6 +10,9 @@ import ProviderLogin from './pages/ProviderLogin';
 import ProviderRegister from './pages/ProviderRegister';
 import ForgotPassword from './pages/ForgotPassword';
 import LandingPage from './pages/LandingPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import TermsPage from './pages/TermsPage';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -27,56 +29,16 @@ import AdminReports from './pages/admin/AdminReports';
 
 import ServicesPage from './pages/ServicesPage';
 
-// Admin Pages
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ManageCustomers from './pages/admin/ManageCustomers';
-import ManageProviders from './pages/admin/ManageProviders';
-import ProviderApproval from './pages/admin/ProviderApproval';
-import ManageCategories from './pages/admin/ManageCategories';
-import ManageServices from './pages/admin/ManageServices';
-import ManageBookings from './pages/admin/ManageBookings';
-import ViewReviews from './pages/admin/ViewReviews';
-import AdminReports from './pages/admin/AdminReports';
-
-// A premium interactive placeholder component for non-login pages
-const PlaceholderPage = ({ title, description }) => {
-  return (
-    <div className="min-h-[calc(100vh-280px)] flex flex-col items-center justify-center text-center px-4 py-16">
-      <div className="glass-card rounded-3xl p-8 sm:p-12 max-w-xl shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl" />
-        <h1 className="text-4xl font-black text-white mb-4">
-          Fixora <span className="text-blue-500">{title}</span>
-        </h1>
-        <p className="text-zinc-400 text-base leading-relaxed mb-8">
-          {description}
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link to="/customer/login">
-            <Button variant="primary" className="w-full sm:w-auto">Customer Login</Button>
-          </Link>
-          <Link to="/provider/login">
-            <Button variant="secondary" className="w-full sm:w-auto">Provider Portal</Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // Inner app — needs useLocation so must be inside Router
 const AppInner = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const isLandingRoute = location.pathname === '/';
-  const isServicesRoute = location.pathname === '/services';
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col selection:bg-[#D4AF37]/30 selection:text-white">
+    <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col selection:bg-[#D4AF37]/30 selection:text-white">
 
-      {/* Main Navbar — hidden on admin pages, landing page, and services page (they have their own) */}
-      {!isAdminRoute && !isLandingRoute && !isServicesRoute && <Navbar />}
+      {/* Shared Navbar — shown on all pages except admin */}
+      {!isAdminRoute && <Navbar />}
 
       <main className="flex-grow">
         <Routes>
@@ -92,11 +54,11 @@ const AppInner = () => {
           <Route path="/provider/login"    element={<ProviderLogin />} />
           <Route path="/provider/register" element={<ProviderRegister />} />
 
-          {/* Navbar placeholder routes */}
+          {/* Public routes */}
           <Route path="/services" element={<ServicesPage />} />
-          <Route path="/about"    element={<PlaceholderPage title="About Us" description="Fixora is on a mission to simplify home service bookings. By verifying trades and protecting customer transactions, we deliver peace of mind." />} />
-          <Route path="/contact"  element={<PlaceholderPage title="Contact Support" description="Have questions? Get in touch with our helpdesk. Our support agents are here to assist with billing, verification, or service issues." />} />
-          <Route path="/terms"    element={<PlaceholderPage title="Terms & Policy" description="Read our safety rules, terms of operations, and privacy protections designed to keep homeowners and local partners secure." />} />
+          <Route path="/about"    element={<AboutPage />} />
+          <Route path="/contact"  element={<ContactPage />} />
+          <Route path="/terms"    element={<TermsPage />} />
 
           {/* Admin Login (standalone — no sidebar layout) */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -120,8 +82,8 @@ const AppInner = () => {
         </Routes>
       </main>
 
-      {/* Footer — hidden on admin pages, landing page, and services page (they have their own) */}
-      {!isAdminRoute && !isLandingRoute && !isServicesRoute && <Footer />}
+      {/* Shared Footer — shown on all pages except admin */}
+      {!isAdminRoute && <Footer />}
 
     </div>
   );

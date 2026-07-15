@@ -30,7 +30,7 @@ const AdminLogin = () => {
       setFeedbackType('success');
       setFeedbackMsg('Authentication successful! Initializing secure session...');
       setTimeout(() => {
-        navigate('/admin/dashboard');
+        navigate('/services');
       }, 1000);
     }, 1500);
   };
@@ -56,7 +56,7 @@ const AdminLogin = () => {
               <img
                 src={fixoraLogo}
                 alt="Fixora Logo"
-                className="h-14 w-auto object-contain"
+                className="h-24 w-auto object-contain"
               />
               <div>
                 <p className="text-[#D4AF37] text-xs font-semibold tracking-widest uppercase mt-1">Admin Portal</p>
@@ -94,7 +94,7 @@ const AdminLogin = () => {
             <img
               src={fixoraLogo}
               alt="Fixora Logo"
-              className="h-10 w-auto object-contain"
+              className="h-20 w-auto object-contain"
             />
             <span className="text-[#D4AF37] text-sm font-semibold tracking-widest uppercase">Admin Portal</span>
           </div>

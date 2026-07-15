@@ -92,7 +92,7 @@ const AdminLayout = () => {
         <img
           src={fixoraLogo}
           alt="Fixora Logo"
-          className="h-9 w-auto object-contain flex-shrink-0"
+          className="h-16 w-auto object-contain flex-shrink-0"
         />
         {!collapsed && (
           <div>

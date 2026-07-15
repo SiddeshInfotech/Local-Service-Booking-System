@@ -46,7 +46,7 @@ const ForgotPassword = () => {
 
   return (
     <div
-      className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-cover bg-center bg-no-repeat relative"
+      className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-cover bg-center bg-no-repeat relative"
       style={{
         background: 'linear-gradient(135deg, #0F1115 0%, #1A1D23 100%)',
       }}
@@ -91,14 +91,7 @@ const ForgotPassword = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F1115]/90 via-transparent to-[#0F1115]/40 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0F1115]/20 via-transparent to-[#0F1115]/60 pointer-events-none" />
 
-          {/* Logo pinned to the top-left */}
-          <div className="absolute top-8 left-8 z-10">
-            <img
-              src={fixoraLogo}
-              alt="Fixora Logo"
-              className="h-14 w-auto object-contain drop-shadow-lg"
-            />
-          </div>
+
 
           {/* Feature pills */}
           <div className="absolute top-8 right-8 z-10 flex flex-col gap-2">

@@ -95,7 +95,7 @@ const ProviderRegister = () => {
 
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-black text-white">
+    <div className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-black text-white">
 
       {feedbackMsg && (
         <div className="mb-6 p-4 rounded-xl bg-blue-950/40 border border-blue-800/40 text-blue-300 text-sm max-w-6xl w-full text-center">
@@ -121,14 +121,7 @@ const ProviderRegister = () => {
           />
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a]/30 to-transparent" />
-          {/* Logo pinned to the top-left */}
-          <div className="absolute top-8 left-8">
-            <img
-              src={fixoraLogo}
-              alt="Fixora Logo"
-              className="h-14 w-auto object-contain drop-shadow-lg"
-            />
-          </div>
+
           {/* Caption at the bottom */}
           <div className="absolute bottom-8 left-8 right-8">
             <h2 className="text-2xl font-bold text-[#D4AF37] tracking-tight leading-snug drop-shadow-md">
@@ -143,14 +136,7 @@ const ProviderRegister = () => {
         {/* Right Side: Provider Registration Form */}
         <div className="p-8 sm:p-10 flex flex-col justify-center bg-[#0B1220]/45">
 
-          {/* Mobile-only logo */}
-          <div className="lg:hidden mb-6">
-            <img
-              src={fixoraLogo}
-              alt="Fixora Logo"
-              className="h-12 w-auto object-contain"
-            />
-          </div>
+
           
           <h2 className="text-2xl font-bold text-[#D4AF37] flex items-center gap-2.5 mb-8">
             <UserPlus size={24} className="text-[#D4AF37]" />

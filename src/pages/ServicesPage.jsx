@@ -3,10 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Sparkles, Wrench, Snowflake, Hammer, Zap,
   Star, Clock, Calendar, CheckCircle, X, Upload,
-  User, Phone, Mail, MapPin, Map, ChevronDown,
+  User, Phone, Mail, MapPin, Map,
   ArrowRight, Info, ShieldAlert, ClipboardList, Shield
 } from 'lucide-react';
-import fixoraLogo from '../assets/images/fixora_logo.png';
 
 /* ─── Reliable electrician fallback images (verified working Unsplash URLs) ─── */
 const ELECTRICIAN_IMG = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=600&auto=format&fit=crop';
@@ -178,16 +177,12 @@ const RippleBtn = ({ children, className = '', onClick, type = 'button' }) => {
    ═══════════════════════════════ */
 const ServicesPage = () => {
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [successBooking, setSuccessBooking] = useState(false);
   const [activeCategoryTab, setActiveCategoryTab] = useState('All');
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailService, setDetailService] = useState(null);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const loginRef = useRef(null);
 
   /* Mouse parallax for hero */
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
@@ -209,18 +204,6 @@ const ServicesPage = () => {
   useEffect(() => {
     if (location.state?.category) setActiveCategoryTab(location.state.category);
   }, [location.state]);
-
-  useEffect(() => {
-    const h = (e) => { if (loginRef.current && !loginRef.current.contains(e.target)) setLoginOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', fn);
-    return () => window.removeEventListener('scroll', fn);
-  }, []);
 
   const openBookingModal = (service) => {
     setSelectedService(service);
@@ -271,7 +254,6 @@ const ServicesPage = () => {
     { name: 'Customer Registration', path: '/customer/register' },
     { name: 'Provider Login', path: '/provider/login' },
     { name: 'Provider Registration', path: '/provider/register' },
-    { name: 'Admin Login', path: '/admin/login' },
   ];
 
   return (
@@ -445,73 +427,7 @@ const ServicesPage = () => {
       {/* Page vignette */}
       <div className="page-vignette" />
 
-      {/* ══════════════ NAVBAR ══════════════ */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled ? 'glass-panel shadow-2xl shadow-black/80 py-3.5 border-b border-[#D4AF37]/20' : 'bg-transparent py-6 border-b border-transparent'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <Link to="/" className="flex-shrink-0">
-            <img src={fixoraLogo} alt="Fixora Logo" className="h-11 w-auto object-contain hover:opacity-85 transition-all hover:scale-105" />
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-8">
-            <Link to="/" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">Home</Link>
-            <Link to="/services" className="text-[#D4AF37] text-sm font-semibold tracking-wide relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-[1.5px] after:bg-[#D4AF37]">Services</Link>
-            <Link to="/about" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">About Us</Link>
-            <Link to="/contact" className="text-zinc-300 hover:text-[#D4AF37] text-sm font-medium tracking-wide transition-all hover:translate-y-[-1px]">Contact</Link>
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={loginRef}>
-              <RippleBtn
-                onClick={() => setLoginOpen(v => !v)}
-                className="gold-btn px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer"
-              >
-                <span>Login</span>
-                <ChevronDown size={14} className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`} />
-              </RippleBtn>
-
-              {loginOpen && (
-                <div className="absolute right-0 top-full mt-3 w-56 glass-panel rounded-2xl p-2.5 shadow-2xl z-50 fade-slide-up border border-[#D4AF37]/22">
-                  <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Account Portal</p>
-                  </div>
-                  {loginLinks.map(l => (
-                    <Link key={l.path} to={l.path} onClick={() => setLoginOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-all group">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
-                      {l.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setMobileMenuOpen(v => !v)}
-              className="md:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              {mobileMenuOpen ? <X size={24} /> : <ChevronDown size={24} className="rotate-90" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden glass-panel border-t border-[#D4AF37]/10 mt-3 px-6 py-5 space-y-3 fade-slide-up">
-            <Link to="/" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">Home</Link>
-            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-[#D4AF37] bg-[#D4AF37]/5 font-semibold text-sm">Services</Link>
-            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">About Us</Link>
-            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-xl text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5 text-sm">Contact</Link>
-            <div className="border-t border-[#D4AF37]/15 pt-3 space-y-1.5">
-              <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Portal Access</p>
-              {loginLinks.slice(0, 4).map(l => (
-                <Link key={l.path} to={l.path} onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-[#D4AF37] transition-all">{l.name}</Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
+      {/* Navbar spacer — shared Navbar rendered by App.jsx */}
 
       {/* ══════════════ HERO BANNER ══════════════ */}
       <section className="relative min-h-[52vh] sm:min-h-[58vh] flex items-end justify-center pt-28 pb-16 overflow-hidden">
@@ -549,9 +465,6 @@ const ServicesPage = () => {
           </AnimSection>
           <AnimSection dir="up" delay={300}>
             <div className="flex flex-wrap gap-3 justify-center">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
-                <span className="text-[#D4AF37]">⭐</span> 4.9 Avg Rating
-              </div>
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
                 <span className="text-[#D4AF37]">✔</span> Vetted Professionals
               </div>
@@ -941,67 +854,7 @@ const ServicesPage = () => {
         </div>
       )}
 
-      {/* ══════════════ FOOTER ══════════════ */}
-      <footer className="pt-20 pb-8 bg-[#080808] border-t border-[#D4AF37]/15">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-            <div className="space-y-4">
-              <Link to="/">
-                <img src={fixoraLogo} alt="Fixora" className="h-11 w-auto object-contain hover:opacity-85 transition-opacity" />
-              </Link>
-              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed max-w-sm">
-                Fixora is India's most luxurious and dependable digital concierge connecting homeowners with certified local practitioners.
-              </p>
-              <div className="flex gap-3 pt-2">
-                {['t', 'i', 'f', 'in'].map(s => (
-                  <a key={s} href="#" className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/45 transition-all text-[10px] font-black uppercase">
-                    {s}
-                  </a>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Company</h4>
-              <ul className="space-y-2.5 text-xs text-zinc-400">
-                <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
-                <li><Link to="/services" className="hover:text-white transition-colors">All Services</Link></li>
-                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Offerings</h4>
-              <ul className="space-y-2.5 text-xs text-zinc-400">
-                {categories.slice(1).map(s => (
-                  <li key={s}>
-                    <button
-                      onClick={() => { setActiveCategoryTab(s); window.scrollTo({ top: 600, behavior: 'smooth' }); }}
-                      className="hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      {s} Services
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-bold text-xs uppercase tracking-widest text-[#D4AF37]">Headquarters</h4>
-              <ul className="space-y-3.5 text-xs text-zinc-400">
-                <li className="flex items-start gap-2.5"><MapPin size={13} className="text-[#D4AF37] shrink-0 mt-0.5" /><span>100 Service Plaza, Suite 400, New York, NY 10001</span></li>
-                <li className="flex items-center gap-2.5"><Phone size={13} className="text-[#D4AF37] shrink-0" /><span>+1 (800) 555-0199</span></li>
-                <li className="flex items-center gap-2.5"><Mail size={13} className="text-[#D4AF37] shrink-0" /><span>support@fixora.com</span></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-zinc-600">
-            <p>© {new Date().getFullYear()} Fixora Inc. All rights reserved.</p>
-            <div className="flex gap-5">
-              <a href="#" className="hover:text-zinc-400 transition-colors">Terms of Use</a>
-              <a href="#" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer rendered by App.jsx */}
 
     </div>
   );

@@ -1,177 +1,225 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, User, Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import fixoraLogo from '../assets/images/fixora_logo.png';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const loginRef = useRef(null);
   const location = useLocation();
 
+  /* Scroll glass effect */
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', fn);
+    fn(); // run on mount
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  /* Close login dropdown on outside click */
+  useEffect(() => {
+    const fn = (e) => {
+      if (loginRef.current && !loginRef.current.contains(e.target)) setLoginOpen(false);
+    };
+    document.addEventListener('mousedown', fn);
+    return () => document.removeEventListener('mousedown', fn);
+  }, []);
+
+  /* Close mobile menu on route change */
+  useEffect(() => {
+    setMobileOpen(false);
+    setLoginOpen(false);
+  }, [location.pathname]);
+
   const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'About Us', path: '/about' },
-    { name: 'Contact Us', path: '/contact' },
-    { name: 'Services', path: '/services' },
-    { name: 'Terms & Policy', path: '/terms' },
+    { name: 'Home',            path: '/' },
+    { name: 'Services',        path: '/services' },
+    { name: 'About Us',        path: '/about' },
+    { name: 'Contact Us',      path: '/contact' },
+    { name: 'Terms & Policies', path: '/terms' },
   ];
 
-  const profileLinks = [
-    { name: 'Customer Login', path: '/customer/login' },
+  const loginLinks = [
+    { name: 'Customer Login',    path: '/customer/login' },
     { name: 'Customer Register', path: '/customer/register' },
-    { name: 'Provider Login', path: '/provider/login' },
+    { name: 'Provider Login',    path: '/provider/login' },
     { name: 'Provider Register', path: '/provider/register' },
   ];
 
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <nav className="sticky top-0 z-50 bg-[#0F1115]/95 border-b border-[#D4AF37]/18 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <Link to="/" className="flex items-center group">
+    <>
+      {/* ── Global styles (scoped to navbar usage) ── */}
+      <style>{`
+        .fixora-navbar-glass {
+          background: rgba(15, 17, 21, 0.92);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+        }
+        .fixora-login-dropdown {
+          background: rgba(18, 18, 18, 0.96);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          border: 1px solid rgba(212, 175, 55, 0.22);
+        }
+        @keyframes navFadeIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .nav-fade-in { animation: navFadeIn 0.25s ease both; }
+
+        .nav-gold-btn {
+          background: linear-gradient(135deg, #F4C542 0%, #D4AF37 55%, #BCA032 100%);
+          color: #0D0D0D;
+          font-weight: 800;
+          box-shadow: 0 4px 20px rgba(212,175,55,0.28);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-gold-btn:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 8px 30px rgba(212,175,55,0.5);
+          background: linear-gradient(135deg, #FFE89C 0%, #F4C542 55%, #D4AF37 100%);
+        }
+      `}</style>
+
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          scrolled
+            ? 'fixora-navbar-glass shadow-2xl shadow-black/80 border-b border-[#D4AF37]/20'
+            : 'bg-transparent border-b border-transparent'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+
+            {/* ── Logo ── */}
+            <Link to="/" className="flex-shrink-0 flex items-center group">
               <img
                 src={fixoraLogo}
                 alt="Fixora Logo"
-                className="h-14 w-auto object-contain transition-opacity duration-300 group-hover:opacity-85"
+                className="h-16 w-auto object-contain transition-all duration-300 group-hover:opacity-85 group-hover:scale-105"
               />
             </Link>
-          </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex space-x-6 lg:space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                className={`text-xs sm:text-sm font-medium tracking-wide transition-colors duration-300 ${
-                  location.pathname === link.path || (link.path === '/' && location.pathname === '/customer/login')
-                    ? 'text-[#D4AF37]'
-                    : 'text-zinc-300 hover:text-[#F4C542]'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+            {/* ── Desktop Nav Links ── */}
+            <nav className="hidden md:flex items-center gap-7 lg:gap-8">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className={`text-sm font-medium tracking-wide transition-all duration-300 hover:translate-y-[-1px] relative ${
+                    isActive(link.path)
+                      ? 'text-[#D4AF37] after:content-[""] after:absolute after:bottom-[-6px] after:left-0 after:right-0 after:h-[2px] after:bg-[#D4AF37] after:rounded-full'
+                      : 'text-zinc-300 hover:text-[#D4AF37]'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
 
-          {/* Right Action: Search Box and Profile */}
-          <div className="hidden md:flex items-center gap-4">
-            
-            {/* Pill Search Box */}
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                placeholder="Search services..."
-                className="w-48 lg:w-56 bg-[#1A1D23] border border-[#D4AF37]/18 text-xs text-zinc-300 px-4 py-2 pr-8 rounded-lg outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/20 placeholder-zinc-500 transition duration-300"
-              />
-              <Search size={14} className="absolute right-3 text-zinc-400 pointer-events-none" />
-            </div>
-
-            {/* Profile Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 hover:text-white transition duration-300 cursor-pointer focus:outline-none"
-              >
-                <User size={16} />
-              </button>
-
-              {showProfileMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowProfileMenu(false)}
+            {/* ── Desktop Right: Login Button ── */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="relative" ref={loginRef}>
+                <button
+                  onClick={() => setLoginOpen((v) => !v)}
+                  className="nav-gold-btn px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer relative overflow-hidden"
+                >
+                  <span>Login</span>
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`}
                   />
-                  <div className="absolute right-0 mt-3 w-52 rounded-xl bg-[#1A1D23] border border-[#D4AF37]/18 p-2 shadow-2xl backdrop-blur-xl z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-3 py-1.5 border-b border-[#D4AF37]/10 mb-1">
-                      <p className="text-[10px] text-[#B0B3B8] font-bold uppercase tracking-wider">Account Portal</p>
+                </button>
+
+                {loginOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-56 fixora-login-dropdown rounded-2xl p-2.5 shadow-2xl z-50 nav-fade-in">
+                    <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                        Account Portal
+                      </p>
                     </div>
-                    {profileLinks.map((link) => (
+                    {loginLinks.map((l) => (
                       <Link
-                        key={link.name}
-                        to={link.path}
-                        onClick={() => setShowProfileMenu(false)}
-                        className={`flex items-center px-3 py-2.5 rounded-lg text-xs transition-colors ${
-                          location.pathname === link.path
-                            ? 'bg-[#D4AF37]/10 text-[#D4AF37] font-medium'
-                            : 'text-zinc-400 hover:text-white hover:bg-[#232831]'
+                        key={l.path}
+                        to={l.path}
+                        onClick={() => setLoginOpen(false)}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-all group ${
+                          location.pathname === l.path
+                            ? 'bg-[#D4AF37]/10 text-[#D4AF37] font-semibold'
+                            : 'text-zinc-400 hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        {link.name}
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
+                        {l.name}
                       </Link>
                     ))}
                   </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
 
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-3">
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-28 bg-[#1A1D23] border border-[#D4AF37]/18 text-xs text-zinc-300 px-3 py-1.5 pr-7 rounded-lg outline-none focus:border-[#D4AF37] placeholder-zinc-500"
-              />
-              <Search size={12} className="absolute right-2 text-zinc-400 pointer-events-none" />
-            </div>
+            {/* ── Mobile Hamburger ── */}
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-zinc-400 hover:text-white p-1 rounded-lg focus:outline-none"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="md:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+              aria-label="Toggle menu"
             >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
+
           </div>
-
         </div>
-      </div>
 
-      {/* Mobile Drawer Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-[#0F1115] border-t border-[#D4AF37]/18 px-4 pt-2 pb-6 space-y-4 animate-in slide-in-from-top duration-300">
-          <div className="flex flex-col space-y-2">
+        {/* ── Mobile Drawer ── */}
+        {mobileOpen && (
+          <div className="md:hidden fixora-navbar-glass border-t border-[#D4AF37]/15 px-4 pt-3 pb-6 space-y-1 nav-fade-in">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
-                onClick={() => setIsOpen(false)}
-                className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  location.pathname === link.path
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive(link.path)
                     ? 'bg-[#D4AF37]/10 text-[#D4AF37]'
-                    : 'text-zinc-300 hover:text-white hover:bg-[#232831]'
+                    : 'text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5'
                 }`}
               >
                 {link.name}
               </Link>
             ))}
-          </div>
 
-          <div className="border-t border-[#D4AF37]/10 pt-4">
-            <p className="px-3 text-xs text-[#B0B3B8] font-semibold uppercase tracking-wider mb-2">Portal Access</p>
-            <div className="grid grid-cols-2 gap-2 px-3">
-              <Link
-                to="/customer/login"
-                onClick={() => setIsOpen(false)}
-                className="py-2.5 text-center text-xs font-medium bg-[#1A1D23] hover:bg-[#232831] rounded-xl text-zinc-300 transition-colors"
-              >
-                Customer Portal
-              </Link>
-              <Link
-                to="/provider/login"
-                onClick={() => setIsOpen(false)}
-                className="py-2.5 text-center text-xs font-medium bg-[#D4AF37] hover:bg-[#F4C542] rounded-xl text-[#111111] transition-colors"
-              >
-                Provider Portal
-              </Link>
+            <div className="border-t border-[#D4AF37]/10 pt-4 mt-2">
+              <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">
+                Portal Access
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/customer/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors"
+                >
+                  Customer Login
+                </Link>
+                <Link
+                  to="/provider/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors"
+                >
+                  Provider Login
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </nav>
+        )}
+      </header>
+    </>
   );
 };
 
