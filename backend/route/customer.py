@@ -60,13 +60,9 @@ def register_customer():
         # Hash Password
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # Insert Customer - example.com accounts are auto-verified for testing
-        if email.endswith("@example.com"):
-            cust_status = "Active"
-            cust_email_verified = 1
-        else:
-            cust_status = "Active"
-            cust_email_verified = 0
+        # Insert Customer - Register directly with Active status and email_verified = 1
+        cust_status = "Active"
+        cust_email_verified = 1
 
         # Insert Customer
         query = """
@@ -77,37 +73,12 @@ def register_customer():
         cursor.execute(query, (full_name, email, hashed_password, phone, gender, date_of_birth, address, city, state, pincode, cust_status, cust_email_verified))
         conn.commit()
 
-        # Generate Verification Token
-        verification_token = secrets.token_urlsafe(32)
-        verification_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-
-        cursor.execute(
-            "INSERT INTO email_verification_tokens (email, verification_token, expires_at, verified) VALUES (%s, %s, %s, 0)",
-            (email, verification_token, verification_expiry)
-        )
-        conn.commit()
-
-        # Send Verification Email
-        backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
-        verification_link = f"{backend_url}/api/customer/verify-email?token={verification_token}"
-        
-        email_subject = "Verify Your Account"
-        email_body = f"""
-            <h2>Verify Your Email</h2>
-            <p>Hi {full_name},</p>
-            <p>Thank you for registering. Please verify your account by clicking the link below:</p>
-            <a href="{verification_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Verify Email</a>
-            <p>Or copy this link in your browser: {verification_link}</p>
-            <p>Expires in 24 hours.</p>
-        """
-        send_email_async(email, email_subject, email_body)
-
         cursor.close()
         conn.close()
 
         return jsonify({
             "status": True,
-            "message": "Customer registered successfully. Check email for verification link."
+            "message": "Customer registered successfully."
         }), 201
 
     except Exception as e:
@@ -135,7 +106,7 @@ def verify_customer_email():
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT email, expires_at FROM email_verification_tokens WHERE verification_token = %s AND verified = 0 LIMIT 1",
+            "SELECT email, expires_at FROM email_verification_tokens WHERE otp_code = %s AND verified = 0 LIMIT 1",
             (token,)
         )
         token_record = cursor.fetchone()
@@ -152,7 +123,7 @@ def verify_customer_email():
 
         # Mark token as verified
         cursor.execute(
-            "UPDATE email_verification_tokens SET verified = 1 WHERE verification_token = %s",
+            "UPDATE email_verification_tokens SET verified = 1 WHERE otp_code = %s",
             (token,)
         )
         # Verify customer
@@ -263,42 +234,39 @@ def customer_forgot_password():
         cursor.execute("SELECT customer_id, full_name FROM customers WHERE email = %s", (email,))
         user = cursor.fetchone()
 
-        success_response = jsonify({
-            "status": True,
-            "message": "If the email is registered, a password reset link has been sent."
-        })
-
         if not user:
             cursor.close()
             conn.close()
-            return success_response, 200
+            return jsonify({"status": False, "message": "Email not found."}), 404
 
-        # Create Password Reset Token
-        reset_token = secrets.token_urlsafe(32)
-        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        # Generate Secure 6 Digit OTP
+        otp = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
 
+        # Store OTP inside password_reset_tokens.otp_code
         cursor.execute(
-            "INSERT INTO password_reset_tokens (email, reset_token, expires_at, used) VALUES (%s, %s, %s, 0)",
-            (email, reset_token, expires_at)
+            "INSERT INTO password_reset_tokens (email, otp_code, expires_at, is_used) VALUES (%s, %s, %s, 0)",
+            (email, otp, expires_at)
         )
         conn.commit()
 
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-        
-        email_subject = "Reset Your Password"
+        # Send OTP via SMTP
+        email_subject = "Password Reset OTP Code"
         email_body = f"""
             <h2>Password Reset Request</h2>
             <p>Hi {user['full_name']},</p>
-            <p>Please click the link below to reset your password:</p>
-            <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
-            <p>Expires in 30 minutes.</p>
+            <p>You requested to reset your password. Use the following 6-digit OTP code to verify your request:</p>
+            <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #2563eb; padding: 10px; background-color: #f3f4f6; display: inline-block; border-radius: 5px; margin: 10px 0;">{otp}</div>
+            <p>This code expires in 10 minutes.</p>
         """
         send_email_async(email, email_subject, email_body)
 
         cursor.close()
         conn.close()
-        return success_response, 200
+        return jsonify({
+            "status": True,
+            "message": "OTP has been sent to your email address."
+        }), 200
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -308,34 +276,75 @@ def customer_forgot_password():
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
-@customer_bp.route("/api/customer/reset-password", methods=["POST"])
-def customer_reset_password():
+@customer_bp.route("/api/customer/verify-otp", methods=["POST"])
+def verify_customer_otp():
     try:
         data = request.get_json() or {}
-        token = data.get("token")
-        new_password = data.get("new_password")
+        email = data.get("email")
+        otp_code = data.get("otp_code")
 
-        if not token or not new_password:
-            return jsonify({"status": False, "message": "Token and new password are required."}), 400
+        if not email or not otp_code:
+            return jsonify({"status": False, "message": "Email and OTP code are required."}), 400
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT email, expires_at FROM password_reset_tokens WHERE reset_token = %s AND used = 0 LIMIT 1",
-            (token,)
+            "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND is_used = 0 LIMIT 1",
+            (email, otp_code)
         )
         token_record = cursor.fetchone()
 
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid password reset token."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Password reset token has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "OTP verified successfully."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/customer/reset-password", methods=["POST"])
+def customer_reset_password():
+    try:
+        data = request.get_json() or {}
+        email = data.get("email")
+        otp_code = data.get("otp_code")
+        new_password = data.get("new_password")
+
+        if not email or not otp_code or not new_password:
+            return jsonify({"status": False, "message": "Email, OTP code and new password are required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND is_used = 0 LIMIT 1",
+            (email, otp_code)
+        )
+        token_record = cursor.fetchone()
+
+        if not token_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
 
         # Hash new password
         hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -343,12 +352,12 @@ def customer_reset_password():
         # Update customer password
         cursor.execute(
             "UPDATE customers SET password_hash = %s WHERE email = %s",
-            (hashed_password, token_record["email"])
+            (hashed_password, email)
         )
         # Mark token as used
         cursor.execute(
-            "UPDATE password_reset_tokens SET used = 1 WHERE reset_token = %s",
-            (token,)
+            "UPDATE password_reset_tokens SET is_used = 1 WHERE email = %s AND otp_code = %s",
+            (email, otp_code)
         )
         conn.commit()
 
@@ -653,6 +662,61 @@ def create_booking():
         # Fetch booking details for response
         cursor.execute("SELECT * FROM bookings WHERE booking_id = %s", (booking_id,))
         booking_record = cursor.fetchone()
+
+        # Send Booking Confirmation Email
+        try:
+            cursor.execute("SELECT full_name, email FROM customers WHERE customer_id = %s LIMIT 1", (user_payload["user_id"],))
+            cust = cursor.fetchone()
+            customer_name = cust["full_name"] if cust else "Customer"
+            customer_email = cust["email"] if cust else ""
+
+            cursor.execute("SELECT service_name FROM services WHERE service_id = %s LIMIT 1", (service_id,))
+            svc = cursor.fetchone()
+            service_name = svc["service_name"] if svc else "Service"
+
+            if customer_email:
+                email_subject = "Booking Confirmation - Fixora"
+                email_body = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #2563eb; text-align: center;">Booking Confirmation</h2>
+                    <p>Dear {customer_name},</p>
+                    <p>Thank you for your booking request. Here are the details of your booking confirmation:</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold; width: 150px;">Booking Number:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">{bk_num}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Service Name:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">{service_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Date:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">{booking_date}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Time:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">{booking_time}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Address:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">{service_address}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Status:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; color: #d97706; font-weight: bold;">Pending</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Estimated Price:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #f0f0f0; font-weight: bold; color: #16a34a;">₹{price}</td>
+                        </tr>
+                    </table>
+                    <p style="margin-top: 20px; font-size: 12px; color: #777777; text-align: center;">This is an automated confirmation email. Please do not reply directly to this email.</p>
+                </div>
+                """
+                send_email_async(customer_email, email_subject, email_body)
+        except Exception as email_err:
+            print("Failed to send booking confirmation email:", email_err)
 
         cursor.close()
         conn.close()
@@ -1128,16 +1192,13 @@ def customer_list_providers():
         cursor = conn.cursor(dictionary=True)
         
         query = """
-        SELECT provider_id, business_name, owner_name, email, phone, category_id, 
-               profile_image, address, city, state, pincode, experience_years, 
-               description, average_rating, total_reviews, status 
-        FROM providers 
+        SELECT provider_id, business_name, full_name, email, phone,
+               profile_image, address, city, state, pincode, experience_years,
+               average_rating, total_reviews, status
+        FROM providers
         WHERE status = 'Approved' AND email_verified = 1
         """
         params = []
-        if category_id:
-            query += " AND category_id = %s"
-            params.append(category_id)
         if city:
             query += " AND city = %s"
             params.append(city)
@@ -1146,11 +1207,12 @@ def customer_list_providers():
         providers = cursor.fetchall()
         cursor.close()
         conn.close()
-        
+
         for p in providers:
+            p["full_name"] = p.get("full_name") or p.get("business_name") or ""
             if p.get("average_rating"):
                 p["average_rating"] = float(p["average_rating"])
-                
+
         return jsonify({"status": True, "providers": providers}), 200
     except Exception as e:
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
@@ -1164,10 +1226,10 @@ def customer_get_provider_details(provider_id):
         
         cursor.execute(
             """
-            SELECT provider_id, business_name, owner_name, email, phone, category_id, 
-                   profile_image, address, city, state, pincode, experience_years, 
-                   description, average_rating, total_reviews, status 
-            FROM providers 
+            SELECT provider_id, business_name, full_name, email, phone,
+                   profile_image, address, city, state, pincode, experience_years,
+                   average_rating, total_reviews, status
+            FROM providers
             WHERE provider_id = %s
             """,
             (provider_id,)
