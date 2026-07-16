@@ -1,31 +1,141 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { CheckCircle2, XCircle, Ban, ShieldCheck, Star, MapPin, Tag, FileText, X, Eye, Sparkles } from 'lucide-react';
-
-const initialProviders = {
-  Pending: [],
-  Approved: [],
-  Blocked: [],
-};
+import { CheckCircle2, XCircle, Ban, ShieldCheck, Star, MapPin, Tag, FileText, X, Eye, Sparkles, Loader2 } from 'lucide-react';
+import { apiFetchAdmin } from '../../api';
 
 const ProviderApproval = () => {
   const { showToast } = useOutletContext();
   const [tab, setTab] = useState('Pending');
-  const [providers, setProviders] = useState(initialProviders);
+  const [providers, setProviders] = useState({ Pending: [], Approved: [], Blocked: [] });
+  const [categoriesMap, setCategoriesMap] = useState({});
+  const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showConfirmAction, setShowConfirmAction] = useState(null); // { provider, from, to }
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const moveProvider = (provider, from, to) => {
-    setProviders((prev) => ({
-      ...prev,
-      [from]: prev[from].filter((p) => p.id !== provider.id),
-      [to]:   [...prev[to], { ...provider, doc: to === 'Approved' ? 'Verified' : provider.doc }],
-    }));
-    showToast(`Provider "${provider.name}" moved to ${to}`, to === 'Approved' ? 'success' : 'warning');
-    setShowConfirmAction(null);
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Categories to map name
+      const catRes = await apiFetchAdmin('/api/admin/categories');
+      const catData = await catRes.json();
+      const catMap = {};
+      if (catRes.ok && catData.status) {
+        catData.categories.forEach(c => {
+          catMap[c.category_id] = c.category_name;
+        });
+        setCategoriesMap(catMap);
+      }
+
+      // 2. Fetch Pending provider applications (with documents)
+      const pendingRes = await apiFetchAdmin('/api/admin/provider-approval');
+      const pendingData = await pendingRes.json();
+
+      // 3. Fetch all other providers
+      const allRes = await apiFetchAdmin('/api/admin/providers');
+      const allData = await allRes.json();
+
+      let pendingList = [];
+      let approvedList = [];
+      let blockedList = [];
+
+      if (pendingRes.ok && pendingData.status) {
+        pendingList = pendingData.providers.map(p => ({
+          id: p.provider_id,
+          name: p.full_name || p.business_name || 'Unnamed Business',
+          email: p.email,
+          phone: p.phone,
+          status: p.status,
+          category: catMap[p.category_id] || 'General Service',
+          location: p.city ? `${p.city}, ${p.state || ''}` : 'Location Not Set',
+          experience: `${p.experience_years || 0} years`,
+          rating: p.average_rating || null,
+          doc: p.documents && p.documents.length > 0 ? (p.documents[0].verification_status || 'Pending') : 'No Docs',
+          docType: p.documents && p.documents.length > 0 ? p.documents[0].document_type : 'Verification ID',
+          docUrl: p.documents && p.documents.length > 0 ? p.documents[0].file_path : '',
+          documents: p.documents || []
+        }));
+      }
+
+      if (allRes.ok && allData.status) {
+        allData.providers.forEach(p => {
+          const mapped = {
+            id: p.provider_id,
+            name: p.full_name || p.business_name || 'Unnamed Business',
+            email: p.email,
+            phone: p.phone,
+            status: p.status,
+            category: catMap[p.category_id] || 'General Service',
+            location: p.city ? `${p.city}, ${p.state || ''}` : 'Location Not Set',
+            experience: `${p.experience_years || 0} years`,
+            rating: p.average_rating || null,
+            doc: 'Verified',
+            docType: 'Verification ID',
+            docUrl: '',
+            documents: []
+          };
+          if (p.status === 'Active') {
+            approvedList.push(mapped);
+          } else if (p.status === 'Blocked' || p.status === 'Suspended') {
+            blockedList.push({ ...mapped, status: 'Blocked' });
+          }
+        });
+      }
+
+      setProviders({
+        Pending: pendingList,
+        Approved: approvedList,
+        Blocked: blockedList
+      });
+
+    } catch {
+      showToast('Error loading provider approvals queue.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const current = providers[tab];
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const handleAction = async () => {
+    if (!showConfirmAction) return;
+    const { provider, from, to } = showConfirmAction;
+    setActionLoading(true);
+
+    let endpoint = '';
+    if (to === 'Approved') {
+      // Approve if currently pending, else unblock
+      endpoint = from === 'Pending' 
+        ? `/api/admin/provider/${provider.id}/approve`
+        : `/api/admin/provider/${provider.id}/unblock`;
+    } else if (to === 'Blocked') {
+      // Reject if currently pending, else block
+      endpoint = from === 'Pending'
+        ? `/api/admin/provider/${provider.id}/reject`
+        : `/api/admin/provider/${provider.id}/block`;
+    }
+
+    try {
+      const res = await apiFetchAdmin(endpoint, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        showToast(data.message || `Provider status updated to ${to}`, 'success');
+        // Refresh local lists
+        await fetchAllData();
+      } else {
+        showToast(data.message || 'Verification operation failed.', 'error');
+      }
+    } catch {
+      showToast('Server error executing operation.', 'error');
+    } finally {
+      setActionLoading(false);
+      setShowConfirmAction(null);
+    }
+  };
+
+  const current = providers[tab] || [];
 
   const tabs = [
     { key: 'Pending',  label: 'Pending',  color: 'amber' },
@@ -65,17 +175,21 @@ const ProviderApproval = () => {
           >
             {label}
             <span className="px-2 py-0.5 rounded-full text-[9px] bg-white/5 border border-white/10 text-zinc-400 font-black">
-              {providers[key].length}
+              {loading ? '..' : (providers[key]?.length || 0)}
             </span>
           </button>
         ))}
       </div>
 
       {/* Cards */}
-      {current.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-20 rounded-3xl bg-[#0d1425]/40 border border-white/5 backdrop-blur-xl flex justify-center">
+          <Loader2 size={32} className="animate-spin text-blue-400" />
+        </div>
+      ) : current.length === 0 ? (
         <div className="text-center py-20 rounded-3xl bg-[#0d1425]/40 border border-white/5 backdrop-blur-xl">
           <ShieldCheck size={40} className="mx-auto mb-4 text-zinc-700" />
-          <p className="text-zinc-400 text-sm font-semibold">No provider approvals pending.</p>
+          <p className="text-zinc-400 text-sm font-semibold">No provider accounts in this list.</p>
           <p className="text-zinc-600 italic text-xs mt-1">Applications will appear here once providers register.</p>
         </div>
       ) : (
@@ -87,7 +201,7 @@ const ProviderApproval = () => {
                 {/* Header */}
                 <div className="flex items-start gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0 shadow-md">
-                    {p.name[0]}
+                    {p.name[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
                     <p className="text-white font-bold text-xs truncate leading-normal">{p.name}</p>
@@ -96,7 +210,7 @@ const ProviderApproval = () => {
                   
                   {/* Doc badge */}
                   <span className={`flex-shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                    p.doc === 'Verified' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                    p.doc === 'Verified' || p.doc === 'Approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                     p.doc === 'Pending'  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                            'bg-red-500/10 text-red-400 border-red-500/20'
                   }`}>
@@ -112,26 +226,28 @@ const ProviderApproval = () => {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-400">
                     <MapPin size={12} className="text-purple-400 flex-shrink-0" />
-                    <span>{p.location}</span>
+                    <span className="truncate">{p.location}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-400 col-span-2">
-                    <FileText size={12} className="text-amber-400 flex-shrink-0" />
-                    <button 
-                      onClick={() => setSelectedDoc(p)}
-                      className="text-zinc-400 hover:text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <span>{p.docType}</span>
-                      <Eye size={12} className="text-zinc-500" />
-                    </button>
-                  </div>
+                  {p.documents && p.documents.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 col-span-2">
+                      <FileText size={12} className="text-amber-400 flex-shrink-0" />
+                      <button 
+                        onClick={() => setSelectedDoc(p)}
+                        className="text-zinc-400 hover:text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <span>{p.docType}</span>
+                        <Eye size={12} className="text-zinc-500" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-zinc-500 px-1">
                   <span>Experience: <strong className="text-zinc-300 font-bold">{p.experience}</strong></span>
-                  {p.rating && (
+                  {p.rating != null && (
                     <div className="flex items-center gap-1">
                       <Star size={11} className="text-amber-400 fill-amber-400" />
-                      <span className="text-white font-bold">{p.rating}</span>
+                      <span className="text-white font-bold">{Number(p.rating).toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -195,27 +311,29 @@ const ProviderApproval = () => {
             <div className="space-y-4">
               <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col gap-2 text-xs">
                 <p className="text-zinc-500">Document Type: <span className="text-white font-bold ml-1">{selectedDoc.docType}</span></p>
-                <p className="text-zinc-500">Resource URI: <span className="text-zinc-400 font-mono ml-1">{selectedDoc.docUrl}</span></p>
+                <p className="text-zinc-500">Resource URL: <span className="text-zinc-400 font-mono ml-1">{selectedDoc.docUrl || 'No digital URL provided'}</span></p>
                 <p className="text-zinc-500">Audit Status: <span className={`ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                  selectedDoc.doc === 'Verified' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  selectedDoc.doc === 'Verified' || selectedDoc.doc === 'Approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                 }`}>{selectedDoc.doc}</span></p>
               </div>
 
-              {/* Mock Document Render */}
+              {/* Document Render */}
               <div className="h-48 border border-white/10 rounded-2xl bg-black/35 flex flex-col items-center justify-center p-6 text-center">
-                <FileText size={44} className="text-blue-500/60 mb-3 animate-pulse" />
+                <FileText size={44} className="text-blue-500/60 mb-3" />
                 <p className="text-white text-xs font-bold">{selectedDoc.docType}</p>
-                <p className="text-zinc-500 text-[10px] mt-1">Audit verification code: FXML-ID-{selectedDoc.id}X2</p>
-                <div className="mt-4 flex gap-2">
-                  <button 
-                    onClick={() => {
-                      showToast('Document downloaded (Simulated)', 'success');
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white font-bold text-[10px] cursor-pointer"
-                  >
-                    Download File
-                  </button>
-                </div>
+                <p className="text-zinc-500 text-[10px] mt-1">Audit verification code: PROV-DOC-{selectedDoc.id}</p>
+                {selectedDoc.docUrl && (
+                  <div className="mt-4 flex gap-2">
+                    <a
+                      href={selectedDoc.docUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white font-bold text-[10px] cursor-pointer"
+                    >
+                      View Original File
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -230,18 +348,20 @@ const ProviderApproval = () => {
               {showConfirmAction.to === 'Approved' ? 'Approve Listing?' : 'Reject / Block Partner?'}
             </h3>
             <p className="text-zinc-500 text-xs mt-2 leading-relaxed">
-              Are you sure you want to change parameters for <span className="text-white font-bold">{showConfirmAction.provider.name}</span> to <span className="text-blue-400 font-bold">{showConfirmAction.to}</span>?
+              Are you sure you want to change status for <span className="text-white font-bold">{showConfirmAction.provider.name}</span> to <span className="text-blue-400 font-bold">{showConfirmAction.to}</span>?
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowConfirmAction(null)} className="px-4 py-2 border border-white/10 text-zinc-400 hover:text-white rounded-xl text-xs cursor-pointer">Cancel</button>
               <button 
-                onClick={() => moveProvider(showConfirmAction.provider, showConfirmAction.from, showConfirmAction.to)}
-                className={`px-5 py-2.5 font-bold rounded-xl text-xs cursor-pointer shadow-lg ${
+                onClick={handleAction}
+                disabled={actionLoading}
+                className={`px-5 py-2.5 font-bold rounded-xl text-xs cursor-pointer shadow-lg flex items-center gap-2 ${
                   showConfirmAction.to === 'Approved' 
                     ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-500/10' 
                     : 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/10'
                 }`}
               >
+                {actionLoading && <Loader2 size={12} className="animate-spin" />}
                 Confirm
               </button>
             </div>

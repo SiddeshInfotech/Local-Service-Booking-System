@@ -121,10 +121,14 @@ def register_provider():
             status = "Pending"
             email_verified = 0
 
+        owner_name = data.get("owner_name") or full_name
+        business_name = data.get("business_name") or full_name
+
         query = """
         INSERT INTO providers
         (
-            full_name,
+            business_name,
+            owner_name,
             email,
             password_hash,
             phone,
@@ -140,11 +144,12 @@ def register_provider():
         )
         VALUES
         (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
         cursor.execute(query, (
-            full_name,
+            business_name,
+            owner_name,
             email,
             password_hash,
             phone,
@@ -368,21 +373,20 @@ def login_provider():
             "refresh_token": refresh_token,
             "provider": {
                 "provider_id": user["provider_id"],
-                "full_name": user["full_name"],
-                # Aliases for frontend compatibility
-                "business_name": user["full_name"],
-                "owner_name": user["full_name"],
+                "full_name": user.get("business_name") or user.get("owner_name") or "",
+                "business_name": user.get("business_name") or "",
+                "owner_name": user.get("owner_name") or "",
                 "email": user["email"],
                 "phone": user["phone"],
-                "profile_image": user["profile_image"],
-                "address": user["address"],
-                "city": user["city"],
-                "state": user["state"],
-                "pincode": user["pincode"],
-                "experience_years": user["experience_years"],
-                "description": user["description"],
-                "average_rating": float(user["average_rating"]) if user["average_rating"] else 0.0,
-                "total_reviews": user["total_reviews"],
+                "profile_image": user.get("profile_image"),
+                "address": user.get("address"),
+                "city": user.get("city"),
+                "state": user.get("state"),
+                "pincode": user.get("pincode"),
+                "experience_years": user.get("experience_years"),
+                "description": user.get("description"),
+                "average_rating": float(user["average_rating"]) if user.get("average_rating") else 0.0,
+                "total_reviews": user.get("total_reviews", 0),
                 "status": user["status"]
             }
         }), 200
@@ -409,7 +413,7 @@ def provider_forgot_password():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT provider_id, full_name FROM providers WHERE email = %s", (email,))
+        cursor.execute("SELECT provider_id, business_name, owner_name FROM providers WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         success_response = jsonify({
@@ -438,7 +442,7 @@ def provider_forgot_password():
         email_subject = "Reset Your Password"
         email_body = f"""
             <h2>Password Reset Request</h2>
-            <p>Hi {user['full_name']},</p>
+            <p>Hi {user.get('business_name') or user.get('owner_name') or 'Provider'},</p>
             <p>Please click the link below to reset your password:</p>
             <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
             <p>Expires in 30 minutes.</p>
@@ -597,7 +601,7 @@ def get_provider_profile():
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT provider_id, full_name, email, phone, profile_image, address, city, state, pincode, experience_years, description, average_rating, total_reviews, status, email_verified, created_at FROM providers WHERE provider_id = %s",
+            "SELECT provider_id, business_name, owner_name, email, phone, profile_image, address, city, state, pincode, experience_years, description, average_rating, total_reviews, status, email_verified, created_at FROM providers WHERE provider_id = %s",
             (user_payload["user_id"],)
         )
         provider = cursor.fetchone()
@@ -607,9 +611,8 @@ def get_provider_profile():
             conn.close()
             return jsonify({"status": False, "message": "Provider not found."}), 404
 
-        # Add aliases for frontend compatibility
-        provider["business_name"] = provider["full_name"]
-        provider["owner_name"] = provider["full_name"]
+        # Add full_name alias for frontend compatibility
+        provider["full_name"] = provider.get("business_name") or provider.get("owner_name") or ""
 
         # Fetch provider documents
         cursor.execute(
@@ -661,11 +664,12 @@ def update_provider_profile():
             return jsonify({"status": False, "message": "Provider not found."}), 404
 
         # Accept full_name or its aliases from frontend
-        full_name = (
+        existing_name = provider.get("business_name") or provider.get("owner_name") or ""
+        new_name = (
             data.get("full_name")
             or data.get("owner_name")
             or data.get("business_name")
-            or provider["full_name"]
+            or existing_name
         )
         phone = data.get("phone", provider["phone"])
         address = data.get("address", provider["address"])
@@ -678,11 +682,11 @@ def update_provider_profile():
 
         query = """
         UPDATE providers
-        SET full_name = %s, phone = %s, address = %s,
+        SET business_name = %s, owner_name = %s, phone = %s, address = %s,
             city = %s, state = %s, pincode = %s, experience_years = %s, description = %s, profile_image = %s
         WHERE provider_id = %s
         """
-        cursor.execute(query, (full_name, phone, address, city, state, pincode, experience_years, description, profile_image, user_payload["user_id"]))
+        cursor.execute(query, (new_name, new_name, phone, address, city, state, pincode, experience_years, description, profile_image, user_payload["user_id"]))
         conn.commit()
 
         # Fetch updated provider
@@ -692,9 +696,8 @@ def update_provider_profile():
         cursor.close()
         conn.close()
 
-        # Add aliases
-        updated_provider["business_name"] = updated_provider["full_name"]
-        updated_provider["owner_name"] = updated_provider["full_name"]
+        # Add full_name alias for frontend compatibility
+        updated_provider["full_name"] = updated_provider.get("business_name") or updated_provider.get("owner_name") or ""
 
         if updated_provider.get("created_at"):
             updated_provider["created_at"] = updated_provider["created_at"].isoformat()

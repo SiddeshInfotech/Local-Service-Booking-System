@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Search, Plus, Pencil, Trash2, X, Check, Tag, Sparkles, AlertCircle, Filter } from 'lucide-react';
-
-const initialCategories = [
-  { id: 1, name: 'Cleaning',     icon: '🧹', services: 0, status: 'Active',   desc: 'Home, office and deep cleaning services.' },
-  { id: 2, name: 'Plumbing',     icon: '🔧', services: 0, status: 'Active',   desc: 'Pipe fitting, leaks, drainage and water-related repairs.' },
-  { id: 3, name: 'AC Repair',    icon: '❄️', services: 0, status: 'Active',   desc: 'Installation, service and gas refilling for ACs.' },
-  { id: 4, name: 'Carpenter',    icon: '🪚', services: 0, status: 'Active',   desc: 'Furniture assembly, wood work and repairs.' },
-  { id: 5, name: 'Electrician',  icon: '⚡', services: 0, status: 'Active',   desc: 'Wiring, switch boards, appliance installation.' },
-];
+import { Search, Plus, Pencil, Trash2, X, Check, Sparkles, AlertCircle, Filter, Loader2 } from 'lucide-react';
+import { apiFetchAdmin } from '../../api';
 
 const EMPTY = { name: '', icon: '🔧', desc: '', status: 'Active' };
 
@@ -16,12 +9,44 @@ const emojiPool = ['🔧', '⚡', '🧹', '🪚', '🐛', '❄️', '🎨', '�
 
 const ManageCategories = () => {
   const { showToast } = useOutletContext();
-  const [categories, setCategories] = useState(initialCategories);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // null | 'add' | { ...category }
   const [form, setForm] = useState(EMPTY);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [filter, setFilter] = useState('All');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetchAdmin('/api/admin/categories');
+      const data = await res.json();
+      if (res.ok && data.status) {
+        // Map database categories to UI structure
+        const mapped = data.categories.map((c) => ({
+          id: c.category_id,
+          name: c.category_name,
+          icon: c.category_icon || '📁',
+          desc: c.description || '',
+          status: c.status || 'Active',
+          services: c.services_count || 0 // Backend might return counts, let's fall back to 0
+        }));
+        setCategories(mapped);
+      } else {
+        showToast(data.message || 'Failed to load categories.', 'error');
+      }
+    } catch {
+      showToast('Server error loading categories.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const filtered = categories.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -34,35 +59,82 @@ const ManageCategories = () => {
   const openEdit = (cat) => { setForm({ name: cat.name, icon: cat.icon, desc: cat.desc, status: cat.status }); setModal(cat); };
   const closeModal = () => setModal(null);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       showToast('Category name is required', 'error');
       return;
     }
-    if (modal === 'add') {
-      setCategories((prev) => [...prev, { id: Date.now(), ...form, services: 0 }]);
-      showToast(`Category "${form.name}" has been created.`, 'success');
-    } else {
-      setCategories((prev) => prev.map((c) => c.id === modal.id ? { ...c, ...form } : c));
-      showToast(`Category "${form.name}" has been updated.`, 'success');
+
+    setActionLoading(true);
+    try {
+      if (modal === 'add') {
+        const res = await apiFetchAdmin('/api/category', {
+          method: 'POST',
+          body: JSON.stringify({
+            category_name: form.name,
+            category_icon: form.icon,
+            description: form.desc
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.status) {
+          showToast(`Category "${form.name}" has been created.`, 'success');
+          fetchCategories();
+          closeModal();
+        } else {
+          showToast(data.message || 'Failed to create category.', 'error');
+        }
+      } else {
+        const res = await apiFetchAdmin(`/api/category/${modal.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            category_name: form.name,
+            category_icon: form.icon,
+            description: form.desc,
+            status: form.status
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.status) {
+          showToast(`Category "${form.name}" has been updated.`, 'success');
+          fetchCategories();
+          closeModal();
+        } else {
+          showToast(data.message || 'Failed to update category.', 'error');
+        }
+      }
+    } catch {
+      showToast('Server error saving category.', 'error');
+    } finally {
+      setActionLoading(false);
     }
-    closeModal();
   };
 
   const attemptDelete = (cat) => {
-    if (cat.services > 0) {
-      showToast(`Conflict: "${cat.name}" has ${cat.services} active services. Reassign them first.`, 'error');
-      return;
-    }
     setShowDeleteConfirm(cat);
   };
 
-  const executeDelete = () => {
+  const executeDelete = async () => {
     const cat = showDeleteConfirm;
-    setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-    showToast(`Category "${cat.name}" has been removed.`, 'error');
-    setShowDeleteConfirm(null);
+    setActionLoading(true);
+    try {
+      const res = await apiFetchAdmin(`/api/category/${cat.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        showToast(`Category "${cat.name}" status set to Inactive.`, 'error');
+        fetchCategories();
+      } else {
+        showToast(data.message || 'Failed to delete category.', 'error');
+      }
+    } catch {
+      showToast('Server error deleting category.', 'error');
+    } finally {
+      setActionLoading(false);
+      setShowDeleteConfirm(null);
+    }
   };
 
   return (
@@ -123,15 +195,20 @@ const ManageCategories = () => {
               <tr className="border-b border-white/5 bg-[#0a0e1b]/40">
                 <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Category</th>
                 <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider hidden md:table-cell">Description</th>
-                <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Services</th>
                 <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center text-zinc-500 py-12 text-xs italic">No categories found matching criteria.</td>
+                  <td colSpan={4} className="text-center py-16">
+                    <Loader2 className="animate-spin text-blue-400 mx-auto" size={24} />
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center text-zinc-500 py-12 text-xs italic">No categories found matching criteria.</td>
                 </tr>
               ) : (
                 filtered.map((cat) => (
@@ -143,7 +220,6 @@ const ManageCategories = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-zinc-400 text-xs max-w-xs truncate hidden md:table-cell">{cat.desc}</td>
-                    <td className="px-6 py-4 text-zinc-300 text-xs font-mono font-bold">{cat.services}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${
                         cat.status === 'Active'
@@ -164,7 +240,7 @@ const ManageCategories = () => {
                         </button>
                         <button 
                           onClick={() => attemptDelete(cat)} 
-                          title="Delete Category"
+                          title="Deactivate Category"
                           className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
                         >
                           <Trash2 size={14} />
@@ -247,8 +323,8 @@ const ManageCategories = () => {
                 <button type="button" onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white text-xs font-bold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/10">
-                  <Check size={14} /> Save Parameters
+                <button type="submit" disabled={actionLoading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/10">
+                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save Parameters
                 </button>
               </div>
             </form>
@@ -262,18 +338,20 @@ const ManageCategories = () => {
           <div className="relative w-full max-w-sm bg-[#0e162c] border border-white/10 rounded-[32px] p-6 shadow-2xl">
             <div className="flex items-center gap-2 text-red-400 mb-3">
               <AlertCircle size={20} />
-              <h3 className="font-bold text-lg">Remove Category?</h3>
+              <h3 className="font-bold text-lg">Deactivate Category?</h3>
             </div>
             <p className="text-zinc-500 text-xs mt-2 leading-relaxed">
-              Confirm removal of category <span className="text-white font-bold">{showDeleteConfirm.name}</span>. This removes it from registry selection indices. Action cannot be undone.
+              Confirm deactivation of category <span className="text-white font-bold">{showDeleteConfirm.name}</span>. This sets its status to Inactive.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowDeleteConfirm(null)} className="px-4 py-2 border border-white/10 text-zinc-400 hover:text-white rounded-xl text-xs cursor-pointer">Cancel</button>
               <button 
                 onClick={executeDelete} 
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-red-500/10"
+                disabled={actionLoading}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-red-500/10 flex items-center gap-1.5"
               >
-                Confirm Delete
+                {actionLoading && <Loader2 size={14} className="animate-spin" />}
+                Confirm Deactivate
               </button>
             </div>
           </div>

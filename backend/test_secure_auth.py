@@ -47,6 +47,14 @@ def fetch_token_from_db(email, token_column):
     conn.close()
     return val
 
+def approve_provider_in_db(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE providers SET status = 'Approved' WHERE email = %s", (email,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 def ensure_category_and_location():
     """
     Ensures at least one category and location exist in the database,
@@ -87,7 +95,7 @@ def ensure_category_and_location():
 def test_customer_flow():
     print("=== STARTING CUSTOMER AUTH FLOW TESTS ===")
     rand_id = random.randint(10000, 99999)
-    email = f"cust_{rand_id}@example.com"
+    email = f"cust_{rand_id}@test.com"
     phone = f"9{rand_id:05d}1234"
     password = "CustomerPassword123"
     
@@ -187,11 +195,11 @@ def test_customer_flow():
     print("  [PASS] Revoked refresh token failed to fetch a new access token as expected.")
     
     print("Customer auth flow tests completed successfully!\n")
-
+ 
 def test_provider_flow(category_id, location_id):
     print("=== STARTING PROVIDER AUTH FLOW TESTS ===")
     rand_id = random.randint(10000, 99999)
-    email = f"prov_{rand_id}@example.com"
+    email = f"prov_{rand_id}@test.com"
     phone = f"8{rand_id:05d}5678"
     password = "ProviderPassword123"
     
@@ -206,7 +214,8 @@ def test_provider_flow(category_id, location_id):
         "state": "TestState",
         "pincode": "110022",
         "experience_years": 5,
-        "description": "Premium service repairs"
+        "description": "Premium service repairs",
+        "category_id": category_id
     }
     
     status, res = make_request(f"{BASE_URL}/api/provider/register", "POST", reg_data)
@@ -229,6 +238,9 @@ def test_provider_flow(category_id, location_id):
     status, res = make_request(f"{BASE_URL}/api/provider/verify-email", "POST", {"token": token})
     assert status == 200, f"Email verification failed: {res}"
     print(f"  [PASS] Email verified successfully. Response: {res['message']}")
+    
+    # Auto-approve provider in DB to allow login testing
+    approve_provider_in_db(email)
     
     # 5. Login after verification
     status, res = make_request(f"{BASE_URL}/api/provider/login", "POST", login_data)

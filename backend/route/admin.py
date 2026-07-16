@@ -407,40 +407,40 @@ def get_aggregate_reports():
 
         # Top performing providers
         top_prov_query = f"""
-            SELECT p.full_name as provider_name,
+            SELECT COALESCE(p.business_name, p.owner_name) as provider_name,
                    COUNT(b.booking_id) as total_bookings,
                    p.average_rating,
                    COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
             FROM providers p
             LEFT JOIN bookings b ON p.provider_id = b.provider_id
             {('AND b.created_at >= %s' if since else '').replace('AND', 'WHERE b.provider_id IS NOT NULL AND') if since else ''}
-            GROUP BY p.provider_id, p.full_name, p.average_rating
+            GROUP BY p.provider_id, p.business_name, p.owner_name, p.average_rating
             ORDER BY total_bookings DESC
             LIMIT 5
         """
         # Simpler top providers query
         if since:
             top_prov_q = """
-                SELECT p.full_name as provider_name,
+                SELECT COALESCE(p.business_name, p.owner_name) as provider_name,
                        COUNT(b.booking_id) as total_bookings,
                        COALESCE(p.average_rating, 0) as average_rating,
                        COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
                 FROM providers p
                 LEFT JOIN bookings b ON p.provider_id = b.provider_id AND b.created_at >= %s
-                GROUP BY p.provider_id, p.full_name, p.average_rating
+                GROUP BY p.provider_id, p.business_name, p.owner_name, p.average_rating
                 ORDER BY total_bookings DESC
                 LIMIT 5
             """
             cursor.execute(top_prov_q, [since])
         else:
             top_prov_q = """
-                SELECT p.full_name as provider_name,
+                SELECT COALESCE(p.business_name, p.owner_name) as provider_name,
                        COUNT(b.booking_id) as total_bookings,
                        COALESCE(p.average_rating, 0) as average_rating,
                        COALESCE(SUM(CASE WHEN b.payment_status='Paid' THEN COALESCE(b.final_price,b.estimated_price,0) ELSE 0 END),0) as revenue
                 FROM providers p
                 LEFT JOIN bookings b ON p.provider_id = b.provider_id
-                GROUP BY p.provider_id, p.full_name, p.average_rating
+                GROUP BY p.provider_id, p.business_name, p.owner_name, p.average_rating
                 ORDER BY total_bookings DESC
                 LIMIT 5
             """
@@ -849,7 +849,7 @@ def admin_list_providers():
         cursor = conn.cursor(dictionary=True)
 
         query = """
-        SELECT provider_id, full_name, email, phone, category_id,
+        SELECT provider_id, business_name, owner_name, email, phone, category_id,
                address, city, state, pincode, experience_years, description,
                average_rating, total_reviews, status, email_verified, last_login, created_at
         FROM providers
@@ -880,8 +880,7 @@ def admin_list_providers():
             if p.get("last_login"):
                 p["last_login"] = p["last_login"].isoformat()
             # Aliases for frontend
-            p["business_name"] = p["full_name"]
-            p["owner_name"] = p["full_name"]
+            p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
 
         return jsonify({"status": True, "providers": providers, "total": len(providers)}), 200
 
@@ -898,7 +897,7 @@ def admin_provider_approval_list():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT provider_id, full_name, email, phone, category_id,
+            SELECT provider_id, business_name, owner_name, email, phone, category_id,
                    address, city, state, pincode, experience_years, description,
                    average_rating, total_reviews, status, email_verified, created_at
             FROM providers
@@ -927,8 +926,7 @@ def admin_provider_approval_list():
             if p.get("status") == "Suspended":
                 p["status"] = "Blocked"
 
-            p["business_name"] = p["full_name"]
-            p["owner_name"] = p["full_name"]
+            p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
 
         cursor.close()
         conn.close()
@@ -948,7 +946,7 @@ def admin_get_provider(provider_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute("""
-            SELECT provider_id, full_name, email, phone, profile_image, category_id,
+            SELECT provider_id, business_name, owner_name, email, phone, profile_image, category_id,
                    address, city, state, pincode, experience_years, description,
                    average_rating, total_reviews, status, email_verified, last_login, created_at
             FROM providers WHERE provider_id = %s
@@ -986,8 +984,7 @@ def admin_get_provider(provider_id):
             provider["created_at"] = provider["created_at"].isoformat()
         if provider.get("last_login"):
             provider["last_login"] = provider["last_login"].isoformat()
-        provider["business_name"] = provider["full_name"]
-        provider["owner_name"] = provider["full_name"]
+        provider["full_name"] = provider.get("business_name") or provider.get("owner_name") or ""
 
         return jsonify({"status": True, "provider": provider}), 200
     except Exception as e:
@@ -1011,7 +1008,7 @@ def admin_update_provider(provider_id):
             conn.close()
             return jsonify({"status": False, "message": "Provider not found."}), 404
 
-        full_name = data.get("full_name") or data.get("owner_name") or data.get("business_name") or provider["full_name"]
+        new_name = data.get("full_name") or data.get("owner_name") or data.get("business_name") or provider.get("business_name") or provider.get("owner_name") or ""
         phone = data.get("phone", provider["phone"])
         address = data.get("address", provider["address"])
         city = data.get("city", provider["city"])
@@ -1025,10 +1022,10 @@ def admin_update_provider(provider_id):
 
         cursor.execute("""
             UPDATE providers
-            SET full_name=%s, phone=%s, address=%s, city=%s, state=%s,
+            SET business_name=%s, owner_name=%s, phone=%s, address=%s, city=%s, state=%s,
                 pincode=%s, experience_years=%s, description=%s, status=%s
             WHERE provider_id=%s
-        """, (full_name, phone, address, city, state, pincode, experience_years, description, status, provider_id))
+        """, (new_name, new_name, phone, address, city, state, pincode, experience_years, description, status, provider_id))
         conn.commit()
         cursor.close()
         conn.close()
@@ -1384,7 +1381,7 @@ def admin_list_bookings():
         SELECT b.*,
                s.service_name,
                c.full_name AS customer_name, c.email AS customer_email,
-               p.full_name AS provider_name, p.email AS provider_email
+               COALESCE(p.business_name, p.owner_name) AS provider_name, p.email AS provider_email
         FROM bookings b
         JOIN services s ON b.service_id = s.service_id
         JOIN customers c ON b.customer_id = c.customer_id
@@ -1427,7 +1424,7 @@ def admin_list_reviews():
         cursor.execute("""
             SELECT r.*,
                    c.full_name AS customer_name,
-                   p.full_name AS provider_name
+                   COALESCE(p.business_name, p.owner_name) AS provider_name
             FROM reviews r
             JOIN customers c ON r.customer_id = c.customer_id
             JOIN providers p ON r.provider_id = p.provider_id
@@ -1613,7 +1610,7 @@ def get_dashboard_recent():
 
         # Recent 5 provider registrations
         cursor.execute("""
-            SELECT provider_id, full_name, email, status, created_at
+            SELECT provider_id, business_name, owner_name, email, status, created_at
             FROM providers
             ORDER BY created_at DESC
             LIMIT 5
@@ -1622,7 +1619,7 @@ def get_dashboard_recent():
         for p in recent_providers:
             if p.get("created_at"):
                 p["created_at"] = p["created_at"].isoformat()
-            p["business_name"] = p["full_name"]
+            p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
 
         cursor.close()
         conn.close()

@@ -1,11 +1,15 @@
 import os
 import smtplib
 import threading
+import traceback
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 
-load_dotenv()
+# Ensure dotenv is loaded with correct paths
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(base_dir, ".env")
+load_dotenv(dotenv_path=env_path)
 
 def send_email(to_email, subject, body_html):
     """
@@ -23,7 +27,6 @@ def send_email(to_email, subject, body_html):
     
     if not user or not password:
         print("Warning: EMAIL_USER or EMAIL_PASSWORD not configured. Skipping email dispatch.")
-        # Print the link to console for debugging/testing environments
         print(f"--- EMAIL TO: {to_email} ---")
         print(f"--- SUBJECT: {subject} ---")
         print(f"--- BODY: ---\n{body_html}\n-----------------")
@@ -37,7 +40,8 @@ def send_email(to_email, subject, body_html):
     msg.attach(MIMEText(body_html, 'html'))
     
     try:
-        server = smtplib.SMTP(host, port)
+        print(f"Attempting to send email to {to_email} via {host}:{port}...")
+        server = smtplib.SMTP(host, port, timeout=15)
         server.starttls()
         server.login(user, password)
         server.sendmail(user, to_email, msg.as_string())
@@ -46,7 +50,9 @@ def send_email(to_email, subject, body_html):
         return True
     except Exception as e:
         print(f"Failed to send email to {to_email}: {e}")
-        # Print fallback to console so the link is still accessible
+        print("Full Traceback:")
+        traceback.print_exc()
+        # Print fallback to console so the link is still accessible in local development
         print(f"--- FALLBACK EMAIL TO: {to_email} ---")
         print(body_html)
         return False
@@ -58,3 +64,4 @@ def send_email_async(to_email, subject, body_html):
     thread = threading.Thread(target=send_email, args=(to_email, subject, body_html))
     thread.daemon = True
     thread.start()
+

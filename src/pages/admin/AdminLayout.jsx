@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Briefcase, CheckSquare, Tag, Wrench,
   CalendarDays, Star, BarChart2, ChevronLeft, ChevronRight,
   Bell, Search, LogOut, Menu, X, ShieldCheck, Check, Sparkles, AlertTriangle, AlertCircle
 } from 'lucide-react';
 import fixoraLogo from '../../assets/images/fixora_logo.png';
+import { apiFetchAdmin, clearAuth, getAdmin } from '../../api';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
@@ -27,16 +28,38 @@ const AdminLayout = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [toasts, setToasts] = useState([]);
   const location = useLocation();
+  const navigate = useNavigate();
   const searchRef = useRef(null);
   const notifRef = useRef(null);
 
-  // Mock Notifications State
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'New provider "CleanPro India" requested approval', time: '5 mins ago', read: false, type: 'alert' },
-    { id: 2, text: 'Booking BK-1021 has been completed', time: '1 hr ago', read: false, type: 'success' },
-    { id: 3, text: 'Review reported for service "Plumbing"', time: '3 hrs ago', read: true, type: 'warning' },
-    { id: 4, text: 'System backup completed successfully', time: '1 day ago', read: true, type: 'info' }
-  ]);
+  // Real Notifications State
+  const [notifications, setNotifications] = useState([]);
+
+  // Load notifications from backend
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiFetchAdmin('/api/notification');
+        const data = await res.json();
+        if (res.ok && data.status && Array.isArray(data.notifications)) {
+          const mapped = data.notifications.map(n => ({
+            id: n.notification_id,
+            text: n.message || n.title,
+            time: n.created_at ? new Date(n.created_at).toLocaleString() : '',
+            read: !!n.is_read,
+            type: n.notification_type === 'Alert' ? 'alert' : n.notification_type === 'Success' ? 'success' : n.notification_type === 'Warning' ? 'warning' : 'info',
+          }));
+          setNotifications(mapped);
+        }
+      } catch {
+        // Notifications are non-critical — silently fail
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  // Get admin info from localStorage
+  const adminInfo = getAdmin();
 
   // Click outside listener for dropdowns
   useEffect(() => {
@@ -78,9 +101,32 @@ const AdminLayout = () => {
     }, 3500);
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    // Mark all as read via API (fire and forget)
+    const unread = notifications.filter(n => !n.read);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    for (const n of unread) {
+      try {
+        await apiFetchAdmin(`/api/notification/${n.id}/read`, { method: 'PUT' });
+      } catch { /* ignore */ }
+    }
     showToast('All notifications marked as read', 'success');
+  };
+
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem('admin_refresh_token');
+      // No admin-specific logout endpoint — just clear tokens
+      if (refreshToken) {
+        await apiFetchAdmin('/api/customer/logout', {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        }).catch(() => {});
+      }
+    } finally {
+      clearAuth();
+      navigate('/admin/login');
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -129,18 +175,17 @@ const AdminLayout = () => {
 
       {/* Bottom: logout */}
       <div className="px-3 py-4 border-t border-white/5 flex-shrink-0">
-        <Link
-          to="/admin/login"
+        <button
           onClick={() => {
             if (onNavClick) onNavClick();
-            showToast('Successfully logged out.', 'info');
+            handleLogout();
           }}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300 ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300 cursor-pointer border-0 bg-transparent ${collapsed ? 'justify-center' : ''}`}
           title={collapsed ? 'Logout' : undefined}
         >
           <LogOut size={18} className="flex-shrink-0" />
           {!collapsed && <span className="text-sm font-semibold">Logout</span>}
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -324,11 +369,11 @@ const AdminLayout = () => {
             {/* Admin avatar */}
             <div className="flex items-center gap-2.5 border-l border-white/5 pl-4">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-lg shadow-blue-500/10">
-                A
+                {adminInfo?.full_name?.[0]?.toUpperCase() || 'A'}
               </div>
               <div className="hidden lg:block text-left">
-                <p className="text-white text-xs font-bold leading-none">Admin</p>
-                <p className="text-blue-400 text-[9px] font-bold uppercase tracking-wider mt-1">Super User</p>
+                <p className="text-white text-xs font-bold leading-none">{adminInfo?.full_name || 'Admin'}</p>
+                <p className="text-blue-400 text-[9px] font-bold uppercase tracking-wider mt-1">{adminInfo?.role || 'Super User'}</p>
               </div>
             </div>
           </div>

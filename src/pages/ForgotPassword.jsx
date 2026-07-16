@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, ShieldCheck, Key, RefreshCw } from 'lucide-react';
 import InputField from '../components/InputField';
 import forgotPasswordIllustration from '../assets/images/forgot_password_illustration.png';
-import fixoraLogo from '../assets/images/fixora_logo.png';
+import { API_BASE_URL } from '../api';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -16,7 +16,7 @@ const ForgotPassword = () => {
     return emailRegex.test(emailVal);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -33,15 +33,24 @@ const ForgotPassword = () => {
 
     setIsSubmitting(true);
 
-    // Backend/API placeholder integration:
-    // This simulates calling a backend password reset API
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/customer/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        setSuccessMsg(data.message || 'If an account exists with this email, a password reset link has been sent to your registered email address.');
+        setEmail('');
+      } else {
+        setErrorMsg(data.message || 'Reset request failed. Please try again.');
+      }
+    } catch {
+      setErrorMsg('Server connection failed. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-      setSuccessMsg(
-        'If an account exists with this email, a password reset link has been sent to your registered email address.'
-      );
-      setEmail('');
-    }, 1200);
+    }
   };
 
   return (
@@ -72,7 +81,6 @@ const ForgotPassword = () => {
         
         {/* Left Side: Illustration Panel */}
         <div className="relative hidden md:flex flex-col justify-between overflow-hidden min-h-[480px] bg-[#0F1115]">
-          {/* Atmospheric orb glows */}
           <div className="absolute top-0 left-0 w-80 h-80 bg-[#D4AF37]/8 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#D4AF37]/6 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 via-transparent to-[#D4AF37]/3 pointer-events-none" />
@@ -87,11 +95,8 @@ const ForgotPassword = () => {
             />
           </div>
 
-          {/* Dark gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F1115]/90 via-transparent to-[#0F1115]/40 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0F1115]/20 via-transparent to-[#0F1115]/60 pointer-events-none" />
-
-
 
           {/* Feature pills */}
           <div className="absolute top-8 right-8 z-10 flex flex-col gap-2">
@@ -129,7 +134,7 @@ const ForgotPassword = () => {
           
           {!successMsg ? (
             <>
-              <p className="text-zinc-400 text-sm mb-8">
+              <p className="text-zinc-400 text-sm mb-8 text-left">
                 Enter your registered email address to receive a password reset link.
               </p>
 
@@ -165,7 +170,7 @@ const ForgotPassword = () => {
               </div>
             </>
           ) : (
-            <div className="mt-6 flex flex-col gap-6">
+            <div className="mt-6 flex flex-col gap-6 text-left">
               <p className="text-zinc-300 text-sm leading-relaxed">
                 We've processed your recovery request. You can check your inbox for instructions to reset your password.
               </p>

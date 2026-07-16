@@ -1,27 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sparkles, Wrench, Snowflake, Hammer, Zap,
   Star, Clock, Calendar, CheckCircle, X, Upload,
   User, Phone, Mail, MapPin, Map,
-  ArrowRight, Info, ShieldAlert, ClipboardList, Shield
+  Info, ShieldAlert, ClipboardList, Loader2
 } from 'lucide-react';
+import { API_BASE_URL, apiFetch, getToken, getRole } from '../api';
 
 /* ─── Reliable electrician fallback images (verified working Unsplash URLs) ─── */
 const ELECTRICIAN_IMG = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=600&auto=format&fit=crop';
 const ELECTRICIAN_FALLBACK = 'https://images.unsplash.com/photo-1607400201515-c2c41c07d307?q=80&w=600&auto=format&fit=crop';
 const GENERIC_FALLBACK = 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=600&auto=format&fit=crop';
 
-/* ─── Sub-services ─── */
-const serviceOptions = {
-  'Cleaning':    ['Full House Deep Cleaning','Kitchen Deep Cleaning','Bathroom Deep Cleaning','Sofa & Carpet Shampooing','Balcony & Window Cleaning'],
-  'Plumbing':    ['Tap & Leak Repair','Toilet & Sink Installation','Drain Unblocking','Water Heater Servicing','Pipeline Repair & Installation'],
-  'AC Repair':   ['AC Deep Clean & Servicing','AC Gas Refilling','AC Installation / Uninstallation','AC Compressor Repair','AC Leak Inspection'],
-  'Carpenter':   ['Furniture Assembly & Repair','Door & Window Fitting','Modular Cabinet Repair','Lock & Handle Replacement','Custom Woodwork'],
-  'Electrician': ['Fan & Light Installation','Switchboard Repair & Upgrade','House Wiring & Inspection','MCB & Fuse Box Repair','Home Appliance Setup & Repair'],
+/* Map category names to icons dynamically */
+const categoryIcons = {
+  'Cleaning': Sparkles,
+  'Plumbing': Wrench,
+  'AC Repair': Snowflake,
+  'Carpenter': Hammer,
+  'Electrician': Zap,
 };
 
-/* ─── Service Inclusions ─── */
+/* Map category names to colors dynamically */
+const categoryColors = {
+  'Cleaning': '#60a5fa',
+  'Plumbing': '#fb923c',
+  'AC Repair': '#34d399',
+  'Carpenter': '#f59e0b',
+  'Electrician': '#facc15',
+};
+
+/* ─── Service Inclusions fallback ─── */
 const serviceInclusions = {
   'Cleaning':    ['Complete dust vacuuming and sanitization','Eco-friendly deep cleaning agents','Stain spot treatment on floors & tiles','Window pane cleaning & balcony scrubbing','Vetted team of 2–3 trained practitioners'],
   'Plumbing':    ['Diagnostics and leakage location checks','High-grade washers and sealing tapes','Blockage extraction with industrial snakes','Pressure test validation post repair','30-day Post-Service Guarantee'],
@@ -29,81 +39,6 @@ const serviceInclusions = {
   'Carpenter':   ['Bespoke hardware replacement (hinges, locks, slides)','Precision alignment and leveling','Heavy-duty adhesives and anchors included','Wood shaving cleanup and dust disposal','Premium finishing touch-up'],
   'Electrician': ['Certified safety audit of local wiring terminal','High-durability insulated wiring replacements','MCB diagnostics to prevent short circuits','Appliance grounding verification','100% compliance with local electrical safety code'],
 };
-
-/* ─── Services List ─── */
-const servicesList = [
-  {
-    id: 1,
-    category: 'Cleaning',
-    icon: Sparkles,
-    title: 'Professional Deep Cleaning',
-    desc: 'Breathe fresh air with our comprehensive deep sanitization, vacuuming, and stain removal services for spaces of all sizes.',
-    price: '₹299',
-    duration: '2–4 Hrs',
-    availability: 'Mon – Sun',
-    rating: '4.9',
-    reviewsCount: '380',
-    imgUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop',
-    accentColor: '#60a5fa',
-  },
-  {
-    id: 2,
-    category: 'Plumbing',
-    icon: Wrench,
-    title: 'Expert Plumbing Solutions',
-    desc: 'Solve leakages, blockages, and pipe repairs instantly. Our licensed plumbers provide prompt and reliable fix guarantees.',
-    price: '₹199',
-    duration: '1–3 Hrs',
-    availability: '24/7 Available',
-    rating: '4.8',
-    reviewsCount: '290',
-    imgUrl: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop',
-    accentColor: '#fb923c',
-  },
-  {
-    id: 3,
-    category: 'AC Repair',
-    icon: Snowflake,
-    title: 'AC Service & Repair',
-    desc: 'Keep cooling optimal. Complete diagnostics, filter cleaning, gas recharge, and compressor repairs at transparent rates.',
-    price: '₹349',
-    duration: '1–2 Hrs',
-    availability: 'Mon – Sat',
-    rating: '4.7',
-    reviewsCount: '195',
-    imgUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop',
-    accentColor: '#34d399',
-  },
-  {
-    id: 4,
-    category: 'Carpenter',
-    icon: Hammer,
-    title: 'Master Carpentry Work',
-    desc: 'Revitalize your woodwork. Standard repairs, cupboard assembly, hinge upgrades, or bespoke furniture installation.',
-    price: '₹249',
-    duration: '2–6 Hrs',
-    availability: 'Mon – Sat',
-    rating: '4.8',
-    reviewsCount: '210',
-    imgUrl: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop',
-    accentColor: '#f59e0b',
-  },
-  {
-    id: 5,
-    category: 'Electrician',
-    icon: Zap,
-    title: 'Certified Electrical Repair',
-    desc: 'From short circuits and wiring to appliances and modern switchboard configurations, our experts ensure safe execution.',
-    price: '₹149',
-    duration: '1–3 Hrs',
-    availability: '24/7 Available',
-    rating: '4.9',
-    reviewsCount: '420',
-    imgUrl: ELECTRICIAN_IMG,
-    fallbackImgUrl: ELECTRICIAN_FALLBACK,
-    accentColor: '#facc15',
-  },
-];
 
 /* ─── Intersection Observer hook ─── */
 const useInView = (threshold = 0.12) => {
@@ -141,7 +76,7 @@ const AnimSection = ({ children, className = '', delay = 0, dir = 'up' }) => {
 };
 
 /* ─── Ripple Button ─── */
-const RippleBtn = ({ children, className = '', onClick, type = 'button' }) => {
+const RippleBtn = ({ children, className = '', onClick, type = 'button', disabled = false }) => {
   const ref = useRef(null);
   const fire = (e) => {
     const btn = ref.current;
@@ -166,25 +101,31 @@ const RippleBtn = ({ children, className = '', onClick, type = 'button' }) => {
     if (onClick) onClick(e);
   };
   return (
-    <button ref={ref} type={type} className={`relative overflow-hidden ${className}`} onClick={fire}>
+    <button ref={ref} type={type} disabled={disabled} className={`relative overflow-hidden ${className}`} onClick={fire}>
       {children}
     </button>
   );
 };
 
-/* ═══════════════════════════════
-   SERVICES PAGE COMPONENT
-   ═══════════════════════════════ */
+/* ─── Services Page Component ─── */
 const ServicesPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [successBooking, setSuccessBooking] = useState(false);
   const [activeCategoryTab, setActiveCategoryTab] = useState('All');
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailService, setDetailService] = useState(null);
+  const [submittingBooking, setSubmittingBooking] = useState(false);
 
-  /* Mouse parallax for hero */
+  // Dynamic lists from backend
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [servicesList, setServicesList] = useState([]);
+  const [serviceOptions, setServiceOptions] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Mouse parallax for hero
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const handleMouseMove = (e) => {
     setMouse({
@@ -197,17 +138,94 @@ const ServicesPage = () => {
     name: '', mobile: '', email: '', address: '', city: '',
     category: '', subService: '', date: '', time: '', problemDesc: '',
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
 
-  /* State from router (pre-select category) */
+  // Fetch initial services & categories
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      const [catRes, srvRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/category`),
+        fetch(`${API_BASE_URL}/api/service`)
+      ]);
+      const catData = await catRes.json();
+      const srvData = await srvRes.json();
+
+      let fetchedCats = [];
+      let fetchedSrvs = [];
+
+      if (catRes.ok && catData.status) {
+        fetchedCats = catData.categories || [];
+        setCategoriesList(fetchedCats);
+      }
+      if (srvRes.ok && srvData.status) {
+        fetchedSrvs = srvData.services || [];
+        setServicesList(fetchedSrvs);
+      }
+
+      // Build options map for booking subService selectors
+      const options = {};
+      fetchedCats.forEach(cat => {
+        options[cat.category_name] = fetchedSrvs
+          .filter(s => s.category_id === cat.category_id)
+          .map(s => s.service_name);
+      });
+      setServiceOptions(options);
+
+    } catch {
+      // Fallback notifications not required here
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Pre-load user profile if logged in
+  const loadUserProfile = async () => {
+    const token = getToken();
+    const role = getRole();
+    if (token && role === 'customer') {
+      try {
+        const res = await apiFetch('/api/customer/profile');
+        const data = await res.json();
+        if (res.ok && data.status && data.customer) {
+          const c = data.customer;
+          setFormData(prev => ({
+            ...prev,
+            name: c.full_name || '',
+            email: c.email || '',
+            mobile: c.phone || '',
+            address: c.address || '',
+            city: c.city || ''
+          }));
+        }
+      } catch {
+        // Fail silently
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadInitialData();
+    loadUserProfile();
+  }, []);
+
   useEffect(() => {
     if (location.state?.category) setActiveCategoryTab(location.state.category);
   }, [location.state]);
 
   const openBookingModal = (service) => {
+    const token = getToken();
+    const role = getRole();
+    if (!token || role !== 'customer') {
+      alert('Please log in as a Customer to book a service.');
+      navigate('/customer/login');
+      return;
+    }
     setSelectedService(service);
-    setFormData(prev => ({ ...prev, category: service.category, subService: serviceOptions[service.category][0] }));
+    setFormData(prev => ({
+      ...prev,
+      category: service.category,
+      subService: serviceOptions[service.category]?.[0] || ''
+    }));
     setBookingOpen(true);
   };
 
@@ -224,37 +242,111 @@ const ServicesPage = () => {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+
+    // 1. Locate selected Category & Service ID
+    const catObj = categoriesList.find(c => c.category_name === formData.category);
+    if (!catObj) {
+      alert('Error mapping service category.');
+      return;
+    }
+
+    const srvObj = servicesList.find(s => s.service_name === formData.subService && s.category_id === catObj.category_id);
+    if (!srvObj) {
+      alert('Selected service not found in registry database.');
+      return;
+    }
+
+    setSubmittingBooking(true);
+    try {
+      // 2. Fetch approved providers for this category to allocate one
+      const provRes = await fetch(`${API_BASE_URL}/api/provider?category_id=${catObj.category_id}`);
+      const provData = await provRes.json();
+      let providerId = null;
+
+      if (provRes.ok && provData.status && provData.providers && provData.providers.length > 0) {
+        // Pick first approved provider matching city if possible, else just pick first provider
+        const matched = provData.providers.find(p => (p.city || '').toLowerCase() === (formData.city || '').toLowerCase()) || provData.providers[0];
+        providerId = matched.provider_id;
+      }
+
+      if (!providerId) {
+        alert('No registered service providers are currently available for this category. Please try again later.');
+        setSubmittingBooking(false);
+        return;
+      }
+
+      // 3. Create the booking entry
+      const res = await apiFetch('/api/booking', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider_id: providerId,
+          service_id: srvObj.service_id,
+          booking_date: formData.date,
+          booking_time: formData.time,
+          service_address: formData.address,
+          city: formData.city,
+          state: 'State',
+          pincode: '000000',
+          problem_description: formData.problemDesc || 'No details provided.'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.status) {
+        setSuccessBooking(true);
+        setTimeout(() => {
+          setBookingOpen(false);
+          setSuccessBooking(false);
+          setFormData(prev => ({
+            ...prev,
+            problemDesc: '',
+            date: '',
+            time: ''
+          }));
+        }, 4000);
+      } else {
+        alert(data.message || 'Failed to submit booking. Check slot details.');
+      }
+
+    } catch {
+      alert('Network error. Unable to register booking.');
+    } finally {
+      setSubmittingBooking(false);
     }
   };
 
-  const handleBookingSubmit = (e) => {
-    e.preventDefault();
-    setSuccessBooking(true);
-    setTimeout(() => {
-      setBookingOpen(false);
-      setSuccessBooking(false);
-      setFormData({ name: '', mobile: '', email: '', address: '', city: '', category: '', subService: '', date: '', time: '', problemDesc: '' });
-      setImageFile(null);
-      setImagePreview('');
-    }, 4500);
-  };
+  const categories = ['All', ...categoriesList.map(c => c.category_name)];
+  
+  // Transform services list from backend to match frontend cards structure
+  const mappedServicesList = servicesList.map(s => {
+    const cat = categoriesList.find(c => c.category_id === s.category_id);
+    const catName = cat ? cat.category_name : 'General';
+    return {
+      id: s.service_id,
+      category: catName,
+      icon: categoryIcons[catName] || Sparkles,
+      title: s.service_name,
+      desc: s.description || 'Professional, verified tasks rendered at your local doorstep.',
+      price: s.estimated_price != null ? `₹${s.estimated_price}` : '₹299',
+      duration: s.estimated_duration || '1-2 Hrs',
+      availability: 'Mon - Sun',
+      rating: '4.8',
+      reviewsCount: '150',
+      imgUrl: catName === 'Cleaning' ? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop' :
+              catName === 'Plumbing' ? 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop' :
+              catName === 'AC Repair' ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop' :
+              catName === 'Carpenter' ? 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop' :
+              ELECTRICIAN_IMG,
+      fallbackImgUrl: ELECTRICIAN_FALLBACK,
+      accentColor: categoryColors[catName] || '#60a5fa'
+    };
+  });
 
-  const categories = ['All', 'Cleaning', 'Plumbing', 'AC Repair', 'Carpenter', 'Electrician'];
-  const filteredServices = activeCategoryTab === 'All' ? servicesList : servicesList.filter(s => s.category === activeCategoryTab);
-
-  const loginLinks = [
-    { name: 'Customer Login', path: '/customer/login' },
-    { name: 'Customer Registration', path: '/customer/register' },
-    { name: 'Provider Login', path: '/provider/login' },
-    { name: 'Provider Registration', path: '/provider/register' },
-  ];
+  const filteredServices = activeCategoryTab === 'All'
+    ? mappedServicesList
+    : mappedServicesList.filter(s => s.category === activeCategoryTab);
 
   return (
     <div
@@ -427,8 +519,6 @@ const ServicesPage = () => {
       {/* Page vignette */}
       <div className="page-vignette" />
 
-      {/* Navbar spacer — shared Navbar rendered by App.jsx */}
-
       {/* ══════════════ HERO BANNER ══════════════ */}
       <section className="relative min-h-[52vh] sm:min-h-[58vh] flex items-end justify-center pt-28 pb-16 overflow-hidden">
         {/* BG Image with ken burns */}
@@ -437,12 +527,6 @@ const ServicesPage = () => {
           style={{ backgroundImage: `url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1800&auto=format&fit=crop')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-[#0D0D0D]/55 z-[1]" />
-
-        {/* Parallax orbs */}
-        <div className="absolute top-[15%] left-[18%] w-[380px] h-[380px] bg-[#D4AF37]/6 rounded-full blur-[90px] z-[1] pointer-events-none"
-          style={{ transform: `translate(${mouse.x * 0.4}px, ${mouse.y * 0.4}px)` }} />
-        <div className="absolute bottom-[10%] right-[15%] w-[450px] h-[450px] bg-[#D4AF37]/4 rounded-full blur-[110px] z-[1] pointer-events-none"
-          style={{ transform: `translate(${mouse.x * -0.5}px, ${mouse.y * -0.5}px)` }} />
 
         {/* Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
@@ -483,33 +567,39 @@ const ServicesPage = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Category Tabs */}
-        <AnimSection dir="up">
-          <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 mb-14">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategoryTab(cat)}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
-                  activeCategoryTab === cat
-                    ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
-                    : 'bg-[#1A1D23]/80 border border-[#D4AF37]/15 text-zinc-400 hover:text-white hover:border-[#D4AF37]/45 hover:bg-[#1A1D23]'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+        {loading ? (
+          <div className="flex justify-center mb-14">
+            <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
           </div>
-        </AnimSection>
+        ) : (
+          <AnimSection dir="up">
+            <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 mb-14">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategoryTab(cat)}
+                  className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
+                    activeCategoryTab === cat
+                      ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
+                      : 'bg-[#1A1D23]/80 border border-[#D4AF37]/15 text-zinc-400 hover:text-white hover:border-[#D4AF37]/45 hover:bg-[#1A1D23]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </AnimSection>
+        )}
 
-        {/* Grid — equal heights via items-stretch + flex-col within cards */}
+        {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-          {filteredServices.map((svc, i) => {
+          {!loading && filteredServices.map((svc, i) => {
             const IconComponent = svc.icon;
             return (
               <AnimSection key={svc.id} dir="up" delay={i * 75} className="h-full">
-                <div className="svc-card glass-panel rounded-[32px] overflow-hidden flex flex-col h-full group light-sweep">
+                <div className="svc-card glass-panel rounded-[32px] overflow-hidden flex flex-col h-full group light-sweep text-left">
 
-                  {/* Image — fixed aspect ratio ensures uniform heights */}
+                  {/* Image */}
                   <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/10 to-transparent z-[2]" />
                     <img
@@ -524,9 +614,7 @@ const ServicesPage = () => {
                       }}
                       loading="lazy"
                       className="img-hover w-full h-full object-cover"
-                      style={{ objectPosition: 'center center' }}
                     />
-                    {/* Subtle color accent overlay matching category */}
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[1]"
                       style={{ background: `radial-gradient(ellipse at center, ${svc.accentColor}08 0%, transparent 70%)` }} />
 
@@ -542,7 +630,7 @@ const ServicesPage = () => {
                     </div>
                   </div>
 
-                  {/* Card content — flex-grow fills equal space */}
+                  {/* Card content */}
                   <div className="p-7 flex flex-col flex-grow">
                     <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#D4AF37] transition-colors duration-300">
                       {svc.title}
@@ -567,7 +655,7 @@ const ServicesPage = () => {
                       </div>
                     </div>
 
-                    {/* Pricing + CTAs */}
+                    {/* Pricing */}
                     <div className="mt-auto">
                       <div className="flex justify-between items-end border-b border-white/5 pb-3.5 mb-4">
                         <div>
@@ -600,8 +688,8 @@ const ServicesPage = () => {
           })}
         </div>
 
-        {/* Empty state when filter returns nothing */}
-        {filteredServices.length === 0 && (
+        {/* Empty state */}
+        {!loading && filteredServices.length === 0 && (
           <div className="text-center py-20 text-zinc-500">
             <p className="text-lg font-semibold mb-2">No services found</p>
             <p className="text-sm">Try selecting a different category.</p>
@@ -615,10 +703,7 @@ const ServicesPage = () => {
           <div onClick={() => setDetailOpen(false)}
             className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
 
-          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-lg overflow-hidden shadow-2xl shadow-black/80 fade-slide-up z-10 p-8 space-y-6">
-            {/* Glow top-right */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#D4AF37]/8 rounded-full blur-3xl pointer-events-none" />
-
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-lg overflow-hidden shadow-2xl shadow-black/80 fade-slide-up z-10 p-8 space-y-6 text-left">
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-widest border border-[#D4AF37]/25 px-3 py-1 rounded-full">Service Details</span>
@@ -635,13 +720,13 @@ const ServicesPage = () => {
               </button>
             </div>
 
-            {/* What's included */}
+            {/* Inclusions */}
             <div className="space-y-3.5">
               <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-1.5">
                 <ClipboardList size={14} className="text-[#D4AF37]" /> What is Included
               </h4>
               <ul className="space-y-2.5">
-                {serviceInclusions[detailService.category]?.map((inc, i) => (
+                {(serviceInclusions[detailService.category] || ['Standard safety inspections','Full tools setup and cleanup','Premium components checking','Diagnostics checklist verification']).map((inc, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-400">
                     <span className="text-[#D4AF37] font-black mt-0.5 text-base leading-none">✓</span>
                     <span>{inc}</span>
@@ -678,10 +763,10 @@ const ServicesPage = () => {
       {/* ══════════════ BOOKING MODAL ══════════════ */}
       {bookingOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => !successBooking && setBookingOpen(false)}
+          <div onClick={() => !successBooking && !submittingBooking && setBookingOpen(false)}
             className="absolute inset-0 bg-black/87 backdrop-blur-2xl" />
 
-          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-2xl overflow-hidden shadow-2xl shadow-black/80 max-h-[92vh] flex flex-col fade-slide-up z-10">
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-2xl overflow-hidden shadow-2xl shadow-black/80 max-h-[92vh] flex flex-col fade-slide-up z-10 text-left">
 
             {/* Success overlay */}
             {successBooking && (
@@ -705,7 +790,7 @@ const ServicesPage = () => {
                   Your booking has been submitted. A Fixora certified expert will contact you shortly to confirm the schedule.
                 </p>
                 <div className="text-[#D4AF37] font-semibold text-xs tracking-wider uppercase border border-[#D4AF37]/22 bg-[#D4AF37]/5 px-5 py-2.5 rounded-full">
-                  Preparing your profile…
+                  Preparing your schedule…
                 </div>
               </div>
             )}
@@ -778,7 +863,7 @@ const ServicesPage = () => {
                   <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Service Category</label>
                   <select name="category" value={formData.category} onChange={handleInputChange}
                     className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
-                    {Object.keys(serviceOptions).map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -815,46 +900,21 @@ const ServicesPage = () => {
                   placeholder="Describe what you need help with (e.g. leaky faucet, AC not cooling, wiring issue…)"
                   className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600 resize-none" />
               </div>
-
-              {/* Image upload */}
-              <div className="space-y-2">
-                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Upload Problem Image (Optional)</label>
-                <label className="flex flex-col items-center justify-center w-full h-32 border border-dashed border-[#D4AF37]/32 rounded-2xl cursor-pointer bg-[#1A1D23]/50 hover:bg-[#1A1D23]/80 hover:border-[#D4AF37]/60 transition-all">
-                  {imagePreview ? (
-                    <div className="relative w-full h-full flex items-center justify-center p-2">
-                      <img src={imagePreview} alt="Preview" className="h-full max-w-[180px] object-contain rounded-xl" />
-                      <button type="button"
-                        onClick={(e) => { e.preventDefault(); setImageFile(null); setImagePreview(''); }}
-                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Upload size={22} className="text-[#D4AF37]" />
-                      <p className="text-xs text-zinc-400"><span className="font-bold text-[#D4AF37]">Click to upload</span> or drag & drop</p>
-                      <p className="text-[10px] text-zinc-500">PNG, JPG, JPEG — Max 5MB</p>
-                    </div>
-                  )}
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                </label>
-              </div>
             </form>
 
             {/* Footer */}
             <div className="px-8 py-5 border-t border-[#D4AF37]/15 flex justify-end gap-3 bg-[#141414]/90 flex-shrink-0">
-              <RippleBtn onClick={() => setBookingOpen(false)} className="outline-gold-btn px-6 py-3 rounded-full text-xs cursor-pointer">
+              <RippleBtn disabled={submittingBooking} onClick={() => setBookingOpen(false)} className="outline-gold-btn px-6 py-3 rounded-full text-xs cursor-pointer">
                 Cancel
               </RippleBtn>
-              <RippleBtn onClick={handleBookingSubmit} className="gold-btn px-8 py-3 rounded-full text-xs uppercase tracking-wider font-bold cursor-pointer">
+              <RippleBtn disabled={submittingBooking} onClick={handleBookingSubmit} className="gold-btn px-8 py-3 rounded-full text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center gap-2">
+                {submittingBooking && <Loader2 size={12} className="animate-spin" />}
                 Confirm Booking
               </RippleBtn>
             </div>
           </div>
         </div>
       )}
-
-      {/* Footer rendered by App.jsx */}
 
     </div>
   );

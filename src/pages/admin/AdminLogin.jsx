@@ -4,6 +4,7 @@ import { Eye, EyeOff, Mail, Lock, ShieldCheck, LogIn, Loader2, Sparkles } from '
 import InputField from '../../components/InputField';
 import fixoraLogo from '../../assets/images/fixora_logo.png';
 import adminIllustration from '../../assets/images/admin_login_illustration.png';
+import { API_BASE_URL, setAdminTokens } from '../../api';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -15,24 +16,40 @@ const AdminLogin = () => {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackType, setFeedbackType] = useState('success'); // 'success' | 'error'
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.includes('@') || password.length < 4) {
       setFeedbackType('error');
       setFeedbackMsg('Invalid email address or password length must be at least 4 characters.');
       return;
     }
-    
+
     setIsSubmitting(true);
     setFeedbackMsg('');
-    setTimeout(() => {
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.status) {
+        setAdminTokens(data.access_token, data.refresh_token, data.admin);
+        setFeedbackType('success');
+        setFeedbackMsg(`Welcome, ${data.admin.full_name}! Initializing secure session...`);
+        setTimeout(() => navigate('/admin/dashboard'), 800);
+      } else {
+        setFeedbackType('error');
+        setFeedbackMsg(data.message || 'Login failed. Check your credentials.');
+      }
+    } catch {
+      setFeedbackType('error');
+      setFeedbackMsg('Unable to connect to the server. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setFeedbackType('success');
-      setFeedbackMsg('Authentication successful! Initializing secure session...');
-      setTimeout(() => {
-        navigate('/services');
-      }, 1000);
-    }, 1500);
+    }
   };
 
   return (

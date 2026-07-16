@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   Users, Briefcase, CalendarDays, DollarSign,
-  ArrowRight, Sparkles, Calendar, Eye, X, Database
+  ArrowRight, Sparkles, Calendar, Loader2
 } from 'lucide-react';
+import { apiFetchAdmin } from '../../api';
 
 const colorMap = {
   blue:   { bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   text: 'text-blue-400',   icon: 'text-blue-400',   hoverBorder: 'hover:border-blue-500/40'   },
@@ -19,13 +20,6 @@ const quickActions = [
   { label: 'Manage Bookings',  to: '/admin/bookings',          icon: '📅', desc: 'Update booking statuses'          },
 ];
 
-const statsList = [
-  { label: 'Total Customers',   value: 0, icon: Users,       color: 'blue'   },
-  { label: 'Service Providers', value: 0, icon: Briefcase,   color: 'purple' },
-  { label: 'Total Bookings',    value: 0, icon: CalendarDays, color: 'green' },
-  { label: 'Revenue',           value: 0, icon: DollarSign,  color: 'amber', prefix: '₹' },
-];
-
 const statusBadge = (status) => {
   const map = {
     Confirmed: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
@@ -36,21 +30,70 @@ const statusBadge = (status) => {
   return map[status] || 'bg-zinc-700/30 text-zinc-400 border-zinc-700';
 };
 
+const userStatusBadge = (status) => {
+  if (status === 'Active') return 'bg-green-500/15 text-green-400 border-green-500/20';
+  if (status === 'Pending') return 'bg-amber-500/15 text-amber-400 border-amber-500/20';
+  return 'bg-red-500/15 text-red-400 border-red-500/20';
+};
+
 const AdminDashboard = () => {
   const { showToast } = useOutletContext();
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
-  const handleActionClick = (actionName) => {
-    showToast(`Quick action triggered: ${actionName}`, 'info');
-  };
+  // Live stats state
+  const [stats, setStats] = useState(null);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [recentCustomers, setRecentCustomers] = useState([]);
+  const [recentProviders, setRecentProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setLoading(true);
+      try {
+        const [statsRes, recentRes] = await Promise.all([
+          apiFetchAdmin('/api/admin/stats'),
+          apiFetchAdmin('/api/admin/dashboard/recent'),
+        ]);
+
+        const statsData = await statsRes.json();
+        const recentData = await recentRes.json();
+
+        if (statsRes.ok && statsData.status) {
+          setStats(statsData.stats);
+        }
+        if (recentRes.ok && recentData.status) {
+          setRecentBookings(recentData.recent_bookings || []);
+          setRecentCustomers(recentData.recent_customers || []);
+          setRecentProviders(recentData.recent_providers || []);
+        }
+      } catch {
+        showToast('Failed to load dashboard data.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDashboard();
+  }, []);
 
   const today = new Date();
   const monthName = today.toLocaleString('default', { month: 'long' });
   const year = today.getFullYear();
-
-  // Compute first day of current month for calendar grid offset
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+  const statsList = [
+    { label: 'Total Customers',   value: stats?.total_customers   ?? '—', icon: Users,       color: 'blue'   },
+    { label: 'Service Providers', value: stats?.total_providers   ?? '—', icon: Briefcase,   color: 'purple' },
+    { label: 'Total Bookings',    value: stats?.total_bookings    ?? '—', icon: CalendarDays, color: 'green' },
+    { label: 'Revenue',           value: stats?.total_revenue != null ? `₹${Number(stats.total_revenue).toLocaleString('en-IN')}` : '—', icon: DollarSign, color: 'amber' },
+  ];
+
+  // Combine recent customers and providers for registrations panel
+  const recentRegistrations = [
+    ...recentCustomers.map(c => ({ ...c, _type: 'Customer', id: c.customer_id })),
+    ...recentProviders.map(p => ({ ...p, _type: 'Provider', id: p.provider_id })),
+  ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
 
   return (
     <div className="space-y-6 text-left relative z-10 animate-fade-in">
@@ -71,15 +114,9 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Backend integration notice */}
-      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-500/5 border border-blue-500/20 text-blue-400 text-xs font-semibold">
-        <Database size={14} className="flex-shrink-0" />
-        <span>Backend integration pending — all metrics will populate automatically once the API is connected.</span>
-      </div>
-
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statsList.map(({ label, value, icon: Icon, color, prefix = '' }) => {
+        {statsList.map(({ label, value, icon: Icon, color }) => {
           const c = colorMap[color];
           return (
             <div key={label} className={`rounded-3xl bg-[#0d1425]/40 border ${c.border} p-6 flex items-center gap-5 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group ${c.hoverBorder}`}>
@@ -88,12 +125,16 @@ const AdminDashboard = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">{label}</p>
-                <p className="text-white text-3xl font-black mt-1 leading-none tracking-tight">
-                  {prefix}{value}
-                </p>
-                <div className="flex items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-zinc-500 font-medium italic">Backend integration pending</span>
-                </div>
+                {loading ? (
+                  <Loader2 size={20} className={`mt-2 animate-spin ${c.text}`} />
+                ) : (
+                  <p className="text-white text-3xl font-black mt-1 leading-none tracking-tight">
+                    {value}
+                  </p>
+                )}
+                {!loading && stats?.pending_providers != null && label === 'Service Providers' && (
+                  <p className="text-xs text-amber-400 mt-1 font-semibold">{stats.pending_providers} pending</p>
+                )}
               </div>
             </div>
           );
@@ -122,13 +163,52 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Empty chart area */}
-          <div className="relative h-56 w-full mt-4 flex items-center justify-center rounded-2xl bg-[#090e1c]/40 border border-white/5">
-            <div className="text-center">
-              <Database size={32} className="mx-auto mb-3 text-zinc-700" />
-              <p className="text-zinc-500 text-xs font-semibold">No data available</p>
-              <p className="text-zinc-600 text-[10px] mt-1 italic">Backend integration pending</p>
-            </div>
+          {/* Simple stats bars based on real data */}
+          <div className="relative h-56 w-full mt-4 flex flex-col items-center justify-center rounded-2xl bg-[#090e1c]/40 border border-white/5 gap-4 px-8">
+            {loading ? (
+              <Loader2 size={28} className="animate-spin text-blue-400" />
+            ) : stats ? (
+              <>
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Bookings</span>
+                    <span className="text-blue-400 font-bold">{stats.total_bookings}</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (stats.total_bookings / Math.max(stats.total_bookings, 1)) * 100)}%` }} />
+                  </div>
+                </div>
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Revenue</span>
+                    <span className="text-purple-400 font-bold">₹{Number(stats.total_revenue || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${stats.total_revenue > 0 ? 70 : 0}%` }} />
+                  </div>
+                </div>
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Providers</span>
+                    <span className="text-green-400 font-bold">{stats.total_providers}</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (stats.total_providers / Math.max(stats.total_providers, 1)) * 100)}%` }} />
+                  </div>
+                </div>
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Customers</span>
+                    <span className="text-amber-400 font-bold">{stats.total_customers}</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (stats.total_customers / Math.max(stats.total_customers, 1)) * 100)}%` }} />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-zinc-500 text-xs">No data available</p>
+            )}
           </div>
         </div>
 
@@ -141,7 +221,6 @@ const AdminDashboard = () => {
                 <Link
                   key={to}
                   to={to}
-                  onClick={() => handleActionClick(label)}
                   className="flex flex-col items-start p-4 rounded-2xl bg-[#090e1c]/80 hover:bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all duration-300 group text-left"
                 >
                   <span className="text-lg mb-2 text-blue-400 bg-blue-500/10 w-8 h-8 rounded-xl flex items-center justify-center font-black group-hover:scale-110 transition-all">{icon}</span>
@@ -176,12 +255,10 @@ const AdminDashboard = () => {
                 <div key={day} className="text-zinc-500 font-bold py-1">{day}</div>
               ))}
 
-              {/* Empty days before start of month */}
               {[...Array(firstDayOfMonth)].map((_, i) => (
                 <div key={`empty-${i}`} className="py-2.5 text-transparent">.</div>
               ))}
 
-              {/* Render month days */}
               {[...Array(daysInMonth)].map((_, i) => {
                 const dayNumber = i + 1;
                 const isSelected = selectedCalendarDate === dayNumber;
@@ -209,7 +286,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Selected Date Bookings Detail */}
           <div className="mt-6 pt-4 border-t border-white/5 text-left">
             <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">
               Bookings on {monthName} {selectedCalendarDate ?? '—'}
@@ -235,17 +311,34 @@ const AdminDashboard = () => {
                   <th className="text-left px-6 py-3 text-zinc-500 text-xs font-bold uppercase tracking-wider">ID</th>
                   <th className="text-left px-6 py-3 text-zinc-500 text-xs font-bold uppercase tracking-wider">Customer</th>
                   <th className="text-left px-6 py-3 text-zinc-500 text-xs font-bold uppercase tracking-wider">Status</th>
-                  <th className="text-center px-6 py-3 text-zinc-500 text-xs font-bold uppercase tracking-wider">Inspect</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td colSpan={4} className="text-center py-12">
-                    <Database size={28} className="mx-auto mb-2 text-zinc-700" />
-                    <p className="text-zinc-500 text-xs">No data available</p>
-                    <p className="text-zinc-600 text-[10px] mt-1 italic">Backend integration pending</p>
-                  </td>
-                </tr>
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-12">
+                      <Loader2 size={24} className="mx-auto animate-spin text-blue-400" />
+                    </td>
+                  </tr>
+                ) : recentBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-12">
+                      <p className="text-zinc-500 text-xs">No recent bookings</p>
+                    </td>
+                  </tr>
+                ) : (
+                  recentBookings.map((b) => (
+                    <tr key={b.booking_id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-3 text-zinc-400 text-xs font-mono">#{b.booking_number || b.booking_id}</td>
+                      <td className="px-6 py-3 text-white text-xs font-semibold truncate max-w-[120px]">{b.customer_name}</td>
+                      <td className="px-6 py-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge(b.booking_status)}`}>
+                          {b.booking_status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -259,11 +352,32 @@ const AdminDashboard = () => {
               View all <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-12 px-6">
-            <Database size={28} className="mb-2 text-zinc-700" />
-            <p className="text-zinc-500 text-xs">No data available</p>
-            <p className="text-zinc-600 text-[10px] mt-1 italic">Backend integration pending</p>
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-blue-400" />
+            </div>
+          ) : recentRegistrations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6">
+              <p className="text-zinc-500 text-xs">No recent registrations</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {recentRegistrations.map((u) => (
+                <div key={`${u._type}-${u.id}`} className="flex items-center gap-3 px-6 py-3 hover:bg-white/5 transition-colors">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 ${u._type === 'Provider' ? 'bg-purple-500/20' : 'bg-blue-500/20'}`}>
+                    {u.full_name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-xs font-semibold truncate">{u.full_name}</p>
+                    <p className="text-zinc-500 text-[10px]">{u._type} · {u.email}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${userStatusBadge(u.status)}`}>
+                    {u.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

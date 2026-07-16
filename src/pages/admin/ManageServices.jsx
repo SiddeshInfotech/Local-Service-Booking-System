@@ -1,28 +1,63 @@
-import React, { useState } from 'react';
-import { Search, Filter, Plus, Pencil, Trash2, X, Check, IndianRupee } from 'lucide-react';
-
-const categories = ['All', 'Cleaning', 'Plumbing', 'AC Repair', 'Carpenter', 'Electrician'];
-
-const initialServices = [
-  { id: 1,  name: 'Pipe Leak Repair',       category: 'Plumbing',    price: 499,  duration: '1–2 hrs', status: 'Active'   },
-  { id: 2,  name: 'Drain Unclogging',        category: 'Plumbing',    price: 399,  duration: '1 hr',    status: 'Active'   },
-  { id: 3,  name: 'Switchboard Repair',      category: 'Electrician', price: 299,  duration: '30 min',  status: 'Active'   },
-  { id: 4,  name: 'Ceiling Fan Install',     category: 'Electrician', price: 349,  duration: '45 min',  status: 'Active'   },
-  { id: 5,  name: 'Full Home Cleaning',      category: 'Cleaning',    price: 999,  duration: '3–4 hrs', status: 'Active'   },
-  { id: 6,  name: 'Bathroom Deep Clean',     category: 'Cleaning',    price: 499,  duration: '2 hrs',   status: 'Inactive' },
-  { id: 7,  name: 'Furniture Assembly',      category: 'Carpenter',   price: 599,  duration: '2–3 hrs', status: 'Active'   },
-  { id: 8,  name: 'Wood Polish',             category: 'Carpenter',   price: 799,  duration: '3 hrs',   status: 'Active'   },
-  { id: 10, name: 'AC Service (Regular)',    category: 'AC Repair',   price: 599,  duration: '1 hr',    status: 'Active'   },
-];
-
-const EMPTY_SVC = { name: '', category: 'Plumbing', price: '', duration: '', status: 'Active' };
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { Search, Filter, Plus, Pencil, Trash2, X, Check, IndianRupee, Loader2 } from 'lucide-react';
+import { apiFetchAdmin } from '../../api';
 
 const ManageServices = () => {
-  const [services, setServices] = useState(initialServices);
+  const { showToast } = useOutletContext();
+  const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState(EMPTY_SVC);
+  const [form, setForm] = useState({ name: '', categoryId: '', price: '', duration: '', status: 'Active', description: '' });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [catRes, srvRes] = await Promise.all([
+        apiFetchAdmin('/api/admin/categories'),
+        apiFetchAdmin('/api/admin/services')
+      ]);
+
+      const catData = await catRes.json();
+      const srvData = await srvRes.json();
+
+      let fetchedCats = [];
+      if (catRes.ok && catData.status) {
+        fetchedCats = catData.categories || [];
+        setCategories(fetchedCats);
+      }
+
+      if (srvRes.ok && srvData.status) {
+        // Map services
+        const mappedSrvs = srvData.services.map(s => {
+          const cat = fetchedCats.find(c => c.category_id === s.category_id);
+          return {
+            id: s.service_id,
+            name: s.service_name,
+            categoryId: s.category_id,
+            category: cat ? cat.category_name : 'General',
+            price: s.base_price || s.estimated_price || 0,
+            duration: s.estimated_duration || '1 hr',
+            status: s.status || 'Active',
+            description: s.description || ''
+          };
+        });
+        setServices(mappedSrvs);
+      }
+    } catch {
+      showToast('Error loading services data.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const filtered = services.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
@@ -30,21 +65,104 @@ const ManageServices = () => {
     return matchSearch && matchCat;
   });
 
-  const openAdd = () => { setForm(EMPTY_SVC); setModal('add'); };
-  const openEdit = (s) => { setForm({ name: s.name, category: s.category, price: s.price, duration: s.duration, status: s.status }); setModal(s); };
-  const closeModal = () => setModal(null);
-
-  const handleSave = () => {
-    if (!form.name.trim()) return;
-    if (modal === 'add') {
-      setServices((prev) => [...prev, { id: Date.now(), ...form, price: Number(form.price) || 0 }]);
-    } else {
-      setServices((prev) => prev.map((s) => s.id === modal.id ? { ...s, ...form, price: Number(form.price) || 0 } : s));
-    }
-    closeModal();
+  const openAdd = () => { 
+    setForm({ 
+      name: '', 
+      categoryId: categories[0]?.category_id || '', 
+      price: '', 
+      duration: '', 
+      status: 'Active',
+      description: ''
+    }); 
+    setModal('add'); 
   };
 
-  const handleDelete = (id) => setServices((prev) => prev.filter((s) => s.id !== id));
+  const openEdit = (s) => { 
+    setForm({ 
+      name: s.name, 
+      categoryId: s.categoryId, 
+      price: s.price, 
+      duration: s.duration, 
+      status: s.status,
+      description: s.description || ''
+    }); 
+    setModal(s); 
+  };
+
+  const closeModal = () => setModal(null);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      showToast('Service name is required', 'error');
+      return;
+    }
+    if (!form.categoryId) {
+      showToast('Category is required', 'error');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const payload = {
+        category_id: Number(form.categoryId),
+        service_name: form.name,
+        description: form.description || '',
+        estimated_price: Number(form.price) || 0,
+        estimated_duration: form.duration || '1 hr',
+        status: form.status
+      };
+
+      if (modal === 'add') {
+        const res = await apiFetchAdmin('/api/service', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.status) {
+          showToast(`Service "${form.name}" added successfully.`, 'success');
+          fetchData();
+          closeModal();
+        } else {
+          showToast(data.message || 'Failed to add service.', 'error');
+        }
+      } else {
+        const res = await apiFetchAdmin(`/api/service/${modal.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.status) {
+          showToast(`Service "${form.name}" updated successfully.`, 'success');
+          fetchData();
+          closeModal();
+        } else {
+          showToast(data.message || 'Failed to update service.', 'error');
+        }
+      }
+    } catch {
+      showToast('Server error saving service.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to deactivate this service?')) return;
+    try {
+      const res = await apiFetchAdmin(`/api/service/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        showToast('Service deactivated.', 'error');
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to deactivate service.', 'error');
+      }
+    } catch {
+      showToast('Server error deactivating service.', 'error');
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -55,7 +173,7 @@ const ManageServices = () => {
         </div>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
         >
           <Plus size={16} /> Add Service
         </button>
@@ -75,17 +193,27 @@ const ManageServices = () => {
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Filter size={15} className="text-zinc-500 flex-shrink-0" />
+          <button
+            onClick={() => setCatFilter('All')}
+            className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border flex-shrink-0 cursor-pointer ${
+              catFilter === 'All'
+                ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                : 'text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-600'
+            }`}
+          >
+            All
+          </button>
           {categories.map((c) => (
             <button
-              key={c}
-              onClick={() => setCatFilter(c)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border flex-shrink-0 ${
-                catFilter === c
+              key={c.category_id}
+              onClick={() => setCatFilter(c.category_name)}
+              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border flex-shrink-0 cursor-pointer ${
+                catFilter === c.category_name
                   ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
                   : 'text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-600'
               }`}
             >
-              {c}
+              {c.category_name}
             </button>
           ))}
         </div>
@@ -106,7 +234,13 @@ const ManageServices = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-16">
+                    <Loader2 className="animate-spin text-blue-400 mx-auto" size={24} />
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="text-center text-zinc-500 py-10">No services found.</td></tr>
               ) : (
                 filtered.map((s) => (
@@ -120,7 +254,7 @@ const ManageServices = () => {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-0.5 text-white text-xs font-semibold">
                         <IndianRupee size={11} />
-                        {s.price.toLocaleString()}
+                        {Number(s.price).toLocaleString()}
                       </div>
                     </td>
                     <td className="px-5 py-4 text-zinc-400 text-xs hidden lg:table-cell">{s.duration}</td>
@@ -135,10 +269,10 @@ const ManageServices = () => {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">
+                        <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer">
                           <Pencil size={14} />
                         </button>
-                        <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                        <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -160,14 +294,14 @@ const ManageServices = () => {
           <div className="w-full max-w-md bg-[#0B1220] border border-zinc-800 rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-white font-bold text-base">{modal === 'add' ? 'Add New Service' : 'Edit Service'}</h3>
-              <button onClick={closeModal} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+              <button onClick={closeModal} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer">
                 <X size={18} />
               </button>
             </div>
             <div className="space-y-4">
               {[
                 { label: 'Service Name *', key: 'name', placeholder: 'e.g. Pipe Leak Repair', type: 'text' },
-                { label: 'Price (₹)', key: 'price', placeholder: 'e.g. 499', type: 'number' },
+                { label: 'Price (₹) *', key: 'price', placeholder: 'e.g. 499', type: 'number' },
                 { label: 'Duration', key: 'duration', placeholder: 'e.g. 1–2 hrs', type: 'text' },
               ].map(({ label, key, placeholder, type }) => (
                 <div key={key}>
@@ -177,18 +311,28 @@ const ManageServices = () => {
                     value={form[key]}
                     onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                     placeholder={placeholder}
-                    className="w-full bg-[#131b2e] border border-zinc-700 text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
+                    className="w-full bg-[#131b2e] border border-[#27272a] text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
                   />
                 </div>
               ))}
               <div>
+                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Description</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Service description..."
+                  rows={2}
+                  className="w-full bg-[#131b2e] border border-[#27272a] text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors resize-none"
+                />
+              </div>
+              <div>
                 <label className="text-zinc-400 text-xs font-medium block mb-1.5">Category</label>
                 <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full bg-[#131b2e] border border-zinc-700 text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 transition-colors"
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  className="w-full bg-[#131b2e] border border-[#27272a] text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 transition-colors"
                 >
-                  {categories.slice(1).map((c) => <option key={c} value={c}>{c}</option>)}
+                  {categories.map((c) => <option key={c.category_id} value={c.category_id} className="bg-[#0b1220]">{c.category_name}</option>)}
                 </select>
               </div>
               <div>
@@ -196,19 +340,19 @@ const ManageServices = () => {
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full bg-[#131b2e] border border-zinc-700 text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#131b2e] border border-[#27272a] text-white text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 transition-colors"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="Active" className="bg-[#0b1220]">Active</option>
+                  <option value="Inactive" className="bg-[#0b1220]">Inactive</option>
                 </select>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white text-sm font-medium transition-colors">
+              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white text-sm font-medium transition-colors cursor-pointer">
                 Cancel
               </button>
-              <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                <Check size={14} /> Save
+              <button onClick={handleSave} disabled={actionLoading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
               </button>
             </div>
           </div>
