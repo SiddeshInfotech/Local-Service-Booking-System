@@ -289,7 +289,12 @@ const ServicesPage = () => {
           city: formData.city,
           state: 'State',
           pincode: '000000',
-          problem_description: formData.problemDesc || 'No details provided.'
+          problem_description: formData.problemDesc || 'No details provided.',
+          // Pass form-entered details so confirmation email goes to the right address
+          customer_name: formData.name,
+          customer_email: formData.email,
+          customer_mobile: formData.mobile,
+          category: formData.category
         })
       });
 

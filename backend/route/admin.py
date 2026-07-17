@@ -869,8 +869,10 @@ def admin_list_providers():
         conn.close()
 
         for p in providers:
-            # Map database 'Suspended' to 'Blocked' for frontend matching
-            if p.get("status") == "Suspended":
+            # Map database statuses → frontend values
+            if p.get("status") == "Approved":
+                p["status"] = "Active"
+            elif p.get("status") == "Suspended":
                 p["status"] = "Blocked"
 
             if p.get("average_rating") is not None:
@@ -922,8 +924,10 @@ def admin_provider_approval_list():
                 p["average_rating"] = float(p["average_rating"])
             if p.get("created_at"):
                 p["created_at"] = p["created_at"].isoformat()
-            # Map database 'Suspended' to 'Blocked' for frontend matching
-            if p.get("status") == "Suspended":
+            # Map database statuses → frontend values
+            if p.get("status") == "Approved":
+                p["status"] = "Active"
+            elif p.get("status") == "Suspended":
                 p["status"] = "Blocked"
 
             p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
@@ -975,7 +979,9 @@ def admin_get_provider(provider_id):
         cursor.close()
         conn.close()
 
-        if provider.get("status") == "Suspended":
+        if provider.get("status") == "Approved":
+            provider["status"] = "Active"
+        elif provider.get("status") == "Suspended":
             provider["status"] = "Blocked"
 
         if provider.get("average_rating") is not None:
@@ -1019,6 +1025,8 @@ def admin_update_provider(provider_id):
         status = data.get("status", provider["status"])
         if status == "Blocked":
             status = "Suspended"
+        elif status == "Active":
+            status = "Approved"
 
         cursor.execute("""
             UPDATE providers
@@ -1620,6 +1628,11 @@ def get_dashboard_recent():
             if p.get("created_at"):
                 p["created_at"] = p["created_at"].isoformat()
             p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
+            # Map database statuses → frontend values
+            if p.get("status") == "Approved":
+                p["status"] = "Active"
+            elif p.get("status") == "Suspended":
+                p["status"] = "Blocked"
 
         cursor.close()
         conn.close()

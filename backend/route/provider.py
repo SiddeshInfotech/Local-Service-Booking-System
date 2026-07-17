@@ -113,13 +113,12 @@ def register_provider():
         # Hash Password
         password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # example.com accounts get auto-approved and verified for testing
+        # example.com accounts get auto-approved for testing
         if email.endswith("@example.com"):
             status = "Approved"
-            email_verified = 1
         else:
             status = "Pending"
-            email_verified = 0
+        email_verified = 1
 
         owner_name = data.get("owner_name") or full_name
         business_name = data.get("business_name") or full_name
@@ -165,37 +164,12 @@ def register_provider():
         ))
         conn.commit()
 
-        # Generate Verification Token
-        verification_token = secrets.token_urlsafe(32)
-        verification_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-
-        cursor.execute(
-            "INSERT INTO email_verification_tokens (email, verification_token, expires_at, verified) VALUES (%s, %s, %s, 0)",
-            (email, verification_token, verification_expiry)
-        )
-        conn.commit()
-
-        # Send Verification Email
-        backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
-        verification_link = f"{backend_url}/api/provider/verify-email?token={verification_token}"
-
-        email_subject = "Verify Your Provider Account"
-        email_body = f"""
-            <h2>Verify Your Email</h2>
-            <p>Hi {full_name},</p>
-            <p>Thank you for registering as a service provider. Please verify your account by clicking the link below:</p>
-            <a href="{verification_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Verify Email</a>
-            <p>Or copy this link in your browser: {verification_link}</p>
-            <p>Expires in 24 hours.</p>
-        """
-        send_email_async(email, email_subject, email_body)
-
         cursor.close()
         conn.close()
 
         return jsonify({
             "status": True,
-            "message": "Provider registered successfully. Check email for verification link."
+            "message": "Provider registered successfully."
         }), 201
 
     except Exception as e:
@@ -416,42 +390,40 @@ def provider_forgot_password():
         cursor.execute("SELECT provider_id, business_name, owner_name FROM providers WHERE email = %s", (email,))
         user = cursor.fetchone()
 
-        success_response = jsonify({
-            "status": True,
-            "message": "If the email is registered, a password reset link has been sent."
-        })
-
         if not user:
             cursor.close()
             conn.close()
-            return success_response, 200
+            return jsonify({"status": False, "message": "Email not found."}), 404
 
-        # Create Password Reset Token
-        reset_token = secrets.token_urlsafe(32)
-        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        # Generate Secure 6 Digit OTP
+        import random
+        otp_code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
 
+        # Store OTP inside password_reset_tokens
         cursor.execute(
-            "INSERT INTO password_reset_tokens (email, reset_token, expires_at, used) VALUES (%s, %s, %s, 0)",
-            (email, reset_token, expires_at)
+            "INSERT INTO password_reset_tokens (email, otp_code, expires_at, used) VALUES (%s, %s, %s, 0)",
+            (email, otp_code, expires_at)
         )
         conn.commit()
 
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-        reset_link = f"{frontend_url}/provider/reset-password?token={reset_token}"
-
-        email_subject = "Reset Your Password"
+        # Send OTP via SMTP
+        email_subject = "Your Password Reset OTP"
+        provider_name = user.get('business_name') or user.get('owner_name') or 'Provider'
         email_body = f"""
             <h2>Password Reset Request</h2>
-            <p>Hi {user.get('business_name') or user.get('owner_name') or 'Provider'},</p>
-            <p>Please click the link below to reset your password:</p>
-            <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
-            <p>Expires in 30 minutes.</p>
+            <p>Hi {provider_name},</p>
+            <p>You requested to reset your password. Please use the following 6-digit One-Time Password (OTP) to proceed:</p>
+            <div style="font-size:24px; font-weight:bold; letter-spacing:4px; padding:10px; background-color:#f3f4f6; text-align:center; border-radius:5px; margin: 15px 0; color: #1e3a8a;">
+                {otp_code}
+            </div>
+            <p>This OTP is valid for 10 minutes and can only be used once.</p>
         """
         send_email_async(email, email_subject, email_body)
 
         cursor.close()
         conn.close()
-        return success_response, 200
+        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}), 200
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -461,47 +433,104 @@ def provider_forgot_password():
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
-@provider_bp.route("/api/provider/reset-password", methods=["POST"])
-def provider_reset_password():
+@provider_bp.route("/api/provider/verify-otp", methods=["POST"])
+def provider_verify_otp():
     try:
         data = request.get_json() or {}
-        token = data.get("token")
-        new_password = data.get("new_password")
+        email = data.get("email")
+        # Accept both 'otp_code' and 'otp' as field names
+        otp_code = data.get("otp_code") or data.get("otp")
 
-        if not token or not new_password:
-            return jsonify({"status": False, "message": "Token and new password are required."}), 400
+        if not otp_code:
+            return jsonify({"status": False, "message": "OTP code is required."}), 400
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute(
-            "SELECT email, expires_at FROM password_reset_tokens WHERE reset_token = %s AND used = 0 LIMIT 1",
-            (token,)
-        )
+        # If email provided, verify with both; otherwise look up via OTP alone
+        if email:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND used = 0 LIMIT 1",
+                (email, otp_code)
+            )
+        else:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE otp_code = %s AND used = 0 LIMIT 1",
+                (otp_code,)
+            )
         token_record = cursor.fetchone()
 
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid password reset token."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Password reset token has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
 
-        # Hash new password
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}), 200
+
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@provider_bp.route("/api/provider/reset-password", methods=["POST"])
+def provider_reset_password():
+    try:
+        data = request.get_json() or {}
+        email = data.get("email")
+        # Accept both 'otp_code' and 'otp' as field names
+        otp_code = data.get("otp_code") or data.get("otp")
+        new_password = data.get("new_password")
+
+        if not otp_code or not new_password:
+            return jsonify({"status": False, "message": "OTP code and new password are required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # If email provided, verify with both; otherwise look up via OTP alone
+        if email:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND used = 0 LIMIT 1",
+                (email, otp_code)
+            )
+        else:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE otp_code = %s AND used = 0 LIMIT 1",
+                (otp_code,)
+            )
+        token_record = cursor.fetchone()
+
+        if not token_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid OTP code or request."}), 400
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+
+        # Resolve email from token (handles case where email was not passed by frontend)
+        email = token_record["email"]
+
+        # Hash new password with bcrypt
         hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # Update provider password
         cursor.execute(
             "UPDATE providers SET password_hash = %s WHERE email = %s",
-            (hashed_password, token_record["email"])
+            (hashed_password, email)
         )
         # Mark token as used
         cursor.execute(
-            "UPDATE password_reset_tokens SET used = 1 WHERE reset_token = %s",
-            (token,)
+            "UPDATE password_reset_tokens SET used = 1 WHERE email = %s AND otp_code = %s",
+            (email, otp_code)
         )
         conn.commit()
 

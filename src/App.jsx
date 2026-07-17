@@ -9,6 +9,9 @@ import CustomerRegister from './pages/CustomerRegister';
 import ProviderLogin from './pages/ProviderLogin';
 import ProviderRegister from './pages/ProviderRegister';
 import ForgotPassword from './pages/ForgotPassword';
+import ProviderForgotPassword from './pages/ProviderForgotPassword';
+import VerifyOTP from './pages/VerifyOTP';
+import ResetPassword from './pages/ResetPassword';
 import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
@@ -49,10 +52,15 @@ const AppInner = () => {
           <Route path="/customer/login"           element={<CustomerLogin />} />
           <Route path="/customer/register"        element={<CustomerRegister />} />
           <Route path="/customer/forgot-password" element={<ForgotPassword />} />
+          <Route path="/customer/verify-otp"       element={<VerifyOTP />} />
+          <Route path="/customer/reset-password"   element={<ResetPassword />} />
 
           {/* Provider Routes */}
-          <Route path="/provider/login"    element={<ProviderLogin />} />
-          <Route path="/provider/register" element={<ProviderRegister />} />
+          <Route path="/provider/login"            element={<ProviderLogin />} />
+          <Route path="/provider/register"         element={<ProviderRegister />} />
+          <Route path="/provider/forgot-password"  element={<ProviderForgotPassword />} />
+          <Route path="/provider/verify-otp"       element={<VerifyOTP />} />
+          <Route path="/provider/reset-password"   element={<ResetPassword />} />
 
           {/* Public routes */}
           <Route path="/services" element={<ServicesPage />} />

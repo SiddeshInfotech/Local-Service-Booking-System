@@ -60,13 +60,8 @@ def register_customer():
         # Hash Password
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # Insert Customer - example.com accounts are auto-verified for testing
-        if email.endswith("@example.com"):
-            cust_status = "Active"
-            cust_email_verified = 1
-        else:
-            cust_status = "Active"
-            cust_email_verified = 0
+        cust_status = "Active"
+        cust_email_verified = 1
 
         # Insert Customer
         query = """
@@ -77,37 +72,12 @@ def register_customer():
         cursor.execute(query, (full_name, email, hashed_password, phone, gender, date_of_birth, address, city, state, pincode, cust_status, cust_email_verified))
         conn.commit()
 
-        # Generate Verification Token
-        verification_token = secrets.token_urlsafe(32)
-        verification_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-
-        cursor.execute(
-            "INSERT INTO email_verification_tokens (email, verification_token, expires_at, verified) VALUES (%s, %s, %s, 0)",
-            (email, verification_token, verification_expiry)
-        )
-        conn.commit()
-
-        # Send Verification Email
-        backend_url = os.environ.get("BACKEND_URL", "http://localhost:5000")
-        verification_link = f"{backend_url}/api/customer/verify-email?token={verification_token}"
-        
-        email_subject = "Verify Your Account"
-        email_body = f"""
-            <h2>Verify Your Email</h2>
-            <p>Hi {full_name},</p>
-            <p>Thank you for registering. Please verify your account by clicking the link below:</p>
-            <a href="{verification_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Verify Email</a>
-            <p>Or copy this link in your browser: {verification_link}</p>
-            <p>Expires in 24 hours.</p>
-        """
-        send_email_async(email, email_subject, email_body)
-
         cursor.close()
         conn.close()
 
         return jsonify({
             "status": True,
-            "message": "Customer registered successfully. Check email for verification link."
+            "message": "Customer registered successfully."
         }), 201
 
     except Exception as e:
@@ -201,28 +171,40 @@ def login_customer():
             conn.close()
             return jsonify({"status": False, "message": "User not found."}), 404
 
-        if not user["email_verified"]:
-            cursor.close()
-            conn.close()
-            return jsonify({"status": False, "message": "Please verify your email before logging in."}), 403
-
+        # Only block suspended customers
         if user["status"] == "Blocked":
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Your account has been suspended."}), 403
+            return jsonify({
+                "status": False,
+                "message": "Your account has been suspended."
+            }), 403
 
         # Verify password
         if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid Password."}), 401
+            return jsonify({
+                "status": False,
+                "message": "Invalid Password."
+            }), 401
 
-        # Generate tokens
-        access_token = generate_access_token(user["customer_id"], user["email"], "customer")
-        refresh_token = generate_and_save_refresh_token(user["customer_id"], "customer")
+        access_token = generate_access_token(
+            user["customer_id"],
+            user["email"],
+            "customer"
+        )
 
-        # Update last login
-        cursor.execute("UPDATE customers SET last_login = NOW() WHERE customer_id = %s", (user["customer_id"],))
+        refresh_token = generate_and_save_refresh_token(
+            user["customer_id"],
+            "customer"
+        )
+
+        cursor.execute(
+            "UPDATE customers SET last_login = NOW() WHERE customer_id = %s",
+            (user["customer_id"],)
+        )
+
         conn.commit()
 
         cursor.close()
@@ -246,9 +228,11 @@ def login_customer():
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
-
+        return jsonify({
+            "status": False,
+            "message": f"Server Error: {str(e)}"
+        }), 500
 @customer_bp.route("/api/customer/forgot-password", methods=["POST"])
 def customer_forgot_password():
     try:
@@ -263,42 +247,39 @@ def customer_forgot_password():
         cursor.execute("SELECT customer_id, full_name FROM customers WHERE email = %s", (email,))
         user = cursor.fetchone()
 
-        success_response = jsonify({
-            "status": True,
-            "message": "If the email is registered, a password reset link has been sent."
-        })
-
         if not user:
             cursor.close()
             conn.close()
-            return success_response, 200
+            return jsonify({"status": False, "message": "Email not found."}), 404
 
-        # Create Password Reset Token
-        reset_token = secrets.token_urlsafe(32)
-        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        # Generate Secure 6 Digit OTP
+        import random
+        otp_code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
 
+        # Store OTP inside password_reset_tokens
         cursor.execute(
-            "INSERT INTO password_reset_tokens (email, reset_token, expires_at, used) VALUES (%s, %s, %s, 0)",
-            (email, reset_token, expires_at)
+            "INSERT INTO password_reset_tokens (email, otp_code, expires_at, used) VALUES (%s, %s, %s, 0)",
+            (email, otp_code, expires_at)
         )
         conn.commit()
 
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-        
-        email_subject = "Reset Your Password"
+        # Send OTP via SMTP
+        email_subject = "Your Password Reset OTP"
         email_body = f"""
             <h2>Password Reset Request</h2>
             <p>Hi {user['full_name']},</p>
-            <p>Please click the link below to reset your password:</p>
-            <a href="{reset_link}" style="padding:10px 20px; background-color:#2563eb; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
-            <p>Expires in 30 minutes.</p>
+            <p>You requested to reset your password. Please use the following 6-digit One-Time Password (OTP) to proceed:</p>
+            <div style="font-size:24px; font-weight:bold; letter-spacing:4px; padding:10px; background-color:#f3f4f6; text-align:center; border-radius:5px; margin: 15px 0; color: #1e3a8a;">
+                {otp_code}
+            </div>
+            <p>This OTP is valid for 10 minutes and can only be used once.</p>
         """
         send_email_async(email, email_subject, email_body)
 
         cursor.close()
         conn.close()
-        return success_response, 200
+        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}), 200
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -308,47 +289,104 @@ def customer_forgot_password():
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
-@customer_bp.route("/api/customer/reset-password", methods=["POST"])
-def customer_reset_password():
+@customer_bp.route("/api/customer/verify-otp", methods=["POST"])
+def customer_verify_otp():
     try:
         data = request.get_json() or {}
-        token = data.get("token")
-        new_password = data.get("new_password")
+        email = data.get("email")
+        # Accept both 'otp_code' and 'otp' as field names
+        otp_code = data.get("otp_code") or data.get("otp")
 
-        if not token or not new_password:
-            return jsonify({"status": False, "message": "Token and new password are required."}), 400
+        if not otp_code:
+            return jsonify({"status": False, "message": "OTP code is required."}), 400
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute(
-            "SELECT email, expires_at FROM password_reset_tokens WHERE reset_token = %s AND used = 0 LIMIT 1",
-            (token,)
-        )
+        # If email provided, verify with both; otherwise look up via OTP alone
+        if email:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND used = 0 LIMIT 1",
+                (email, otp_code)
+            )
+        else:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE otp_code = %s AND used = 0 LIMIT 1",
+                (otp_code,)
+            )
         token_record = cursor.fetchone()
 
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid password reset token."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Password reset token has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
 
-        # Hash new password
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}), 200
+
+    except Exception as e:
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+@customer_bp.route("/api/customer/reset-password", methods=["POST"])
+def customer_reset_password():
+    try:
+        data = request.get_json() or {}
+        email = data.get("email")
+        # Accept both 'otp_code' and 'otp' as field names
+        otp_code = data.get("otp_code") or data.get("otp")
+        new_password = data.get("new_password")
+
+        if not otp_code or not new_password:
+            return jsonify({"status": False, "message": "OTP code and new password are required."}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # If email provided, verify with both; otherwise look up via OTP alone
+        if email:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE email = %s AND otp_code = %s AND used = 0 LIMIT 1",
+                (email, otp_code)
+            )
+        else:
+            cursor.execute(
+                "SELECT email, expires_at FROM password_reset_tokens WHERE otp_code = %s AND used = 0 LIMIT 1",
+                (otp_code,)
+            )
+        token_record = cursor.fetchone()
+
+        if not token_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Invalid OTP code or request."}), 400
+
+        if token_record["expires_at"] < datetime.datetime.utcnow():
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+
+        # Resolve email from token (handles case where email was not passed by frontend)
+        email = token_record["email"]
+
+        # Hash new password with bcrypt
         hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # Update customer password
         cursor.execute(
             "UPDATE customers SET password_hash = %s WHERE email = %s",
-            (hashed_password, token_record["email"])
+            (hashed_password, email)
         )
         # Mark token as used
         cursor.execute(
-            "UPDATE password_reset_tokens SET used = 1 WHERE reset_token = %s",
-            (token,)
+            "UPDATE password_reset_tokens SET used = 1 WHERE email = %s AND otp_code = %s",
+            (email, otp_code)
         )
         conn.commit()
 
@@ -654,6 +692,267 @@ def create_booking():
         cursor.execute("SELECT * FROM bookings WHERE booking_id = %s", (booking_id,))
         booking_record = cursor.fetchone()
 
+        # ── Send HTML Booking Confirmation Email ──────────────────────────────
+        try:
+            # Use form-supplied values (what the customer typed in the booking form)
+            form_customer_name   = data.get("customer_name", "").strip()
+            form_customer_email  = data.get("customer_email", "").strip()
+            form_customer_mobile = data.get("customer_mobile", "").strip()
+            form_category        = data.get("category", "").strip()
+
+            # Fetch customer details from DB as fallback
+            cursor.execute(
+                "SELECT full_name, email, phone FROM customers WHERE customer_id = %s",
+                (user_payload["user_id"],)
+            )
+            cust_row = cursor.fetchone()
+
+            # Resolve recipient — form email takes priority; fall back to registered email
+            customer_name   = form_customer_name  or (cust_row["full_name"] if cust_row else "Valued Customer")
+            customer_email  = form_customer_email or (cust_row["email"]     if cust_row else "")
+            customer_mobile = form_customer_mobile or (cust_row["phone"]    if cust_row else "N/A")
+
+            if not customer_email:
+                raise ValueError("No customer email available to send confirmation.")
+
+            # Fetch service, provider & category details
+            cursor.execute(
+                "SELECT s.service_name, s.category_id, "
+                "       c.category_name, "
+                "       p.business_name, p.owner_name, p.phone as provider_phone "
+                "FROM services s "
+                "LEFT JOIN categories c ON c.category_id = s.category_id "
+                "JOIN providers p ON p.provider_id = %s "
+                "WHERE s.service_id = %s LIMIT 1",
+                (provider_id, service_id)
+            )
+            sp_row = cursor.fetchone()
+
+            if sp_row:
+                service_name_txt  = sp_row["service_name"]
+                category_txt      = form_category or sp_row.get("category_name") or "General"
+                provider_name_txt = sp_row.get("business_name") or sp_row.get("owner_name") or "Your Provider"
+                provider_phone_txt = sp_row.get("provider_phone") or "N/A"
+            else:
+                service_name_txt  = "Booked Service"
+                category_txt      = form_category or "General"
+                provider_name_txt = "Your Provider"
+                provider_phone_txt = "N/A"
+
+            # Format values
+            try:
+                price_txt = f"\u20b9{float(price):,.2f}" if price else "As per visit"
+            except Exception:
+                price_txt = f"\u20b9{price}" if price else "As per visit"
+
+            date_txt    = str(booking_date)
+            time_txt    = str(booking_time)
+            city_txt    = city or "N/A"
+            address_txt = f"{service_address}{(', ' + city) if city else ''}{(', ' + (state or ''))}{(' - ' + (pincode or '')) if pincode else ''}".strip(", ")
+            created_txt = datetime.datetime.now().strftime("%d %b %Y, %I:%M %p")
+
+            html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Booking Confirmation – Fixora</title>
+</head>
+<body style="margin:0;padding:0;background:#0F1115;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#1A1D23;border-radius:16px;overflow:hidden;border:1px solid #2a2d35;max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1A1D23 0%,#0F1115 100%);padding:40px 40px 30px;text-align:center;border-bottom:2px solid #D4AF37;">
+            <h1 style="margin:0;font-size:30px;font-weight:900;color:#D4AF37;letter-spacing:3px;">FIXORA</h1>
+            <p style="margin:6px 0 0;color:#888;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Local Service Booking Platform</p>
+          </td>
+        </tr>
+
+        <!-- Success Banner -->
+        <tr>
+          <td style="padding:36px 40px 20px;text-align:center;">
+            <div style="display:inline-block;background:#D4AF37;border-radius:50%;width:68px;height:68px;line-height:68px;font-size:36px;margin-bottom:16px;">&#10003;</div>
+            <h2 style="margin:0;font-size:24px;font-weight:800;color:#ffffff;">Booking Confirmed!</h2>
+            <p style="margin:10px 0 0;color:#aaa;font-size:14px;">Your service request has been successfully registered with Fixora.</p>
+          </td>
+        </tr>
+
+        <!-- Booking Reference -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <div style="border:1px solid #D4AF37;border-radius:12px;padding:16px 24px;text-align:center;background:rgba(212,175,55,0.08);">
+              <p style="margin:0;font-size:11px;color:#D4AF37;text-transform:uppercase;letter-spacing:3px;">Booking Reference Number</p>
+              <p style="margin:6px 0 0;font-size:26px;font-weight:900;color:#D4AF37;letter-spacing:4px;">{bk_num}</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Greeting -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <p style="margin:0;color:#e0e0e0;font-size:15px;line-height:1.7;">
+              Hi <strong style="color:#ffffff;">{customer_name}</strong>,<br><br>
+              Thank you for choosing <strong style="color:#D4AF37;">Fixora</strong>! We have received your booking request and our verified service professional will reach out to you shortly to confirm your appointment.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Customer Details -->
+        <tr>
+          <td style="padding:0 40px 10px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;border-radius:12px;overflow:hidden;border:1px solid #2a2d35;margin-bottom:4px;">
+              <tr style="background:#16191f;">
+                <td colspan="2" style="padding:14px 20px;font-size:12px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #2a2d35;">
+                  Customer Information
+                </td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;width:42%;">Full Name</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_name}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Mobile Number</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_mobile}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Email Address</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_email}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Booking Details -->
+        <tr>
+          <td style="padding:14px 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;border-radius:12px;overflow:hidden;border:1px solid #2a2d35;">
+              <tr style="background:#16191f;">
+                <td colspan="2" style="padding:14px 20px;font-size:12px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #2a2d35;">
+                  Booking Details
+                </td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;width:42%;">Booking ID</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:700;">{bk_num}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Category</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{category_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Selected Service</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{service_name_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Provider</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{provider_name_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Preferred Date</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{date_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Time Slot</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{time_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Address</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{address_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">City</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{city_txt}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #1e2128;">
+                <td style="padding:12px 20px;color:#888;font-size:13px;">Booking Created</td>
+                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{created_txt}</td>
+              </tr>
+              <tr style="background:#16191f;">
+                <td style="padding:12px 20px;color:#D4AF37;font-size:13px;font-weight:700;">Estimated Price</td>
+                <td style="padding:12px 20px;color:#D4AF37;font-size:16px;font-weight:900;">{price_txt}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Booking Status Badge -->
+        <tr>
+          <td style="padding:0 40px 28px;text-align:center;">
+            <span style="background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.4);color:#facc15;padding:10px 28px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:inline-block;">
+              &#9679; Status: Pending Confirmation
+            </span>
+          </td>
+        </tr>
+
+        <!-- What Happens Next -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:18px 22px;">
+              <p style="margin:0;color:#93c5fd;font-size:13px;line-height:1.7;">
+                <strong>&#9432; What happens next?</strong><br>
+                Your service provider will review your booking request and contact you to confirm the schedule. You will also receive an in-app notification when your booking status changes. Please ensure your phone is reachable.
+              </p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Thank You Message -->
+        <tr>
+          <td style="padding:0 40px 28px;text-align:center;">
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.7;">
+              We appreciate you trusting <strong style="color:#D4AF37;">Fixora</strong> for your home service needs.<br>
+              Our team is committed to delivering quality, reliability, and satisfaction at every step.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding:0 40px 24px;">
+            <div style="border-top:1px solid #2a2d35;"></div>
+          </td>
+        </tr>
+
+        <!-- Support Info -->
+        <tr>
+          <td style="padding:0 40px 28px;text-align:center;">
+            <p style="margin:0 0 6px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Fixora Customer Support</p>
+            <p style="margin:0;color:#aaa;font-size:13px;line-height:1.7;">
+              &#128222; <a href="tel:+918000000000" style="color:#D4AF37;text-decoration:none;">+91 80000 00000</a><br>
+              &#128231; <a href="mailto:support@fixora.in" style="color:#D4AF37;text-decoration:none;">support@fixora.in</a><br>
+              &#127760; <a href="https://fixora.in" style="color:#D4AF37;text-decoration:none;">www.fixora.in</a>
+            </p>
+            <p style="margin:10px 0 0;color:#666;font-size:11px;">Support available Mon–Sat, 9 AM – 7 PM IST</p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#0F1115;padding:24px 40px;text-align:center;border-top:1px solid #2a2d35;">
+            <p style="margin:0;color:#D4AF37;font-size:14px;font-weight:800;letter-spacing:2px;">FIXORA</p>
+            <p style="margin:6px 0 0;color:#555;font-size:11px;line-height:1.7;">
+              This is an automated booking confirmation. Please do not reply to this email.<br>
+              If you did not make this booking, please contact us immediately at <a href="mailto:support@fixora.in" style="color:#D4AF37;text-decoration:none;">support@fixora.in</a><br><br>
+              &copy; {datetime.datetime.now().year} Fixora. All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+            send_email_async(customer_email, f"Booking Confirmation – {bk_num} | Fixora", html_body)
+        except Exception as email_err:
+            # Email failure must NEVER roll back or cancel the booking
+            import logging
+            logging.getLogger(__name__).error(f"Booking email error for {bk_num}: {email_err}")
+        # ── End Email ──────────────────────────────────────────────────────────
+
         cursor.close()
         conn.close()
 
@@ -676,6 +975,7 @@ def create_booking():
             cursor.close()
             conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
 
 
 @customer_bp.route("/api/booking/history", methods=["GET"])

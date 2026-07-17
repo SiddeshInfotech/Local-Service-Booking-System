@@ -34,13 +34,13 @@ def fetch_token_from_db(email, token_column):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     if token_column == "verification_token":
-        cursor.execute("SELECT verification_token FROM email_verification_tokens WHERE email = %s AND verified = 0 LIMIT 1", (email,))
+        cursor.execute("SELECT otp_code FROM email_verification_tokens WHERE email = %s AND verified = 0 LIMIT 1", (email,))
         row = cursor.fetchone()
-        val = row["verification_token"] if row else None
+        val = row["otp_code"] if row else None
     elif token_column == "password_reset_token":
-        cursor.execute("SELECT reset_token FROM password_reset_tokens WHERE email = %s AND used = 0 LIMIT 1", (email,))
+        cursor.execute("SELECT otp_code FROM password_reset_tokens WHERE email = %s AND used = 0 LIMIT 1", (email,))
         row = cursor.fetchone()
-        val = row["reset_token"] if row else None
+        val = row["otp_code"] if row else None
     else:
         val = None
     cursor.close()
@@ -114,44 +114,28 @@ def test_customer_flow():
     assert status == 201, f"Registration failed: {res}"
     print(f"  [PASS] Registration successful. Response: {res['message']}")
     
-    # 2. Login before verification should be denied (403)
+    # 2. Login immediately (since verification is removed)
     login_data = {"email": email, "password": password}
-    status, res = make_request(f"{BASE_URL}/api/customer/login", "POST", login_data)
-    assert status == 403, f"Expected 403, got {status}: {res}"
-    assert "verify your email" in res["message"], f"Unexpected message: {res['message']}"
-    print(f"  [PASS] Login denied before email verification as expected. Response: {res['message']}")
-    
-    # 3. Retrieve verification token from database
-    token = fetch_token_from_db(email, "verification_token")
-    assert token is not None, "Verification token not found in database!"
-    print(f"  [PASS] Verification token found in database: {token[:10]}...")
-    
-    # 4. Verify email
-    status, res = make_request(f"{BASE_URL}/api/customer/verify-email", "POST", {"token": token})
-    assert status == 200, f"Email verification failed: {res}"
-    print(f"  [PASS] Email verified successfully. Response: {res['message']}")
-    
-    # 5. Login after verification
     status, res = make_request(f"{BASE_URL}/api/customer/login", "POST", login_data)
     assert status == 200, f"Login failed: {res}"
     assert "access_token" in res, "access_token missing in login response"
     assert "refresh_token" in res, "refresh_token missing in login response"
     access_token = res["access_token"]
     refresh_token = res["refresh_token"]
-    print("  [PASS] Login successful after verification. Received access and refresh tokens.")
+    print("  [PASS] Login successful immediately after registration. Received tokens.")
     
-    # 6. Test Protected API (profile) with valid token
+    # 3. Test Protected API (profile) with valid token
     status, res = make_request(f"{BASE_URL}/api/customer/profile", "GET", token=access_token)
     assert status == 200, f"Failed to fetch profile: {res}"
     assert res["user"]["email"] == email, f"Unexpected profile email: {res['user']['email']}"
     print("  [PASS] Accessed protected profile endpoint using JWT access token.")
     
-    # 7. Test Protected API with invalid token (should return 401)
+    # 4. Test Protected API with invalid token (should return 401)
     status, res = make_request(f"{BASE_URL}/api/customer/profile", "GET", token="invalid_token")
     assert status == 401, f"Expected 401, got {status}: {res}"
     print("  [PASS] Protected endpoint blocked unauthorized requests correctly.")
     
-    # 8. Test Refresh Token
+    # 5. Test Refresh Token
     status, res = make_request(f"{BASE_URL}/api/customer/refresh-token", "POST", {"refresh_token": refresh_token})
     assert status == 200, f"Token refresh failed: {res}"
     new_access_token = res["access_token"]
@@ -162,19 +146,24 @@ def test_customer_flow():
     assert status == 200, f"New access token failed to authorize: {res}"
     print("  [PASS] Verified new access token works correctly.")
     
-    # 9. Test Forgot Password
+    # 6. Test Forgot Password
     status, res = make_request(f"{BASE_URL}/api/customer/forgot-password", "POST", {"email": email})
     assert status == 200, f"Forgot password failed: {res}"
     print(f"  [PASS] Forgot password requested. Response: {res['message']}")
     
-    # Retrieve reset token from database
-    reset_token = fetch_token_from_db(email, "password_reset_token")
-    assert reset_token is not None, "Reset token not found in database!"
-    print(f"  [PASS] Password reset token found in database: {reset_token[:10]}...")
+    # Retrieve OTP code from database
+    otp_code = fetch_token_from_db(email, "password_reset_token")
+    assert otp_code is not None, "OTP code not found in database!"
+    print(f"  [PASS] OTP code found in database: {otp_code}")
+    
+    # Verify OTP
+    status, res = make_request(f"{BASE_URL}/api/customer/verify-otp", "POST", {"email": email, "otp_code": otp_code})
+    assert status == 200, f"Verify OTP failed: {res}"
+    print(f"  [PASS] OTP verified successfully. Response: {res['message']}")
     
     # Reset Password
     new_password = "NewStrongPassword123"
-    status, res = make_request(f"{BASE_URL}/api/customer/reset-password", "POST", {"token": reset_token, "new_password": new_password})
+    status, res = make_request(f"{BASE_URL}/api/customer/reset-password", "POST", {"email": email, "otp_code": otp_code, "new_password": new_password})
     assert status == 200, f"Reset password failed: {res}"
     print(f"  [PASS] Password reset successfully. Response: {res['message']}")
     
@@ -184,7 +173,7 @@ def test_customer_flow():
     assert status == 200, f"Login with new password failed: {res}"
     print("  [PASS] Logged in successfully using new password.")
     
-    # 10. Test Logout
+    # Test Logout
     status, res = make_request(f"{BASE_URL}/api/customer/logout", "POST", {"refresh_token": refresh_token})
     assert status == 200, f"Logout failed: {res}"
     print("  [PASS] Logged out successfully. Refresh token revoked.")
@@ -195,7 +184,7 @@ def test_customer_flow():
     print("  [PASS] Revoked refresh token failed to fetch a new access token as expected.")
     
     print("Customer auth flow tests completed successfully!\n")
- 
+
 def test_provider_flow(category_id, location_id):
     print("=== STARTING PROVIDER AUTH FLOW TESTS ===")
     rand_id = random.randint(10000, 99999)
@@ -222,47 +211,38 @@ def test_provider_flow(category_id, location_id):
     assert status == 201, f"Registration failed: {res}"
     print(f"  [PASS] Registration successful. Response: {res['message']}")
     
-    # 2. Login before verification should be denied (403)
+    # 2. Login before approval should be denied (403)
     login_data = {"email": email, "password": password}
     status, res = make_request(f"{BASE_URL}/api/provider/login", "POST", login_data)
     assert status == 403, f"Expected 403, got {status}: {res}"
-    assert "verify your email" in res["message"], f"Unexpected message: {res['message']}"
-    print(f"  [PASS] Login denied before email verification as expected. Response: {res['message']}")
+    assert "admin approval" in res["message"], f"Unexpected message: {res['message']}"
+    print(f"  [PASS] Login denied before approval as expected. Response: {res['message']}")
     
-    # 3. Retrieve verification token from database
-    token = fetch_token_from_db(email, "verification_token")
-    assert token is not None, "Verification token not found in database!"
-    print(f"  [PASS] Verification token found in database: {token[:10]}...")
-    
-    # 4. Verify email
-    status, res = make_request(f"{BASE_URL}/api/provider/verify-email", "POST", {"token": token})
-    assert status == 200, f"Email verification failed: {res}"
-    print(f"  [PASS] Email verified successfully. Response: {res['message']}")
-    
-    # Auto-approve provider in DB to allow login testing
+    # 3. Approve provider in DB
     approve_provider_in_db(email)
+    print("  [PASS] Provider approved in database.")
     
-    # 5. Login after verification
+    # 4. Login after approval
     status, res = make_request(f"{BASE_URL}/api/provider/login", "POST", login_data)
     assert status == 200, f"Login failed: {res}"
     assert "access_token" in res, "access_token missing in login response"
     assert "refresh_token" in res, "refresh_token missing in login response"
     access_token = res["access_token"]
     refresh_token = res["refresh_token"]
-    print("  [PASS] Login successful after verification. Received access and refresh tokens.")
+    print("  [PASS] Login successful after approval. Received tokens.")
     
-    # 6. Test Protected API (profile) with valid token
+    # 5. Test Protected API (profile) with valid token
     status, res = make_request(f"{BASE_URL}/api/provider/profile", "GET", token=access_token)
     assert status == 200, f"Failed to fetch profile: {res}"
     assert res["provider"]["email"] == email, f"Unexpected profile email: {res['provider']['email']}"
     print("  [PASS] Accessed protected provider profile endpoint using JWT access token.")
     
-    # 7. Test Protected API with invalid token (should return 401)
+    # 6. Test Protected API with invalid token (should return 401)
     status, res = make_request(f"{BASE_URL}/api/provider/profile", "GET", token="invalid_token")
     assert status == 401, f"Expected 401, got {status}: {res}"
     print("  [PASS] Protected endpoint blocked unauthorized requests correctly.")
     
-    # 8. Test Refresh Token
+    # 7. Test Refresh Token
     status, res = make_request(f"{BASE_URL}/api/provider/refresh-token", "POST", {"refresh_token": refresh_token})
     assert status == 200, f"Token refresh failed: {res}"
     new_access_token = res["access_token"]
@@ -273,19 +253,24 @@ def test_provider_flow(category_id, location_id):
     assert status == 200, f"New access token failed to authorize: {res}"
     print("  [PASS] Verified new access token works correctly.")
     
-    # 9. Test Forgot Password
+    # 8. Test Forgot Password
     status, res = make_request(f"{BASE_URL}/api/provider/forgot-password", "POST", {"email": email})
     assert status == 200, f"Forgot password failed: {res}"
     print(f"  [PASS] Forgot password requested. Response: {res['message']}")
     
-    # Retrieve reset token from database
-    reset_token = fetch_token_from_db(email, "password_reset_token")
-    assert reset_token is not None, "Reset token not found in database!"
-    print(f"  [PASS] Password reset token found in database: {reset_token[:10]}...")
+    # Retrieve OTP code from database
+    otp_code = fetch_token_from_db(email, "password_reset_token")
+    assert otp_code is not None, "OTP code not found in database!"
+    print(f"  [PASS] OTP code found in database: {otp_code}")
+    
+    # Verify OTP
+    status, res = make_request(f"{BASE_URL}/api/provider/verify-otp", "POST", {"email": email, "otp_code": otp_code})
+    assert status == 200, f"Verify OTP failed: {res}"
+    print(f"  [PASS] OTP verified successfully. Response: {res['message']}")
     
     # Reset Password
     new_password = "NewStrongPassword123"
-    status, res = make_request(f"{BASE_URL}/api/provider/reset-password", "POST", {"token": reset_token, "new_password": new_password})
+    status, res = make_request(f"{BASE_URL}/api/provider/reset-password", "POST", {"email": email, "otp_code": otp_code, "new_password": new_password})
     assert status == 200, f"Reset password failed: {res}"
     print(f"  [PASS] Password reset successfully. Response: {res['message']}")
     
@@ -295,7 +280,7 @@ def test_provider_flow(category_id, location_id):
     assert status == 200, f"Login with new password failed: {res}"
     print("  [PASS] Logged in successfully using new password.")
     
-    # 10. Test Logout
+    # Test Logout
     status, res = make_request(f"{BASE_URL}/api/provider/logout", "POST", {"refresh_token": refresh_token})
     assert status == 200, f"Logout failed: {res}"
     print("  [PASS] Logged out successfully. Refresh token revoked.")

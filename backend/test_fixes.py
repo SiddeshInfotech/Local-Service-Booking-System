@@ -39,7 +39,7 @@ def test_flow():
     # 1. Login Admin to get Token
     admin_login = request_api("Admin Login", f"{BASE_URL}/api/admin/login", "POST", {
         "email": "admin@gmail.com",
-        "password": "admin123"
+        "password": "Admin@1234"
     })
     if not admin_login or not admin_login.get("status"):
         print("Admin login failed! Aborting.")

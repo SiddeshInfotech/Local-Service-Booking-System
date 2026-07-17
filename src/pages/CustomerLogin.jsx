@@ -54,12 +54,7 @@ const CustomerLogin = () => {
         // Navigate to customer dashboard
         setTimeout(() => navigate('/services'), 800);
       } else {
-        // Show a more helpful message for unverified email
-        if (response.status === 403) {
-          setErrorMsg('Your email is not verified. Please check your inbox and click the verification link.');
-        } else {
-          setErrorMsg(data.message || 'Login failed. Please try again.');
-        }
+        setErrorMsg(data.message || 'Login failed. Please try again.');
       }
     } catch (err) {
       setErrorMsg('Unable to connect to the server. Please try again later.');

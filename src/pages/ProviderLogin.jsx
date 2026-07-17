@@ -49,15 +49,14 @@ const ProviderLogin = () => {
         localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('provider', JSON.stringify(data.provider));
         localStorage.setItem('role', 'provider');
-        setFeedbackMsg(`Welcome, ${data.provider.full_name}! Redirecting to your dashboard...`);
+        setFeedbackMsg(`Welcome, ${data.provider.full_name || data.provider.business_name}! Redirecting to your dashboard...`);
         setEmail('');
         setPassword('');
         // Navigate to provider dashboard
         setTimeout(() => navigate('/services'), 800);
       } else {
-        // Show a more helpful message for unverified email
         if (response.status === 403) {
-          setErrorMsg('Your email is not verified. Please check your inbox and click the verification link.');
+          setErrorMsg(data.message || 'Your account is awaiting admin approval. Please try again later.');
         } else {
           setErrorMsg(data.message || 'Login failed. Please try again.');
         }
@@ -160,9 +159,12 @@ const ProviderLogin = () => {
                 Remember Me
               </label>
 
-              <a href="#" className="text-blue-500 hover:text-blue-400 transition-colors">
+              <Link
+                to="/provider/forgot-password"
+                className="text-blue-500 hover:text-blue-400 transition-colors"
+              >
                 Forgot Password?
-              </a>
+              </Link>
             </div>
 
             <button

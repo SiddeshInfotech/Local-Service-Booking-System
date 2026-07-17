@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, ShieldCheck, Key, RefreshCw } from 'lucide-react';
 import InputField from '../components/InputField';
 import forgotPasswordIllustration from '../assets/images/forgot_password_illustration.png';
@@ -10,6 +10,8 @@ const ForgotPassword = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const navigate = useNavigate();
 
   const validateEmail = (emailVal) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,8 +43,11 @@ const ForgotPassword = () => {
       });
       const data = await res.json();
       if (res.ok && data.status) {
-        setSuccessMsg(data.message || 'If an account exists with this email, a password reset link has been sent to your registered email address.');
-        setEmail('');
+        setSuccessMsg(data.message || 'OTP sent successfully to your registered email address.');
+        // Navigate to OTP verify page, passing email via state
+        setTimeout(() => {
+          navigate('/customer/verify-otp', { state: { email } });
+        }, 1500);
       } else {
         setErrorMsg(data.message || 'Reset request failed. Please try again.');
       }
@@ -135,7 +140,7 @@ const ForgotPassword = () => {
           {!successMsg ? (
             <>
               <p className="text-zinc-400 text-sm mb-8 text-left">
-                Enter your registered email address to receive a password reset link.
+                Enter your registered email address to receive a 6-digit OTP code.
               </p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -155,7 +160,7 @@ const ForgotPassword = () => {
                   disabled={isSubmitting}
                   className="w-full bg-gold-accent hover:bg-gold-hover text-bg-dark font-bold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2 shadow-lg shadow-gold-accent/15 hover:shadow-gold-accent/25"
                 >
-                  {isSubmitting ? 'Sending Link...' : 'Send Reset Link'}
+                  {isSubmitting ? 'Sending OTP...' : 'Send OTP'}
                 </button>
               </form>
 
