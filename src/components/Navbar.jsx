@@ -10,6 +10,14 @@ const Navbar = () => {
   const loginRef = useRef(null);
   const location = useLocation();
 
+  const authRoutes = [
+    '/customer/login',
+    '/customer/register',
+    '/provider/login',
+    '/provider/register'
+  ];
+  const isAuthRoute = authRoutes.includes(location.pathname);
+
   /* Scroll glass effect */
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -89,8 +97,8 @@ const Navbar = () => {
       `}</style>
 
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled
+        className={`${isAuthRoute ? 'sticky' : 'fixed'} top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          scrolled || isAuthRoute
             ? 'fixora-navbar-glass shadow-2xl shadow-black/80 border-b border-[#D4AF37]/20'
             : 'bg-transparent border-b border-transparent'
         }`}
@@ -108,7 +116,7 @@ const Navbar = () => {
             </Link>
 
             {/* ── Desktop Nav Links ── */}
-            <nav className="hidden md:flex items-center gap-7 lg:gap-8">
+            <nav className="hidden xl:flex items-center gap-7 lg:gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
@@ -125,7 +133,7 @@ const Navbar = () => {
             </nav>
 
             {/* ── Desktop Right: Login Button ── */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden xl:flex items-center gap-4">
               <div className="relative" ref={loginRef}>
                 <button
                   onClick={() => setLoginOpen((v) => !v)}
@@ -168,7 +176,7 @@ const Navbar = () => {
             {/* ── Mobile Hamburger ── */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+              className="xl:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -179,7 +187,7 @@ const Navbar = () => {
 
         {/* ── Mobile Drawer ── */}
         {mobileOpen && (
-          <div className="md:hidden fixora-navbar-glass border-t border-[#D4AF37]/15 px-4 pt-3 pb-6 space-y-1 nav-fade-in">
+          <div className="xl:hidden fixora-navbar-glass border-t border-[#D4AF37]/15 px-4 pt-3 pb-6 space-y-1 nav-fade-in">
             {navLinks.map((link) => (
               <Link
                 key={link.name}

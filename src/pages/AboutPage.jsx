@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Users, TrendingUp, Star, Award, Clock, ArrowRight, CheckCircle } from 'lucide-react';
+import MahimImg from '../assets/images/Mahim sir.png';
+import AryanImg from '../assets/images/aryan.png';
 
 /* ─── InView hook ─── */
 const useInView = (threshold = 0.15) => {
@@ -31,10 +33,9 @@ const AnimSection = ({ children, className = '', delay = 0, dir = 'up' }) => {
 };
 
 const team = [
-  { name: 'Arjun Kapoor', role: 'CEO & Co-Founder', desc: 'Former McKinsey consultant who saw the gap in home service quality. Drives Fixora\'s vision for transparent, premium-tier home care.', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Priya Sharma', role: 'CTO & Co-Founder', desc: 'Ex-Amazon engineer. Architects the intelligent matching algorithms and SaaS infrastructure that power real-time bookings.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Rohan Verma', role: 'Head of Operations', desc: 'Led nationwide field operations for UrbanClap. Oversees provider onboarding, vetting protocols, and quality benchmarks.', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Kavya Nair', role: 'Head of Design', desc: 'Design director with a decade across Zomato and Swiggy. Crafts every touchpoint to feel intuitive, elegant, and premium.', img: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=300&auto=format&fit=crop' },
+  { name: 'Mahim Dosi', role: 'CEO & Co-Founder', desc: 'Former McKinsey consultant who saw the gap in home service quality. Drives Fixora\'s vision for transparent, premium-tier home care.', img: MahimImg },
+  { name: 'Dhanashree Nerkar', role: 'CTO & Co-Founder', desc: 'Ex-Amazon engineer. Architects the intelligent matching algorithms and SaaS infrastructure that power real-time bookings.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop' },
+  { name: 'Aryan Harwani', role: 'Head of Operations and Design ', desc: 'Led nationwide field operations for UrbanClap. Oversees provider onboarding, vetting protocols, and quality benchmarks.', img: AryanImg },
 ];
 
 const values = [
@@ -262,8 +263,8 @@ const AboutPage = () => {
       </section>
 
       {/* ─── TEAM ─── */}
-      <section className="py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <AnimSection dir="up" className="text-center mb-16">
+      <section className="py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <AnimSection dir="up" className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 w-max mx-auto mb-5">
             <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">The Team</span>
           </div>
@@ -272,17 +273,17 @@ const AboutPage = () => {
             <span className="about-gold-shimmer">Fixora</span>
           </h2>
         </AnimSection>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 max-w-5xl w-full mx-auto">
           {team.map((member, i) => (
-            <AnimSection key={member.name} dir="up" delay={i * 80}>
-              <div className="glass-card-about team-card rounded-3xl overflow-hidden">
-                <div className="overflow-hidden h-56 bg-zinc-900">
-                  <img src={member.img} alt={member.name} className="w-full h-full object-cover object-top" />
+            <AnimSection key={member.name} dir="up" delay={i * 80} className="h-full">
+              <div className="glass-card-about team-card rounded-3xl overflow-hidden flex flex-col h-full w-full">
+                <div className="overflow-hidden h-56 w-full bg-zinc-900 shrink-0">
+                  <img src={member.img} alt={member.name} className="w-full h-full object-cover object-[50%_15%]" />
                 </div>
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-grow">
                   <h3 className="text-white font-bold text-sm mb-0.5">{member.name}</h3>
                   <p className="text-[#D4AF37] text-xs font-semibold uppercase tracking-wider mb-3">{member.role}</p>
-                  <p className="text-zinc-400 text-xs leading-relaxed">{member.desc}</p>
+                  <p className="text-zinc-400 text-xs leading-relaxed flex-grow">{member.desc}</p>
                 </div>
               </div>
             </AnimSection>
