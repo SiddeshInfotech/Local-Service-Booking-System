@@ -1,0 +1,754 @@
+{
+  "info": {
+    "name": "Local Service Booking System — Full API",
+    "description": "Complete API collection for all Customer, Provider and Admin endpoints. Set the 'base_url', 'admin_token', 'customer_token', and 'provider_token' collection variables before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "local-service-booking-v3"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000", "type": "string" },
+    { "key": "admin_token", "value": "", "type": "string" },
+    { "key": "customer_token", "value": "", "type": "string" },
+    { "key": "provider_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Admin Login",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"admin123\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Get Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/dashboard",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Dashboard Recent (NEW)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/dashboard/recent",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Reports (All Time)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/reports",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Reports (Last 7 Days)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/reports?range=7d",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Reports (Last 30 Days)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/reports?range=30d",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Reports (Year-to-Date)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/reports?range=ytd",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Providers",
+          "item": [
+            {
+              "name": "List All Providers",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/providers",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "List Providers (Filter by Status)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/providers?status=Approved",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Provider Approval Queue",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/provider-approval",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Provider Details",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/provider/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Update Provider",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/admin/provider/1",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Mumbai\"\n}" }
+              }
+            },
+            {
+              "name": "Delete Provider",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/admin/provider/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Approve Provider",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/provider/1/approve",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Reject Provider",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/provider/1/reject",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Insufficient documents\"\n}" }
+              }
+            },
+            {
+              "name": "Block Provider",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/provider/1/block",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Unblock Provider",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/provider/1/unblock",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Suspend Provider",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/provider/1/suspend",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customers",
+          "item": [
+            {
+              "name": "List All Customers",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/customers",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Get Customer Details",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/customer/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Update Customer",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/admin/customer/1",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Updated Customer\",\n  \"phone\": \"9876543210\"\n}" }
+              }
+            },
+            {
+              "name": "Delete Customer",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/admin/customer/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Suspend Customer",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/customer/1/suspend",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Unblock Customer",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/customer/1/unblock",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List All Categories (Admin)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/categories",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Create Category",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/category",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"category_name\": \"Painter\",\n  \"description\": \"Professional painting services\",\n  \"status\": \"Active\"\n}" }
+              }
+            },
+            {
+              "name": "Update Category",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/category/1",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"category_name\": \"Painter Updated\",\n  \"status\": \"Active\"\n}" }
+              }
+            },
+            {
+              "name": "Delete Category",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/category/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Services",
+          "item": [
+            {
+              "name": "List All Services (Admin)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/services",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Create Service",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/service",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"service_name\": \"Water Heater Repair\",\n  \"category_id\": 1,\n  \"description\": \"Repair of water heaters\",\n  \"base_price\": 499,\n  \"duration\": \"1-2 hrs\",\n  \"status\": \"Active\"\n}" }
+              }
+            },
+            {
+              "name": "Update Service",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/service/1",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"service_name\": \"Updated Service\",\n  \"base_price\": 599,\n  \"status\": \"Active\"\n}" }
+              }
+            },
+            {
+              "name": "Delete Service",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/service/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings",
+          "item": [
+            {
+              "name": "List All Bookings (Admin)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/bookings",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Cancel Booking (Admin) [NEW]",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/admin/booking/1/cancel",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Cancelled by admin due to dispute\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reviews",
+          "item": [
+            {
+              "name": "List All Reviews (Admin)",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/admin/reviews",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            },
+            {
+              "name": "Delete Review (Admin) [NEW]",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/admin/review/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Register",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/customer/register",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Mumbai\"\n}" }
+              }
+            },
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/customer/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Forgot Password",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/customer/forgot-password",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\"\n}" }
+              }
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/customer/refresh-token",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"<your_refresh_token>\"\n}" }
+              }
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/customer/logout",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/customer/profile",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/customer/profile",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{customer_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"John Doe Updated\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Pune\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Discovery",
+          "item": [
+            {
+              "name": "List Categories",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/category",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            },
+            {
+              "name": "List Services",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/service",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            },
+            {
+              "name": "List Providers",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/provider",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            },
+            {
+              "name": "Get Provider Profile",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/provider/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings",
+          "item": [
+            {
+              "name": "Create Booking",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{customer_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"provider_id\": 1,\n  \"service_id\": 1,\n  \"booking_date\": \"2026-08-01\",\n  \"booking_time\": \"10:00:00\",\n  \"service_address\": \"123 Main St\",\n  \"city\": \"Mumbai\",\n  \"pincode\": \"400001\"\n}" }
+              }
+            },
+            {
+              "name": "Booking History",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/booking/history",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            },
+            {
+              "name": "Cancel Booking",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/1/cancel",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{customer_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Change of plans\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reviews",
+          "item": [
+            {
+              "name": "Submit Review",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/review",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{customer_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"booking_id\": 1,\n  \"provider_id\": 1,\n  \"rating\": 5,\n  \"review_text\": \"Excellent service!\"\n}" }
+              }
+            },
+            {
+              "name": "Get Provider Reviews",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/review/provider/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{customer_token}}" }]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Provider",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Register (with service name mapping)",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/provider/register",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Ravi Electric\",\n  \"email\": \"ravi@gmail.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543211\",\n  \"service\": \"Electrician\",\n  \"city\": \"Pune\",\n  \"experience\": \"4\",\n  \"description\": \"Certified Electrician\"\n}" }
+              }
+            },
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/provider/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ravi@gmail.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/provider/refresh-token",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"<your_refresh_token>\"\n}" }
+              }
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/provider/logout",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/provider/profile",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "url": "{{base_url}}/api/provider/profile",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Ravi Electric Updated\",\n  \"city\": \"Mumbai\",\n  \"description\": \"Updated description\"\n}" }
+              }
+            },
+            {
+              "name": "Upload Documents",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/provider/documents",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }],
+                "body": { "mode": "formdata", "formdata": [
+                  { "key": "document_type", "value": "Aadhaar Card", "type": "text" },
+                  { "key": "document", "type": "file" }
+                ]}
+              }
+            }
+          ]
+        },
+        {
+          "name": "Services",
+          "item": [
+            {
+              "name": "Add Service to Profile",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/service/provider",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"service_id\": 1\n}" }
+              }
+            },
+            {
+              "name": "My Services",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/service/provider",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            },
+            {
+              "name": "Remove Service from Profile",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/service/provider/1",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings",
+          "item": [
+            {
+              "name": "My Booking History",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/booking/provider/history",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            },
+            {
+              "name": "Accept Booking",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/provider/1/accept",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            },
+            {
+              "name": "Reject Booking",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/provider/1/reject",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Not available on this date\"\n}" }
+              }
+            },
+            {
+              "name": "Start Booking (In Progress)",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/provider/1/start",
+                "header": [{ "key": "Authorization", "value": "Bearer {{provider_token}}" }]
+              }
+            },
+            {
+              "name": "Complete Booking",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/provider/1/complete",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"final_price\": 599\n}" }
+              }
+            },
+            {
+              "name": "Cancel Booking (Provider)",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/booking/provider/1/cancel",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Emergency\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reviews",
+          "item": [
+            {
+              "name": "Reply to Review",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/review/1/reply",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reply_text\": \"Thank you for your kind review!\"\n}" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
