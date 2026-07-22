@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { DollarSign, Users, Briefcase, CalendarDays, Download, TrendingUp, Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { apiFetchAdmin } from '../../api';
+import * as XLSX from "xlsx";
 
 const colorMap = {
   green: { bg: 'bg-green-500/10', border: 'border-green-500/20', icon: 'text-green-400', val: 'text-green-400' },
@@ -117,18 +118,48 @@ const AdminReports = () => {
 
   const handleExport = () => {
     setIsExporting(true);
-    showToast('Preparing spreadsheet export configurations...', 'info');
-    setTimeout(() => {
-      setIsExporting(false);
-      showToast('Export successful! Check downloads folder.', 'success');
-    }, 1500);
-  };
 
+    try {
+      console.log("Report Data:", reportData);
+      console.log("Summary:", reportData.summary);
+
+      if (!reportData.summary || reportData.summary.length === 0) {
+        showToast("No report data available to export.", "warning");
+        return;
+      }
+
+      const exportData = reportData.summary.map((row) => ({
+        Interval: row.m || "",
+        Bookings: row.b || 0,
+        "Estimated Users": row.u || 0,
+        Revenue:
+          typeof row.r === "string"
+            ? row.r.replace(/[₹,]/g, "")
+            : row.r || 0,
+      }));
+
+      console.log("Export Data:", exportData);
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Admin Report");
+
+      XLSX.writeFile(workbook, "Admin_Report.xlsx");
+
+      showToast("Report downloaded successfully!", "success");
+    } catch (err) {
+      console.error("EXPORT ERROR:", err);
+      showToast(err.message || "Failed to export report.", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const pieGradient = buildPieGradient(reportData.categoryRevenue);
 
   return (
     <div className="space-y-6 text-left relative z-10 animate-fade-in">
-      
+
       {/* Header section */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -147,11 +178,10 @@ const AdminReports = () => {
                 setSelectedRange(range);
                 showToast(`Filter applied: ${range}`, 'info');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedRange === range
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
-              }`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedRange === range
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
             >
               {range}
             </button>
@@ -252,7 +282,7 @@ const AdminReports = () => {
               </div>
             )}
           </div>
-          
+
           <div className="relative h-44 mt-6">
             {loading ? (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -369,8 +399,8 @@ const AdminReports = () => {
                 <p className="text-zinc-500 text-xs mb-2">Distribution of earnings per service type</p>
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                   {reportData.categoryRevenue.map(({ name, pct, color, amount }, index) => (
-                    <div 
-                      key={name} 
+                    <div
+                      key={name}
                       onMouseEnter={() => setHoveredCategory(index)}
                       onMouseLeave={() => setHoveredCategory(null)}
                       className={`flex items-center justify-between p-2 rounded-xl border border-transparent transition-colors cursor-pointer ${hoveredCategory === index ? 'bg-white/5 border-white/5' : ''}`}
