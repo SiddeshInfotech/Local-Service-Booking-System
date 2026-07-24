@@ -51,8 +51,8 @@ const ForgotPassword = () => {
       } else {
         setErrorMsg(data.message || 'Reset request failed. Please try again.');
       }
-    } catch {
-      setErrorMsg('Server connection failed. Please try again later.');
+    } catch (err) {
+      setErrorMsg(err?.message || 'Server connection failed. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

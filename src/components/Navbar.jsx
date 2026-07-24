@@ -54,8 +54,6 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const dashboardPath = authRole === 'customer' ? '/customer/dashboard' : '/provider/dashboard';
-
   const navLinks = [
     { name: 'Home',            path: '/' },
     { name: 'Services',        path: '/services' },
@@ -152,11 +150,10 @@ const Navbar = () => {
               {authRole && (authRole === 'customer' || authRole === 'provider') ? (
                 <>
                   <Link
-                    to={dashboardPath}
+                    to="/services"
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-all border border-white/10"
                   >
-                    <LayoutDashboard size={13} />
-                    My Dashboard
+                    Services
                   </Link>
                   <button
                     onClick={handleLogout}
@@ -239,17 +236,10 @@ const Navbar = () => {
 
             <div className="border-t border-[#D4AF37]/10 pt-4 mt-2">
               {authRole && (authRole === 'customer' || authRole === 'provider') ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to={dashboardPath}
-                    onClick={() => setMobileOpen(false)}
-                    className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <LayoutDashboard size={12} /> Dashboard
-                  </Link>
+                <div className="flex justify-end">
                   <button
                     onClick={() => { setMobileOpen(false); handleLogout(); }}
-                    className="py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <LogOut size={12} /> Sign Out
                   </button>

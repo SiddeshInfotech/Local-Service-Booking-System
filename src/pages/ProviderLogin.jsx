@@ -52,17 +52,17 @@ const ProviderLogin = () => {
         setFeedbackMsg(`Welcome, ${data.provider.full_name || data.provider.business_name}! Redirecting to your dashboard...`);
         setEmail('');
         setPassword('');
-        // Navigate to provider dashboard
-        setTimeout(() => navigate('/provider/dashboard'), 800);
+        // Navigate to services page
+        setTimeout(() => navigate('/services'), 800);
       } else {
         if (response.status === 403) {
           setErrorMsg(data.message || 'Your account is awaiting admin approval. Please try again later.');
         } else {
-          setErrorMsg(data.message || 'Login failed. Please try again.');
+          setErrorMsg(data.message || 'Invalid email or password. Please try again.');
         }
       }
     } catch (err) {
-      setErrorMsg('Unable to connect to the server. Please try again later.');
+      setErrorMsg(err.message || 'Server error. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

@@ -5,7 +5,7 @@ import datetime
 import os
 import secrets
 from werkzeug.utils import secure_filename
-from utils.email import send_email_async, get_otp_email_template
+from utils.email import send_email, send_email_detailed, send_email_async, get_otp_email_template
 from utils.auth_utils import (
     generate_access_token,
     generate_and_save_refresh_token,
@@ -230,7 +230,7 @@ def verify_provider_email():
         if request.method == "POST":
             return jsonify({"status": True, "message": "Email verified successfully."}), 200
         else:
-            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
             from flask import redirect
             return redirect(f"{frontend_url}/email-verified")
 
@@ -411,10 +411,18 @@ def provider_forgot_password():
         email_subject = "Your Password Reset OTP | Fixora"
         provider_name = user.get('business_name') or user.get('owner_name') or 'Provider'
         email_body = get_otp_email_template(provider_name, otp_code)
-        send_email_async(email, email_subject, email_body)
+
+        email_success, email_msg = send_email_detailed(email, email_subject, email_body)
 
         cursor.close()
         conn.close()
+
+        if not email_success:
+            return jsonify({
+                "status": False,
+                "message": f"OTP generated, but email delivery failed: {email_msg}"
+            }), 500
+
         return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}), 200
 
     except Exception as e:

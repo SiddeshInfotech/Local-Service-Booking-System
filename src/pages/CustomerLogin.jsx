@@ -51,13 +51,13 @@ const CustomerLogin = () => {
         setFeedbackMsg(`Welcome back, ${data.user.full_name}! Redirecting...`);
         setEmail('');
         setPassword('');
-        // Navigate to customer dashboard
-        setTimeout(() => navigate('/customer/dashboard'), 800);
+        // Navigate to services page
+        setTimeout(() => navigate('/services'), 800);
       } else {
-        setErrorMsg(data.message || 'Login failed. Please try again.');
+        setErrorMsg(data.message || 'Invalid email or password. Please try again.');
       }
     } catch (err) {
-      setErrorMsg('Unable to connect to the server. Please try again later.');
+      setErrorMsg(err.message || 'Server error. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

@@ -31,8 +31,6 @@ import ViewReviews from './pages/admin/ViewReviews';
 import AdminReports from './pages/admin/AdminReports';
 
 import ServicesPage from './pages/ServicesPage';
-import ProviderDashboard from './pages/provider/ProviderDashboard';
-import CustomerDashboard from './pages/customer/CustomerDashboard';
 
 // Inner app — needs useLocation so must be inside Router
 const AppInner = () => {
@@ -56,7 +54,8 @@ const AppInner = () => {
           <Route path="/customer/forgot-password" element={<ForgotPassword />} />
           <Route path="/customer/verify-otp"       element={<VerifyOTP />} />
           <Route path="/customer/reset-password"   element={<ResetPassword />} />
-          <Route path="/customer/dashboard"        element={<CustomerDashboard />} />
+          <Route path="/customer/dashboard"        element={<Navigate to="/services" replace />} />
+          <Route path="/customer/services"         element={<Navigate to="/services" replace />} />
 
           {/* Provider Routes */}
           <Route path="/provider/login"            element={<ProviderLogin />} />
@@ -64,7 +63,8 @@ const AppInner = () => {
           <Route path="/provider/forgot-password"  element={<ProviderForgotPassword />} />
           <Route path="/provider/verify-otp"       element={<VerifyOTP />} />
           <Route path="/provider/reset-password"   element={<ResetPassword />} />
-          <Route path="/provider/dashboard"        element={<ProviderDashboard />} />
+          <Route path="/provider/dashboard"        element={<Navigate to="/services" replace />} />
+          <Route path="/provider/services"         element={<Navigate to="/services" replace />} />
 
           {/* Public routes */}
           <Route path="/services" element={<ServicesPage />} />

@@ -12,57 +12,111 @@ base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(base_dir, ".env")
 load_dotenv(dotenv_path=env_path)
 
+def send_email_detailed(to_email, subject, body_html):
+    """
+    Sends an HTML email using SMTP configuration.
+    Supports both TLS (port 587) and SSL (port 465).
+    Returns (success: bool, detail_msg: str).
+    """
+    host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    port_val = os.getenv("EMAIL_PORT", "587")
+    try:
+        port = int(port_val)
+    except (ValueError, TypeError):
+        port = 587
+        
+    user = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASSWORD")
+    sender = os.getenv("EMAIL_FROM") or user
+
+    # Sanitize App Password (remove spaces if user entered with spaces)
+    if password:
+        password = password.replace(" ", "").strip()
+    if user:
+        user = user.strip()
+
+    use_ssl = (port == 465) or (os.getenv("EMAIL_USE_SSL", "false").lower() == "true")
+    use_tls = (port == 587) or (os.getenv("EMAIL_USE_TLS", "true").lower() == "true")
+
+    if not user or not password:
+        msg = "SMTP configuration missing: EMAIL_USER or EMAIL_PASSWORD environment variables are not set."
+        print(f"[SMTP ERROR] {msg}")
+        print(f"--- FALLBACK CONSOLE EMAIL TO: {to_email} ---")
+        print(f"--- SUBJECT: {subject} ---")
+        print(f"--- BODY: ---\n{body_html}\n-----------------")
+        return False, msg
+
+    if not to_email or "@" not in str(to_email):
+        msg = f"Invalid recipient email address: '{to_email}'"
+        print(f"[EMAIL ERROR] {msg}")
+        return False, msg
+
+    msg = MIMEMultipart("alternative")
+    msg['From'] = sender
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body_html, 'html', 'utf-8'))
+
+    server = None
+    try:
+        print(f"[SMTP CONNECT] Connecting to {host}:{port} (SSL={use_ssl}, TLS={use_tls})...")
+        if use_ssl:
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
+        else:
+            server = smtplib.SMTP(host, port, timeout=15)
+            if use_tls:
+                server.starttls()
+                
+        print(f"[SMTP AUTH] Authenticating as {user}...")
+        server.login(user, password)
+
+        print(f"[SMTP SEND] Delivering mail to {to_email}...")
+        server.sendmail(sender, [to_email], msg.as_string())
+        print(f"[SMTP SUCCESS] Email successfully delivered to {to_email}")
+        return True, "Email sent successfully."
+    except smtplib.SMTPAuthenticationError as auth_err:
+        err_msg = f"SMTP Authentication failed for {user}: Invalid credentials or App Password required. ({auth_err})"
+        print(f"[SMTP AUTH ERROR] {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
+    except smtplib.SMTPConnectError as conn_err:
+        err_msg = f"SMTP Connection failed to {host}:{port}: {conn_err}"
+        print(f"[SMTP CONNECT ERROR] {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
+    except smtplib.SMTPException as smtp_err:
+        err_msg = f"SMTP Protocol error: {smtp_err}"
+        print(f"[SMTP ERROR] {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
+    except Exception as e:
+        err_msg = f"Failed to send email to {to_email}: {str(e)}"
+        print(f"[EMAIL EXCEPTION] {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
 def send_email(to_email, subject, body_html):
     """
     Sends an HTML email using SMTP configuration.
+    Returns boolean (True on success, False on failure).
     """
-    host = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-    port_val = os.environ.get("EMAIL_PORT", "587")
-    try:
-        port = int(port_val)
-    except ValueError:
-        port = 587
-        
-    user = os.environ.get("EMAIL_USER")
-    password = os.environ.get("EMAIL_PASSWORD")
-    
-    if not user or not password:
-        print("Warning: EMAIL_USER or EMAIL_PASSWORD not configured. Skipping email dispatch.")
-        print(f"--- EMAIL TO: {to_email} ---")
-        print(f"--- SUBJECT: {subject} ---")
-        print(f"--- BODY: ---\n{body_html}\n-----------------")
-        return False
-
-    msg = MIMEMultipart()
-    msg['From'] = user
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    
-    msg.attach(MIMEText(body_html, 'html'))
-    
-    try:
-        print(f"Attempting to send email to {to_email} via {host}:{port}...")
-        server = smtplib.SMTP(host, port, timeout=15)
-        server.starttls()
-        server.login(user, password)
-        server.sendmail(user, to_email, msg.as_string())
-        server.quit()
-        print(f"Email sent successfully to {to_email}")
-        return True
-    except Exception as e:
-        print(f"Failed to send email to {to_email}: {e}")
-        print("Full Traceback:")
-        traceback.print_exc()
-        # Print fallback to console so the link is still accessible in local development
-        print(f"--- FALLBACK EMAIL TO: {to_email} ---")
-        print(body_html)
-        return False
+    success, _ = send_email_detailed(to_email, subject, body_html)
+    return success
 
 def send_email_async(to_email, subject, body_html):
     """
     Sends an HTML email asynchronously in a background thread to prevent API blocking.
     """
-    thread = threading.Thread(target=send_email, args=(to_email, subject, body_html))
+    def worker():
+        send_email_detailed(to_email, subject, body_html)
+        
+    thread = threading.Thread(target=worker)
     thread.daemon = True
     thread.start()
 
