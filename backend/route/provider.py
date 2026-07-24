@@ -5,7 +5,7 @@ import datetime
 import os
 import secrets
 from werkzeug.utils import secure_filename
-from utils.email import send_email_async
+from utils.email import send_email_async, get_otp_email_template
 from utils.auth_utils import (
     generate_access_token,
     generate_and_save_refresh_token,
@@ -408,17 +408,9 @@ def provider_forgot_password():
         conn.commit()
 
         # Send OTP via SMTP
-        email_subject = "Your Password Reset OTP"
+        email_subject = "Your Password Reset OTP | Fixora"
         provider_name = user.get('business_name') or user.get('owner_name') or 'Provider'
-        email_body = f"""
-            <h2>Password Reset Request</h2>
-            <p>Hi {provider_name},</p>
-            <p>You requested to reset your password. Please use the following 6-digit One-Time Password (OTP) to proceed:</p>
-            <div style="font-size:24px; font-weight:bold; letter-spacing:4px; padding:10px; background-color:#f3f4f6; text-align:center; border-radius:5px; margin: 15px 0; color: #1e3a8a;">
-                {otp_code}
-            </div>
-            <p>This OTP is valid for 10 minutes and can only be used once.</p>
-        """
+        email_body = get_otp_email_template(provider_name, otp_code)
         send_email_async(email, email_subject, email_body)
 
         cursor.close()
@@ -1179,24 +1171,24 @@ def complete_booking(booking_id):
 
         # Update Booking
         cursor.execute(
-            "UPDATE bookings SET booking_status = 'Completed', final_price = %s, completed_at = NOW() WHERE booking_id = %s",
+            "UPDATE bookings SET booking_status = 'Finished', final_price = %s, completed_at = NOW(), completed_by = 'provider' WHERE booking_id = %s",
             (price, booking_id)
         )
         # Update History
         cursor.execute(
-            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, 'In Progress', 'Completed', 'Job completed by provider', 'Provider')",
+            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, 'In Progress', 'Finished', 'Job marked as Finished by provider', 'Provider')",
             (booking_id,)
         )
         # Notify Customer
         cursor.execute(
-            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Customer', %s, 'Booking', 'Job Completed', %s, 0)",
-            (booking["customer_id"], f"The provider has completed work on your booking {booking['booking_number']}.")
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Customer', %s, 'Booking', 'Job Finished', %s, 0)",
+            (booking["customer_id"], f"The provider has finished work on your booking {booking['booking_number']}. Please confirm completion.")
         )
         conn.commit()
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking completed successfully."}), 200
+        return jsonify({"status": True, "message": "Booking marked as finished successfully."}), 200
 
     except Exception as e:
         if 'conn' in locals() and conn:

@@ -5,7 +5,14 @@ import datetime
 import os
 import secrets
 import random
-from utils.email import send_email_async
+from utils.email import (
+    send_email_async,
+    get_otp_email_template,
+    get_password_reset_template,
+    get_booking_confirmation_template,
+    get_booking_completed_template,
+    get_review_request_template
+)
 from utils.auth_utils import (
     generate_access_token,
     generate_and_save_refresh_token,
@@ -265,16 +272,8 @@ def customer_forgot_password():
         conn.commit()
 
         # Send OTP via SMTP
-        email_subject = "Your Password Reset OTP"
-        email_body = f"""
-            <h2>Password Reset Request</h2>
-            <p>Hi {user['full_name']},</p>
-            <p>You requested to reset your password. Please use the following 6-digit One-Time Password (OTP) to proceed:</p>
-            <div style="font-size:24px; font-weight:bold; letter-spacing:4px; padding:10px; background-color:#f3f4f6; text-align:center; border-radius:5px; margin: 15px 0; color: #1e3a8a;">
-                {otp_code}
-            </div>
-            <p>This OTP is valid for 10 minutes and can only be used once.</p>
-        """
+        email_subject = "Your Password Reset OTP | Fixora"
+        email_body = get_otp_email_template(user['full_name'], otp_code)
         send_email_async(email, email_subject, email_body)
 
         cursor.close()
@@ -749,203 +748,15 @@ def create_booking():
             time_txt    = str(booking_time)
             city_txt    = city or "N/A"
             address_txt = f"{service_address}{(', ' + city) if city else ''}{(', ' + (state or ''))}{(' - ' + (pincode or '')) if pincode else ''}".strip(", ")
-            created_txt = datetime.datetime.now().strftime("%d %b %Y, %I:%M %p")
-
-            html_body = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Booking Confirmation – Fixora</title>
-</head>
-<body style="margin:0;padding:0;background:#0F1115;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#1A1D23;border-radius:16px;overflow:hidden;border:1px solid #2a2d35;max-width:600px;width:100%;">
-
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#1A1D23 0%,#0F1115 100%);padding:40px 40px 30px;text-align:center;border-bottom:2px solid #D4AF37;">
-            <h1 style="margin:0;font-size:30px;font-weight:900;color:#D4AF37;letter-spacing:3px;">FIXORA</h1>
-            <p style="margin:6px 0 0;color:#888;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Local Service Booking Platform</p>
-          </td>
-        </tr>
-
-        <!-- Success Banner -->
-        <tr>
-          <td style="padding:36px 40px 20px;text-align:center;">
-            <div style="display:inline-block;background:#D4AF37;border-radius:50%;width:68px;height:68px;line-height:68px;font-size:36px;margin-bottom:16px;">&#10003;</div>
-            <h2 style="margin:0;font-size:24px;font-weight:800;color:#ffffff;">Booking Confirmed!</h2>
-            <p style="margin:10px 0 0;color:#aaa;font-size:14px;">Your service request has been successfully registered with Fixora.</p>
-          </td>
-        </tr>
-
-        <!-- Booking Reference -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <div style="border:1px solid #D4AF37;border-radius:12px;padding:16px 24px;text-align:center;background:rgba(212,175,55,0.08);">
-              <p style="margin:0;font-size:11px;color:#D4AF37;text-transform:uppercase;letter-spacing:3px;">Booking Reference Number</p>
-              <p style="margin:6px 0 0;font-size:26px;font-weight:900;color:#D4AF37;letter-spacing:4px;">{bk_num}</p>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Greeting -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <p style="margin:0;color:#e0e0e0;font-size:15px;line-height:1.7;">
-              Hi <strong style="color:#ffffff;">{customer_name}</strong>,<br><br>
-              Thank you for choosing <strong style="color:#D4AF37;">Fixora</strong>! We have received your booking request and our verified service professional will reach out to you shortly to confirm your appointment.
-            </p>
-          </td>
-        </tr>
-
-        <!-- Customer Details -->
-        <tr>
-          <td style="padding:0 40px 10px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;border-radius:12px;overflow:hidden;border:1px solid #2a2d35;margin-bottom:4px;">
-              <tr style="background:#16191f;">
-                <td colspan="2" style="padding:14px 20px;font-size:12px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #2a2d35;">
-                  Customer Information
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;width:42%;">Full Name</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_name}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Mobile Number</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_mobile}</td>
-              </tr>
-              <tr>
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Email Address</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{customer_email}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Booking Details -->
-        <tr>
-          <td style="padding:14px 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0F1115;border-radius:12px;overflow:hidden;border:1px solid #2a2d35;">
-              <tr style="background:#16191f;">
-                <td colspan="2" style="padding:14px 20px;font-size:12px;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid #2a2d35;">
-                  Booking Details
-                </td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;width:42%;">Booking ID</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:700;">{bk_num}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Category</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{category_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Selected Service</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{service_name_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Provider</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{provider_name_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Preferred Date</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{date_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Time Slot</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{time_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Service Address</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{address_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;background:#16191f;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">City</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{city_txt}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #1e2128;">
-                <td style="padding:12px 20px;color:#888;font-size:13px;">Booking Created</td>
-                <td style="padding:12px 20px;color:#ffffff;font-size:13px;font-weight:600;">{created_txt}</td>
-              </tr>
-              <tr style="background:#16191f;">
-                <td style="padding:12px 20px;color:#D4AF37;font-size:13px;font-weight:700;">Estimated Price</td>
-                <td style="padding:12px 20px;color:#D4AF37;font-size:16px;font-weight:900;">{price_txt}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Booking Status Badge -->
-        <tr>
-          <td style="padding:0 40px 28px;text-align:center;">
-            <span style="background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.4);color:#facc15;padding:10px 28px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:inline-block;">
-              &#9679; Status: Pending Confirmation
-            </span>
-          </td>
-        </tr>
-
-        <!-- What Happens Next -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:18px 22px;">
-              <p style="margin:0;color:#93c5fd;font-size:13px;line-height:1.7;">
-                <strong>&#9432; What happens next?</strong><br>
-                Your service provider will review your booking request and contact you to confirm the schedule. You will also receive an in-app notification when your booking status changes. Please ensure your phone is reachable.
-              </p>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Thank You Message -->
-        <tr>
-          <td style="padding:0 40px 28px;text-align:center;">
-            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.7;">
-              We appreciate you trusting <strong style="color:#D4AF37;">Fixora</strong> for your home service needs.<br>
-              Our team is committed to delivering quality, reliability, and satisfaction at every step.
-            </p>
-          </td>
-        </tr>
-
-        <!-- Divider -->
-        <tr>
-          <td style="padding:0 40px 24px;">
-            <div style="border-top:1px solid #2a2d35;"></div>
-          </td>
-        </tr>
-
-        <!-- Support Info -->
-        <tr>
-          <td style="padding:0 40px 28px;text-align:center;">
-            <p style="margin:0 0 6px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Fixora Customer Support</p>
-            <p style="margin:0;color:#aaa;font-size:13px;line-height:1.7;">
-              &#128222; <a href="tel:+918000000000" style="color:#D4AF37;text-decoration:none;">+91 80000 00000</a><br>
-              &#128231; <a href="mailto:support@fixora.in" style="color:#D4AF37;text-decoration:none;">support@fixora.in</a><br>
-              &#127760; <a href="https://fixora.in" style="color:#D4AF37;text-decoration:none;">www.fixora.in</a>
-            </p>
-            <p style="margin:10px 0 0;color:#666;font-size:11px;">Support available Mon–Sat, 9 AM – 7 PM IST</p>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#0F1115;padding:24px 40px;text-align:center;border-top:1px solid #2a2d35;">
-            <p style="margin:0;color:#D4AF37;font-size:14px;font-weight:800;letter-spacing:2px;">FIXORA</p>
-            <p style="margin:6px 0 0;color:#555;font-size:11px;line-height:1.7;">
-              This is an automated booking confirmation. Please do not reply to this email.<br>
-              If you did not make this booking, please contact us immediately at <a href="mailto:support@fixora.in" style="color:#D4AF37;text-decoration:none;">support@fixora.in</a><br><br>
-              &copy; {datetime.datetime.now().year} Fixora. All rights reserved.
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
+            html_body = get_booking_confirmation_template(
+                booking_number=bk_num,
+                customer_name=customer_name,
+                provider_name=provider_name_txt,
+                service_name=service_name_txt,
+                booking_date=date_txt,
+                price=price,
+                status="Pending Confirmation"
+            )
             send_email_async(customer_email, f"Booking Confirmation – {bk_num} | Fixora", html_body)
         except Exception as email_err:
             # Email failure must NEVER roll back or cancel the booking
@@ -1089,6 +900,105 @@ def cancel_booking(booking_id):
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 
+@customer_bp.route("/api/booking/customer/<int:booking_id>/complete", methods=["POST"])
+@token_required
+def customer_complete_booking(booking_id):
+    try:
+        user_payload = g.current_user
+        if user_payload["role"] != "customer":
+            return jsonify({"status": False, "message": "Unauthorized."}), 403
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s AND customer_id = %s", (booking_id, user_payload["user_id"]))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking["booking_status"] == 'Completed':
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "message": "Booking is already completed."}), 400
+
+        # Update Booking Status
+        cursor.execute(
+            "UPDATE bookings SET booking_status = 'Completed', completed_by = 'customer', completed_at = NOW() WHERE booking_id = %s",
+            (booking_id,)
+        )
+        # Update History
+        cursor.execute(
+            "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, %s, 'Completed', 'Job marked completed by customer', 'Customer')",
+            (booking_id, booking["booking_status"])
+        )
+        # Notify Provider
+        cursor.execute(
+            "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'Booking Completed', %s, 0)",
+            (booking["provider_id"], f"Booking request {booking['booking_number']} has been completed by the customer.")
+        )
+        conn.commit()
+
+        # Fetch details for email
+        cursor.execute("SELECT full_name, email FROM customers WHERE customer_id = %s", (booking["customer_id"],))
+        customer = cursor.fetchone()
+        cursor.execute("SELECT business_name, owner_name FROM providers WHERE provider_id = %s", (booking["provider_id"],))
+        provider = cursor.fetchone()
+        cursor.execute("SELECT service_name FROM services WHERE service_id = %s", (booking["service_id"],))
+        service = cursor.fetchone()
+
+        customer_name = customer["full_name"] if customer else "Customer"
+        customer_email = customer["email"] if customer else ""
+        provider_name = (provider["business_name"] or provider["owner_name"]) if provider else "Provider"
+        service_name = service["service_name"] if service else "Service"
+        final_price = float(booking["final_price"]) if booking["final_price"] else (float(booking["estimated_price"]) if booking["estimated_price"] else 0.0)
+
+        # Send Booking Completed Email
+        try:
+            completed_email_body = get_booking_completed_template(
+                booking_number=booking["booking_number"] or f"#{booking['booking_id']}",
+                customer_name=customer_name,
+                provider_name=provider_name,
+                service_name=service_name,
+                booking_date=str(booking["booking_date"]),
+                price=final_price,
+                status="Completed"
+            )
+            send_email_async(customer_email, "Your Booking has been Completed ✅", completed_email_body)
+        except Exception as email_err:
+            import logging
+            logging.getLogger(__name__).error(f"Booking completed email error: {email_err}")
+
+        # Send Review Request Email
+        try:
+            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+            review_link = f"{frontend_url}/services"
+            review_email_body = get_review_request_template(
+                booking_number=booking["booking_number"] or f"#{booking['booking_id']}",
+                customer_name=customer_name,
+                provider_name=provider_name,
+                service_name=service_name,
+                review_link=review_link
+            )
+            send_email_async(customer_email, "How was your experience?", review_email_body)
+        except Exception as email_err:
+            import logging
+            logging.getLogger(__name__).error(f"Review request email error: {email_err}")
+
+        cursor.close()
+        conn.close()
+        return jsonify({"status": True, "message": "Booking marked as completed successfully."}), 200
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
 # ====================================================
 # REVIEWS
 # ====================================================
@@ -1105,6 +1015,7 @@ def create_review():
         booking_id = data.get("booking_id")
         rating = data.get("rating")
         review_text = data.get("review_text")
+        review_title = data.get("review_title")
 
         if not booking_id or not rating:
             return jsonify({"status": False, "message": "Booking ID and Rating are required."}), 400
@@ -1135,8 +1046,8 @@ def create_review():
 
         # Insert Review
         cursor.execute(
-            "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text) VALUES (%s, %s, %s, %s, %s)",
-            (booking_id, user_payload["user_id"], booking["provider_id"], rating, review_text)
+            "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text, review_title) VALUES (%s, %s, %s, %s, %s, %s)",
+            (booking_id, user_payload["user_id"], booking["provider_id"], rating, review_text, review_title)
         )
         conn.commit()
 
@@ -1159,10 +1070,22 @@ def create_review():
         )
         conn.commit()
 
+        # Get updated provider details to return
+        cursor.execute("SELECT provider_id, business_name, owner_name, email, phone, average_rating, total_reviews, status FROM providers WHERE provider_id = %s", (booking["provider_id"],))
+        updated_provider = cursor.fetchone()
+        if updated_provider and updated_provider.get("average_rating") is not None:
+            updated_provider["average_rating"] = float(updated_provider["average_rating"])
+
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "message": "Review submitted successfully."}), 201
+        return jsonify({
+            "status": True,
+            "message": "Review submitted successfully.",
+            "data": {
+                "provider": updated_provider
+            }
+        }), 201
 
     except Exception as e:
         if 'conn' in locals() and conn:

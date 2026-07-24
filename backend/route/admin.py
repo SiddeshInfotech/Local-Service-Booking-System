@@ -967,6 +967,17 @@ def admin_get_provider(provider_id):
         provider["total_bookings"] = cursor.fetchone()["total"]
         cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE provider_id = %s AND booking_status = 'Completed'", (provider_id,))
         provider["completed_bookings"] = cursor.fetchone()["cnt"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE provider_id = %s AND booking_status IN ('Pending', 'Accepted', 'In Progress', 'Finished')", (provider_id,))
+        provider["pending_jobs"] = cursor.fetchone()["cnt"]
+
+        # Services offered
+        cursor.execute("""
+            SELECT ps.provider_service_id, ps.sub_service_name, ps.price, s.service_name
+            FROM provider_services ps
+            JOIN services s ON s.service_id = ps.service_id
+            WHERE ps.provider_id = %s
+        """, (provider_id,))
+        provider["services_offered"] = cursor.fetchall()
 
         # Documents
         cursor.execute("SELECT document_id, document_type, file_path, verification_status, uploaded_at FROM provider_documents WHERE provider_id = %s", (provider_id,))
@@ -1205,6 +1216,12 @@ def admin_get_customer(customer_id):
         customer["total_bookings"] = cursor.fetchone()["total"]
         cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = %s AND booking_status = 'Completed'", (customer_id,))
         customer["completed_bookings"] = cursor.fetchone()["cnt"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = %s AND booking_status IN ('Pending', 'Accepted', 'In Progress', 'Finished')", (customer_id,))
+        customer["active_bookings"] = cursor.fetchone()["cnt"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = %s AND booking_status = 'Cancelled'", (customer_id,))
+        customer["cancelled_bookings"] = cursor.fetchone()["cnt"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM reviews WHERE customer_id = %s", (customer_id,))
+        customer["reviews_given"] = cursor.fetchone()["cnt"]
 
         cursor.close()
         conn.close()

@@ -16,7 +16,15 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("JWT_SECRET", "super_secure_local_service_jwt_secret_key_123!")
 
 # Enable CORS
-CORS(app)
+CORS(
+    app,
+    supports_credentials=True,
+    origins=[
+        "http://localhost:5173",
+        os.getenv("FRONTEND_URL", "http://localhost:5173")
+    ]
+)
+
 
 # Register Blueprints without prefixes as the routes inside already contain full prefixes
 app.register_blueprint(customer_bp)
@@ -62,5 +70,27 @@ def method_not_allowed(error):
 def internal_server_error(error):
     return jsonify({"status": False, "message": "Internal server error. Please try again later."}), 500
 
+@app.after_request
+def standardize_json_responses(response):
+    if response.is_json:
+        try:
+            data = response.get_json()
+            if isinstance(data, dict):
+                modified = False
+                # If 'status' is a boolean, copy it to 'success'
+                if "status" in data and isinstance(data["status"], bool) and "success" not in data:
+                    data["success"] = data["status"]
+                    modified = True
+                # If 'success' is a boolean, copy it to 'status'
+                if "success" in data and isinstance(data["success"], bool) and "status" not in data:
+                    data["status"] = data["success"]
+                    modified = True
+                
+                if modified:
+                    response.set_data(jsonify(data).data)
+        except Exception:
+            pass
+    return response
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True)

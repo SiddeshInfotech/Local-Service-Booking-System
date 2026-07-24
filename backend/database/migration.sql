@@ -102,6 +102,54 @@ SET @sql_cancelled_by := IF(@exist_cancelled_by = 0,
 PREPARE stmt FROM @sql_cancelled_by;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+SET @exist_completed_by := (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'bookings'
+      AND COLUMN_NAME = 'completed_by'
+);
+SET @sql_completed_by := IF(@exist_completed_by = 0,
+    "ALTER TABLE bookings ADD COLUMN completed_by ENUM('customer', 'provider') DEFAULT NULL",
+    'SELECT "completed_by already exists in bookings"'
+);
+PREPARE stmt FROM @sql_completed_by;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+SET @exist_review_title := (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'reviews'
+      AND COLUMN_NAME = 'review_title'
+);
+SET @sql_review_title := IF(@exist_review_title = 0,
+    "ALTER TABLE reviews ADD COLUMN review_title VARCHAR(255) DEFAULT NULL",
+    'SELECT "review_title already exists in reviews"'
+);
+PREPARE stmt FROM @sql_review_title;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+SET @exist_profile_photo := (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'customers'
+      AND COLUMN_NAME = 'profile_photo'
+);
+SET @sql_profile_photo := IF(@exist_profile_photo = 0,
+    "ALTER TABLE customers ADD COLUMN profile_photo VARCHAR(255) DEFAULT NULL",
+    'SELECT "profile_photo already exists in customers"'
+);
+PREPARE stmt FROM @sql_profile_photo;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+-- redfining provider status to support Blocked if needed
+ALTER TABLE providers MODIFY COLUMN status ENUM('Pending', 'Approved', 'Rejected', 'Suspended', 'Blocked') DEFAULT 'Pending';
+UPDATE providers SET status = 'Blocked' WHERE status = 'Suspended';
 
 
 -- -------------------------------------------------------
@@ -109,3 +157,4 @@ DEALLOCATE PREPARE stmt;
 -- or import via phpMyAdmin / Aiven Console.
 -- -------------------------------------------------------
 SELECT 'Migration complete!' as result;
+
