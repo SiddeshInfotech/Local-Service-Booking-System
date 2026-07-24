@@ -52,7 +52,7 @@ const CustomerLogin = () => {
         setEmail('');
         setPassword('');
         // Navigate to customer dashboard
-        setTimeout(() => navigate('/services'), 800);
+        setTimeout(() => navigate('/customer/dashboard'), 800);
       } else {
         setErrorMsg(data.message || 'Login failed. Please try again.');
       }

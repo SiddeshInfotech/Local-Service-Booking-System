@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, ChevronDown, LayoutDashboard, LogOut } from 'lucide-react';
 import fixoraLogo from '../assets/images/fixora_logo.png';
+import { clearAuth, getRole } from '../api';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -9,6 +10,8 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const loginRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [authRole, setAuthRole] = useState(null);
 
   const authRoutes = [
     '/customer/login',
@@ -39,7 +42,19 @@ const Navbar = () => {
   useEffect(() => {
     setMobileOpen(false);
     setLoginOpen(false);
+    setAuthRole(getRole());
   }, [location.pathname]);
+
+  /* Sync auth state on mount */
+  useEffect(() => { setAuthRole(getRole()); }, []);
+
+  const handleLogout = () => {
+    clearAuth();
+    setAuthRole(null);
+    navigate('/');
+  };
+
+  const dashboardPath = authRole === 'customer' ? '/customer/dashboard' : '/provider/dashboard';
 
   const navLinks = [
     { name: 'Home',            path: '/' },
@@ -132,45 +147,64 @@ const Navbar = () => {
               ))}
             </nav>
 
-            {/* ── Desktop Right: Login Button ── */}
-            <div className="hidden xl:flex items-center gap-4">
-              <div className="relative" ref={loginRef}>
-                <button
-                  onClick={() => setLoginOpen((v) => !v)}
-                  className="nav-gold-btn px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer relative overflow-hidden"
-                >
-                  <span>Login</span>
-                  <ChevronDown
-                    size={14}
-                    className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
+            {/* ── Desktop Right: Auth-aware ── */}
+            <div className="hidden xl:flex items-center gap-3">
+              {authRole && (authRole === 'customer' || authRole === 'provider') ? (
+                <>
+                  <Link
+                    to={dashboardPath}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-all border border-white/10"
+                  >
+                    <LayoutDashboard size={13} />
+                    My Dashboard
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest nav-gold-btn cursor-pointer"
+                  >
+                    <LogOut size={13} />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <div className="relative" ref={loginRef}>
+                  <button
+                    onClick={() => setLoginOpen((v) => !v)}
+                    className="nav-gold-btn px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer relative overflow-hidden"
+                  >
+                    <span>Login</span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-300 ${loginOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
 
-                {loginOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-56 fixora-login-dropdown rounded-2xl p-2.5 shadow-2xl z-50 nav-fade-in">
-                    <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
-                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                        Account Portal
-                      </p>
+                  {loginOpen && (
+                    <div className="absolute right-0 top-full mt-3 w-56 fixora-login-dropdown rounded-2xl p-2.5 shadow-2xl z-50 nav-fade-in">
+                      <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                          Account Portal
+                        </p>
+                      </div>
+                      {loginLinks.map((l) => (
+                        <Link
+                          key={l.path}
+                          to={l.path}
+                          onClick={() => setLoginOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-all group ${
+                            location.pathname === l.path
+                              ? 'bg-[#D4AF37]/10 text-[#D4AF37] font-semibold'
+                              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
+                          {l.name}
+                        </Link>
+                      ))}
                     </div>
-                    {loginLinks.map((l) => (
-                      <Link
-                        key={l.path}
-                        to={l.path}
-                        onClick={() => setLoginOpen(false)}
-                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-all group ${
-                          location.pathname === l.path
-                            ? 'bg-[#D4AF37]/10 text-[#D4AF37] font-semibold'
-                            : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
-                        {l.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Mobile Hamburger ── */}
@@ -204,25 +238,43 @@ const Navbar = () => {
             ))}
 
             <div className="border-t border-[#D4AF37]/10 pt-4 mt-2">
-              <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">
-                Portal Access
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  to="/customer/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors"
-                >
-                  Customer Login
-                </Link>
-                <Link
-                  to="/provider/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors"
-                >
-                  Provider Login
-                </Link>
-              </div>
+              {authRole && (authRole === 'customer' || authRole === 'provider') ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to={dashboardPath}
+                    onClick={() => setMobileOpen(false)}
+                    className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <LayoutDashboard size={12} /> Dashboard
+                  </Link>
+                  <button
+                    onClick={() => { setMobileOpen(false); handleLogout(); }}
+                    className="py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <LogOut size={12} /> Sign Out
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Portal Access</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/customer/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors"
+                    >
+                      Customer Login
+                    </Link>
+                    <Link
+                      to="/provider/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="py-2.5 text-center text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] transition-colors"
+                    >
+                      Provider Login
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

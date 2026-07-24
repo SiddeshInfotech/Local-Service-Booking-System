@@ -53,7 +53,7 @@ const ProviderLogin = () => {
         setEmail('');
         setPassword('');
         // Navigate to provider dashboard
-        setTimeout(() => navigate('/services'), 800);
+        setTimeout(() => navigate('/provider/dashboard'), 800);
       } else {
         if (response.status === 403) {
           setErrorMsg(data.message || 'Your account is awaiting admin approval. Please try again later.');
