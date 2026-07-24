@@ -20,8 +20,8 @@ CORS(
     app,
     supports_credentials=True,
     origins=[
-        "http://localhost:5173",
-        os.getenv("FRONTEND_URL", "http://localhost:5173")
+        "http://localhost:3000",
+        os.getenv("FRONTEND_URL", "http://localhost:3000")
     ]
 )
 
@@ -93,4 +93,5 @@ def standardize_json_responses(response):
     return response
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
