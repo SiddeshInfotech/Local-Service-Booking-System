@@ -6,10 +6,7 @@ import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-import socket
 
-print("Resolved addresses:")
-print(socket.getaddrinfo(host, port))
 
 # Ensure dotenv is loaded with correct paths
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,6 +21,9 @@ def send_email_detailed(to_email, subject, body_html):
     """
     host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
     port_val = os.getenv("EMAIL_PORT", "587")
+    import socket
+    print("Resolved addresses:")
+    print(socket.getaddrinfo(host, port))
     try:
         port = int(port_val)
     except (ValueError, TypeError):
