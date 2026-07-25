@@ -756,12 +756,11 @@ def create_booking():
                 price_txt = f"\u20b9{price}" if price else "As per visit"
 
             date_txt = str(booking_date)
-            backend_url = "https://local-service-booking-system.onrender.com"
-            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+            backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
 
             # Build secure action button URLs
             completion_url = f"{backend_url}/api/customer/service-completed/{booking_id}?token={completion_token}"
-            review_url     = f"{frontend_url}/review/{booking_id}?token={completion_token}"
+            review_url     = f"{backend_url}/api/customer/review/{booking_id}?token={completion_token}"
 
             html_body = get_booking_confirmation_template(
                 booking_number=bk_num,
@@ -810,50 +809,185 @@ def create_booking():
 def mark_service_completed(booking_id):
     """
     Hit when customer clicks "SERVICE COMPLETED" in the email.
-    Verifies token, marks customer_confirmed = 1, redirects to frontend success page.
+    Verifies token, marks booking_status = 'Completed', customer_confirmed = 1, completed_at = NOW(),
+    and redirects to Flask success page (/completed).
     """
     from flask import redirect
     token = request.args.get("token", "").strip()
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
     if not token:
-        return jsonify({"status": False, "message": "Missing token."}), 400
+        return redirect(f"/completed?booking_id={booking_id}&status=missing_token")
 
     try:
         conn   = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT booking_id, completion_token, customer_confirmed FROM bookings WHERE booking_id = %s",
+            "SELECT booking_id, customer_id, completion_token, customer_confirmed, booking_status FROM bookings WHERE booking_id = %s",
             (booking_id,)
         )
         row = cursor.fetchone()
 
         if not row:
             cursor.close(); conn.close()
-            return redirect(f"{frontend_url}/service-completed?status=not_found")
+            return redirect(f"/completed?booking_id={booking_id}&status=not_found")
 
         if row["completion_token"] != token:
             cursor.close(); conn.close()
-            return redirect(f"{frontend_url}/service-completed?status=invalid")
+            return redirect(f"/completed?booking_id={booking_id}&status=invalid_token")
 
-        if row["customer_confirmed"]:
-            cursor.close(); conn.close()
-            return redirect(f"{frontend_url}/service-completed?status=already_done")
-
-        # Mark confirmed
+        # Update bookings table: status = 'Completed', customer_confirmed = 1, completed_at = NOW()
         cursor.execute(
-            "UPDATE bookings SET customer_confirmed = 1, completed_at = %s WHERE booking_id = %s",
-            (datetime.datetime.utcnow(), booking_id)
+            "UPDATE bookings SET booking_status = 'Completed', customer_confirmed = 1, completed_at = NOW() WHERE booking_id = %s",
+            (booking_id,)
         )
         conn.commit()
         cursor.close(); conn.close()
-        return redirect(f"{frontend_url}/service-completed?status=success")
+        return redirect(f"/completed?booking_id={booking_id}&token={token}")
 
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"service-completed error: {e}")
-        return redirect(f"{frontend_url}/service-completed?status=error")
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return redirect(f"/completed?booking_id={booking_id}&token={token}&status=error")
+
+
+@customer_bp.route("/completed", methods=["GET"])
+def service_completed_success_page():
+    """
+    Flask route rendering the responsive Fixora Black + Gold completion success page directly.
+    """
+    from flask import render_template_string
+    booking_id = request.args.get("booking_id", "").strip()
+    token = request.args.get("token", "").strip()
+    backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
+
+    if booking_id and token:
+        review_url = f"{backend_url}/api/customer/review/{booking_id}?token={token}"
+    elif booking_id:
+        review_url = f"{backend_url}/api/customer/review/{booking_id}"
+    else:
+        review_url = f"{backend_url}/api/customer/review/1"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Successfully Completed | Fixora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }}
+    body {{
+      font-family: 'Outfit', sans-serif;
+      background: #0A0A0A;
+      color: #E0E0E0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }}
+    .card {{
+      background: #121212;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 24px;
+      padding: 48px 36px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.15);
+    }}
+    .logo {{
+      color: #D4AF37;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      margin-bottom: 28px;
+      text-transform: uppercase;
+    }}
+    .icon-badge {{
+      width: 84px;
+      height: 84px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 2px solid #22c55e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      margin: 0 auto 24px auto;
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.25);
+    }}
+    h1 {{
+      font-size: 25px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }}
+    p.text-main {{
+      font-size: 16px;
+      color: #CCCCCC;
+      line-height: 1.6;
+      margin-bottom: 6px;
+    }}
+    p.text-sub {{
+      font-size: 15px;
+      color: #D4AF37;
+      font-weight: 600;
+      margin-top: 16px;
+      margin-bottom: 32px;
+    }}
+    .btn-review {{
+      display: inline-block;
+      width: 100%;
+      padding: 16px 28px;
+      background: linear-gradient(135deg, #F4C542 0%, #D4AF37 100%);
+      color: #0D0D0D !important;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 15px;
+      border-radius: 30px;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+      transition: all 0.3s ease;
+    }}
+    .btn-review:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5);
+    }}
+    .footer-copy {{
+      margin-top: 32px;
+      font-size: 12px;
+      color: #555555;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="icon-badge">✅</div>
+    <h1>Service Successfully Completed</h1>
+    <p class="text-main">Thank you for confirming.</p>
+    <p class="text-main">Your booking has been marked as completed.</p>
+    <p class="text-sub">You may now leave a review.</p>
+    <a href="{review_url}" class="btn-review">⭐ Leave Review</a>
+    <div class="footer-copy">&copy; Fixora. All rights reserved.</div>
+  </div>
+</body>
+</html>"""
+    return render_template_string(html)
 
 
 @customer_bp.route("/api/booking/history", methods=["GET"])
@@ -1040,8 +1174,8 @@ def customer_complete_booking(booking_id):
 
         # Send Review Request Email
         try:
-            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-            review_link = f"{frontend_url}/services"
+            backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
+            review_link = f"{backend_url}/api/customer/review/{booking['booking_id']}?token={booking['completion_token']}"
             review_email_body = get_review_request_template(
                 booking_number=booking["booking_number"] or f"#{booking['booking_id']}",
                 customer_name=customer_name,
@@ -1260,6 +1394,513 @@ def public_review(booking_id):
             conn.rollback()
             cursor.close(); conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ── HTML Review Page (GET) & Submit Review (POST) directly from Flask ────────
+@customer_bp.route("/api/customer/review/<int:booking_id>", methods=["GET", "POST"])
+def customer_review_page(booking_id):
+    """
+    GET  - Returns a professional HTML Review Page (Fixora Black + Gold) directly from Flask.
+    POST - Processes review submission, updates reviews & bookings tables, and shows confirmation.
+    """
+    from flask import render_template_string
+    token = request.args.get("token", "").strip() or (request.form.get("token", "").strip() if request.form else "")
+    backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
+
+    if not token:
+        return render_template_string("""<!DOCTYPE html>
+<html>
+<head><title>Invalid Request | Fixora</title>
+<style>
+body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: center; padding: 50px; }
+.card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); padding: 40px; border-radius: 20px; max-width: 450px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+.logo { color: #D4AF37; font-size: 24px; font-weight: 800; letter-spacing: 3px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <h2 style="color: #ef4444;">Invalid Review Link</h2>
+    <p style="color: #aaa; margin-top: 10px;">Security token is missing.</p>
+  </div>
+</body>
+</html>"""), 400
+
+    try:
+        conn   = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            """SELECT b.booking_id, b.booking_number, b.completion_token, b.review_given, b.customer_id, b.provider_id,
+                      s.service_name, c.full_name as customer_name,
+                      COALESCE(p.business_name, p.owner_name) as provider_name
+               FROM bookings b
+               JOIN services s ON s.service_id = b.service_id
+               JOIN customers c ON c.customer_id = b.customer_id
+               JOIN providers p ON p.provider_id = b.provider_id
+               WHERE b.booking_id = %s""",
+            (booking_id,)
+        )
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close(); conn.close()
+            return render_template_string("""<!DOCTYPE html>
+<html>
+<head><title>Booking Not Found | Fixora</title>
+<style>
+body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: center; padding: 50px; }
+.card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); padding: 40px; border-radius: 20px; max-width: 450px; margin: 0 auto; }
+.logo { color: #D4AF37; font-size: 24px; font-weight: 800; letter-spacing: 3px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <h2 style="color: #ef4444;">Booking Not Found</h2>
+    <p style="color: #aaa; margin-top: 10px;">The specified booking record could not be found.</p>
+  </div>
+</body>
+</html>"""), 404
+
+        if booking["completion_token"] != token:
+            cursor.close(); conn.close()
+            return render_template_string("""<!DOCTYPE html>
+<html>
+<head><title>Invalid Link | Fixora</title>
+<style>
+body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: center; padding: 50px; }
+.card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); padding: 40px; border-radius: 20px; max-width: 450px; margin: 0 auto; }
+.logo { color: #D4AF37; font-size: 24px; font-weight: 800; letter-spacing: 3px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <h2 style="color: #ef4444;">Invalid or Expired Link</h2>
+    <p style="color: #aaa; margin-top: 10px;">This review link is not valid for this booking.</p>
+  </div>
+</body>
+</html>"""), 403
+
+        # Check existing review in reviews table
+        cursor.execute("SELECT review_id FROM reviews WHERE booking_id = %s", (booking_id,))
+        existing_review = cursor.fetchone()
+
+        # Handle POST - Submit Review
+        if request.method == "POST":
+            if booking.get("review_given") or existing_review:
+                cursor.close(); conn.close()
+                return render_template_string("""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Already Submitted | Fixora</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background: #0A0A0A; color: #E0E0E0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 20px; padding: 40px 30px; max-width: 500px; width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+    .logo { color: #D4AF37; font-size: 24px; font-weight: 800; letter-spacing: 3px; margin-bottom: 20px; text-transform: uppercase; }
+    .stars { color: #D4AF37; font-size: 36px; margin-bottom: 16px; letter-spacing: 6px; }
+    h1 { font-size: 24px; color: #FFF; margin-bottom: 12px; }
+    p { color: #AAA; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="stars">★★★★★</div>
+    <h1>Thank you!</h1>
+    <p>Your review has already been submitted for this booking.</p>
+  </div>
+</body>
+</html>""")
+
+            rating_raw = request.form.get("rating") if request.form else (request.get_json() or {}).get("rating")
+            review_text = (request.form.get("review_text", "").strip() if request.form else (request.get_json() or {}).get("review_text", "").strip())
+            review_title = (request.form.get("review_title", "").strip() if request.form else (request.get_json() or {}).get("review_title", "").strip())
+
+            try:
+                rating = int(rating_raw)
+            except Exception:
+                rating = 5
+
+            # Insert into reviews table
+            cursor.execute(
+                "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text, review_title) VALUES (%s, %s, %s, %s, %s, %s)",
+                (booking_id, booking["customer_id"], booking["provider_id"], rating, review_text, review_title)
+            )
+
+            # Update bookings table: review_given = 1
+            cursor.execute("UPDATE bookings SET review_given = 1 WHERE booking_id = %s", (booking_id,))
+
+            # Recalculate provider stats
+            cursor.execute("SELECT AVG(rating) as avg_r, COUNT(*) as cnt FROM reviews WHERE provider_id = %s", (booking["provider_id"],))
+            stats = cursor.fetchone()
+            avg_r = round(float(stats["avg_r"]), 1) if stats and stats.get("avg_r") else 0.0
+            cnt = stats["cnt"] if stats and stats.get("cnt") else 0
+            cursor.execute(
+                "UPDATE providers SET average_rating = %s, total_reviews = %s WHERE provider_id = %s",
+                (avg_r, cnt, booking["provider_id"])
+            )
+            conn.commit()
+            cursor.close(); conn.close()
+
+            return render_template_string("""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Submitted | Fixora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #0A0A0A;
+      color: #E0E0E0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #121212;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 24px;
+      padding: 48px 36px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.15);
+    }
+    .logo {
+      color: #D4AF37;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    .stars {
+      color: #D4AF37;
+      font-size: 38px;
+      margin-bottom: 18px;
+      letter-spacing: 6px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 14px;
+    }
+    p {
+      font-size: 16px;
+      color: #CCCCCC;
+      line-height: 1.6;
+    }
+    .footer-copy {
+      margin-top: 32px;
+      font-size: 12px;
+      color: #555555;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="stars">★★★★★</div>
+    <h1>Thank you!</h1>
+    <p>Your review has been submitted successfully.</p>
+    <div class="footer-copy">&copy; Fixora. All rights reserved.</div>
+  </div>
+</body>
+</html>""")
+
+        # GET - Show Review Form or Already Submitted Page
+        if booking.get("review_given") or existing_review:
+            cursor.close(); conn.close()
+            return render_template_string("""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Already Submitted | Fixora</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background: #0A0A0A; color: #E0E0E0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #121212; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 20px; padding: 40px 30px; max-width: 500px; width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+    .logo { color: #D4AF37; font-size: 24px; font-weight: 800; letter-spacing: 3px; margin-bottom: 20px; text-transform: uppercase; }
+    .stars { color: #D4AF37; font-size: 36px; margin-bottom: 16px; letter-spacing: 6px; }
+    h1 { font-size: 24px; color: #FFF; margin-bottom: 12px; }
+    p { color: #AAA; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="stars">★★★★★</div>
+    <h1>Thank you!</h1>
+    <p>Your review has already been submitted for this booking.</p>
+  </div>
+</body>
+</html>""")
+
+        cursor.close(); conn.close()
+
+        # Render HTML Review Page
+        bk_num = booking.get("booking_number") or f"#{booking['booking_id']}"
+        provider_name = booking.get("provider_name") or "Service Provider"
+        service_name = booking.get("service_name") or "Local Service"
+
+        html_review_form = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave a Review | Fixora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: 'Outfit', sans-serif;
+      background: #0A0A0A;
+      color: #E0E0E0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }}
+    .card {{
+      background: #121212;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.12);
+    }}
+    .logo {{
+      color: #D4AF37;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      text-align: center;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }}
+    .info-box {{
+      background: #1A1A1A;
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }}
+    .info-row {{
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 14px;
+      border-bottom: 1px solid #262626;
+    }}
+    .info-row:last-child {{ border-bottom: none; }}
+    .info-label {{ color: #888; font-weight: 500; }}
+    .info-val {{ color: #FFF; font-weight: 600; text-align: right; }}
+    
+    h2 {{
+      font-size: 20px;
+      color: #FFF;
+      text-align: center;
+      margin-bottom: 16px;
+    }}
+    
+    /* Star Rating */
+    .star-rating {{
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      direction: row;
+    }}
+    .star {{
+      font-size: 36px;
+      color: #333333;
+      cursor: pointer;
+      transition: color 0.2s ease, transform 0.2s ease;
+      user-select: none;
+    }}
+    .star.active, .star:hover, .star.hovered {{
+      color: #D4AF37;
+      transform: scale(1.15);
+    }}
+
+    .form-group {{
+      margin-bottom: 20px;
+    }}
+    label {{
+      display: block;
+      font-size: 13px;
+      color: #AAA;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }}
+    textarea {{
+      width: 100%;
+      background: #1A1A1A;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 12px;
+      padding: 14px;
+      color: #FFF;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border 0.3s ease;
+    }}
+    textarea:focus {{
+      border-color: #D4AF37;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    }}
+    .btn {{
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #F4C542 0%, #D4AF37 100%);
+      color: #0D0D0D;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+    }}
+    .btn:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5);
+    }}
+    .footer-copy {{
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #555555;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Booking ID</span>
+        <span class="info-val">{bk_num}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Service</span>
+        <span class="info-val">{service_name}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Provider</span>
+        <span class="info-val">{provider_name}</span>
+      </div>
+    </div>
+
+    <h2>Rate Your Experience</h2>
+
+    <form method="POST" action="{backend_url}/api/customer/review/{booking_id}">
+      <input type="hidden" name="token" value="{token}">
+      <input type="hidden" name="rating" id="ratingInput" value="5">
+
+      <div class="star-rating" id="starRating">
+        <span class="star active" data-val="1">★</span>
+        <span class="star active" data-val="2">★</span>
+        <span class="star active" data-val="3">★</span>
+        <span class="star active" data-val="4">★</span>
+        <span class="star active" data-val="5">★</span>
+      </div>
+
+      <div class="form-group">
+        <label for="reviewText">Your Review</label>
+        <textarea id="reviewText" name="review_text" rows="4" placeholder="Share details about your experience with {provider_name}..." required></textarea>
+      </div>
+
+      <button type="submit" class="btn">Submit Review</button>
+    </form>
+
+    <div class="footer-copy">&copy; Fixora. All rights reserved.</div>
+  </div>
+
+  <script>
+    const stars = document.querySelectorAll('#starRating .star');
+    const ratingInput = document.getElementById('ratingInput');
+
+    stars.forEach((star) => {{
+      star.addEventListener('click', () => {{
+        const val = parseInt(star.getAttribute('data-val'));
+        ratingInput.value = val;
+        updateStars(val);
+      }});
+
+      star.addEventListener('mouseover', () => {{
+        const val = parseInt(star.getAttribute('data-val'));
+        highlightStars(val);
+      }});
+
+      star.addEventListener('mouseleave', () => {{
+        const currentVal = parseInt(ratingInput.value);
+        updateStars(currentVal);
+      }});
+    }});
+
+    function updateStars(val) {{
+      stars.forEach(s => {{
+        const v = parseInt(s.getAttribute('data-val'));
+        if (v <= val) {{
+          s.classList.add('active');
+          s.classList.remove('hovered');
+        }} else {{
+          s.classList.remove('active');
+          s.classList.remove('hovered');
+        }}
+      }});
+    }}
+
+    function highlightStars(val) {{
+      stars.forEach(s => {{
+        const v = parseInt(s.getAttribute('data-val'));
+        if (v <= val) {{
+          s.classList.add('active');
+        }} else {{
+          s.classList.remove('active');
+        }}
+      }});
+    }}
+  </script>
+</body>
+</html>"""
+        return render_template_string(html_review_form)
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"customer_review_page error: {e}")
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close(); conn.close()
+        return render_template_string(f"<h2>Server Error: {str(e)}</h2>"), 500
 
 
 @customer_bp.route("/api/review/provider/<int:provider_id>", methods=["GET"])
