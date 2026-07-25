@@ -6,6 +6,10 @@ import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+import socket
+
+print("Resolved addresses:")
+print(socket.getaddrinfo(host, port))
 
 # Ensure dotenv is loaded with correct paths
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,13 +63,21 @@ def send_email_detailed(to_email, subject, body_html):
 
     server = None
     try:
-        print(f"[SMTP CONNECT] Connecting to {host}:{port} (SSL={use_ssl}, TLS={use_tls})...")
+        print(f"[SMTP CONNECT] Connecting to {host}:{port}")
+        print(f"[SMTP USER] {user}")
+        print(f"[SMTP TLS] {use_tls}")
+        print(f"[SMTP SSL] {use_ssl}")
+
         if use_ssl:
-            server = smtplib.SMTP_SSL(host, port, timeout=15)
+         server = smtplib.SMTP_SSL(host, port, timeout=15)
+         server.ehlo()
         else:
-            server = smtplib.SMTP(host, port, timeout=15)
-            if use_tls:
-                server.starttls()
+          server = smtplib.SMTP(host, port, timeout=15)
+          server.ehlo()
+
+        if use_tls:
+          server.starttls()
+          server.ehlo()
                 
         print(f"[SMTP AUTH] Authenticating as {user}...")
         server.login(user, password)
