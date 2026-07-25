@@ -260,9 +260,52 @@ def get_password_reset_template(name, reset_link):
     """
     return get_base_template(html)
 
-def get_booking_confirmation_template(booking_number, customer_name, provider_name, service_name, booking_date, price, status):
+def get_booking_confirmation_template(booking_number, customer_name, provider_name,
+                                      service_name, booking_date, price, status,
+                                      completion_url=None, review_url=None):
+    # Build optional action buttons section
+    buttons_html = ""
+    if completion_url or review_url:
+        buttons_html = """
+    <hr style="border: none; border-top: 1px solid #2A2A2A; margin: 30px 0;" />
+    <p style="color: #AAA; font-size: 13px; text-align: center; margin-bottom: 20px;">
+      Once the service is done, use the buttons below:
+    </p>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+      <tr>"""
+        if completion_url:
+            buttons_html += f"""
+        <td align="center" style="padding: 6px;">
+          <a href="{completion_url}"
+             style="display:inline-block; padding:14px 28px; border-radius:30px;
+                    background:linear-gradient(135deg,#22c55e,#16a34a);
+                    color:#fff !important; text-decoration:none;
+                    font-weight:700; font-size:13px; letter-spacing:1px;
+                    box-shadow:0 4px 15px rgba(34,197,94,0.35);">
+            ✔ SERVICE COMPLETED
+          </a>
+        </td>"""
+        if review_url:
+            buttons_html += f"""
+        <td align="center" style="padding: 6px;">
+          <a href="{review_url}"
+             style="display:inline-block; padding:14px 28px; border-radius:30px;
+                    background:linear-gradient(135deg,#F4C542,#D4AF37);
+                    color:#0D0D0D !important; text-decoration:none;
+                    font-weight:700; font-size:13px; letter-spacing:1px;
+                    box-shadow:0 4px 15px rgba(212,175,55,0.35);">
+            ⭐ WRITE REVIEW
+          </a>
+        </td>"""
+        buttons_html += """
+      </tr>
+    </table>
+    <p style="color:#666; font-size:11px; text-align:center; margin-top:16px;">
+      These links are secure and tied to your booking. Do not share them.
+    </p>"""
+
     html = f"""
-    <h2 style="color: #FFF; margin-top: 0;">Booking Confirmed!</h2>
+    <h2 style="color: #FFF; margin-top: 0;">Booking Confirmed! 🎉</h2>
     <p>Hello {customer_name}, your booking has been successfully confirmed. Below are the details:</p>
     <table class="details-table">
         <tr>
@@ -291,6 +334,7 @@ def get_booking_confirmation_template(booking_number, customer_name, provider_na
         </tr>
     </table>
     <p>Our service provider will contact you shortly before arrival. Thank you for choosing Fixora!</p>
+    {buttons_html}
     """
     return get_base_template(html)
 

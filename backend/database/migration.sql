@@ -152,9 +152,15 @@ ALTER TABLE providers MODIFY COLUMN status ENUM('Pending', 'Approved', 'Rejected
 UPDATE providers SET status = 'Blocked' WHERE status = 'Suspended';
 
 
+ALTER TABLE bookings ADD COLUMN customer_confirmed TINYINT(1) DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN review_given TINYINT(1) DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN completion_token VARCHAR(255) DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN completed_at DATETIME DEFAULT NULL;
+
 -- -------------------------------------------------------
 -- Done. Run: SOURCE migration.sql; inside MySQL CLI
 -- or import via phpMyAdmin / Aiven Console.
 -- -------------------------------------------------------
 SELECT 'Migration complete!' as result;
+
 

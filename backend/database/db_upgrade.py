@@ -76,6 +76,30 @@ def run_upgrade():
         cursor.execute("ALTER TABLE bookings ADD COLUMN completed_by ENUM('customer', 'provider') DEFAULT NULL")
         conn.commit()
 
+    cursor.execute("SHOW COLUMNS FROM bookings LIKE 'customer_confirmed'")
+    if not cursor.fetchone():
+        print("Adding column 'customer_confirmed' to 'bookings' table...")
+        cursor.execute("ALTER TABLE bookings ADD COLUMN customer_confirmed TINYINT(1) DEFAULT 0")
+        conn.commit()
+
+    cursor.execute("SHOW COLUMNS FROM bookings LIKE 'review_given'")
+    if not cursor.fetchone():
+        print("Adding column 'review_given' to 'bookings' table...")
+        cursor.execute("ALTER TABLE bookings ADD COLUMN review_given TINYINT(1) DEFAULT 0")
+        conn.commit()
+
+    cursor.execute("SHOW COLUMNS FROM bookings LIKE 'completion_token'")
+    if not cursor.fetchone():
+        print("Adding column 'completion_token' to 'bookings' table...")
+        cursor.execute("ALTER TABLE bookings ADD COLUMN completion_token VARCHAR(255) DEFAULT NULL")
+        conn.commit()
+
+    cursor.execute("SHOW COLUMNS FROM bookings LIKE 'completed_at'")
+    if not cursor.fetchone():
+        print("Adding column 'completed_at' to 'bookings' table...")
+        cursor.execute("ALTER TABLE bookings ADD COLUMN completed_at DATETIME DEFAULT NULL")
+        conn.commit()
+
     # 4b. Check and add columns to 'reviews' table
     cursor.execute("SHOW COLUMNS FROM reviews LIKE 'review_title'")
     if not cursor.fetchone():

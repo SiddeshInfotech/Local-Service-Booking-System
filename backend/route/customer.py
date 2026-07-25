@@ -670,12 +670,15 @@ def create_booking():
         # Generate unique booking number
         bk_num = f"BK-{datetime.datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
 
+        # Generate a secure single-use completion token for email buttons
+        completion_token = secrets.token_urlsafe(32)
+
         query = """
         INSERT INTO bookings
-        (booking_number, customer_id, provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, estimated_price, booking_status, payment_status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', 'Pending')
+        (booking_number, customer_id, provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, estimated_price, booking_status, payment_status, completion_token)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', 'Pending', %s)
         """
-        cursor.execute(query, (bk_num, user_payload["user_id"], provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, price))
+        cursor.execute(query, (bk_num, user_payload["user_id"], provider_id, service_id, booking_date, booking_time, service_address, city, state, pincode, problem_description, price, completion_token))
         booking_id = cursor.lastrowid
         conn.commit()
 
@@ -741,12 +744,10 @@ def create_booking():
                 service_name_txt  = sp_row["service_name"]
                 category_txt      = form_category or sp_row.get("category_name") or "General"
                 provider_name_txt = sp_row.get("business_name") or sp_row.get("owner_name") or "Your Provider"
-                provider_phone_txt = sp_row.get("provider_phone") or "N/A"
             else:
                 service_name_txt  = "Booked Service"
                 category_txt      = form_category or "General"
                 provider_name_txt = "Your Provider"
-                provider_phone_txt = "N/A"
 
             # Format values
             try:
@@ -754,10 +755,14 @@ def create_booking():
             except Exception:
                 price_txt = f"\u20b9{price}" if price else "As per visit"
 
-            date_txt    = str(booking_date)
-            time_txt    = str(booking_time)
-            city_txt    = city or "N/A"
-            address_txt = f"{service_address}{(', ' + city) if city else ''}{(', ' + (state or ''))}{(' - ' + (pincode or '')) if pincode else ''}".strip(", ")
+            date_txt = str(booking_date)
+            backend_url = "https://local-service-booking-system.onrender.com"
+            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+            # Build secure action button URLs
+            completion_url = f"{backend_url}/api/customer/service-completed/{booking_id}?token={completion_token}"
+            review_url     = f"{frontend_url}/review/{booking_id}?token={completion_token}"
+
             html_body = get_booking_confirmation_template(
                 booking_number=bk_num,
                 customer_name=customer_name,
@@ -765,7 +770,9 @@ def create_booking():
                 service_name=service_name_txt,
                 booking_date=date_txt,
                 price=price,
-                status="Pending Confirmation"
+                status="Pending Confirmation",
+                completion_url=completion_url,
+                review_url=review_url
             )
             send_email_async(customer_email, f"Booking Confirmation – {bk_num} | Fixora", html_body)
         except Exception as email_err:
@@ -797,6 +804,56 @@ def create_booking():
             conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
+
+# ── Service Completed (called from email button – no auth needed) ─────────────
+@customer_bp.route("/api/customer/service-completed/<int:booking_id>", methods=["GET"])
+def mark_service_completed(booking_id):
+    """
+    Hit when customer clicks "SERVICE COMPLETED" in the email.
+    Verifies token, marks customer_confirmed = 1, redirects to frontend success page.
+    """
+    from flask import redirect
+    token = request.args.get("token", "").strip()
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+    if not token:
+        return jsonify({"status": False, "message": "Missing token."}), 400
+
+    try:
+        conn   = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT booking_id, completion_token, customer_confirmed FROM bookings WHERE booking_id = %s",
+            (booking_id,)
+        )
+        row = cursor.fetchone()
+
+        if not row:
+            cursor.close(); conn.close()
+            return redirect(f"{frontend_url}/service-completed?status=not_found")
+
+        if row["completion_token"] != token:
+            cursor.close(); conn.close()
+            return redirect(f"{frontend_url}/service-completed?status=invalid")
+
+        if row["customer_confirmed"]:
+            cursor.close(); conn.close()
+            return redirect(f"{frontend_url}/service-completed?status=already_done")
+
+        # Mark confirmed
+        cursor.execute(
+            "UPDATE bookings SET customer_confirmed = 1, completed_at = %s WHERE booking_id = %s",
+            (datetime.datetime.utcnow(), booking_id)
+        )
+        conn.commit()
+        cursor.close(); conn.close()
+        return redirect(f"{frontend_url}/service-completed?status=success")
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"service-completed error: {e}")
+        return redirect(f"{frontend_url}/service-completed?status=error")
 
 
 @customer_bp.route("/api/booking/history", methods=["GET"])
@@ -1059,6 +1116,8 @@ def create_review():
             "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text, review_title) VALUES (%s, %s, %s, %s, %s, %s)",
             (booking_id, user_payload["user_id"], booking["provider_id"], rating, review_text, review_title)
         )
+        # Mark review_given on the booking
+        cursor.execute("UPDATE bookings SET review_given = 1 WHERE booking_id = %s", (booking_id,))
         conn.commit()
 
         # Recalculate Rating
@@ -1102,6 +1161,104 @@ def create_review():
             conn.rollback()
             cursor.close()
             conn.close()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+
+
+# ── Public Review via Email Link (no auth, uses completion_token) ─────────────
+@customer_bp.route("/api/review/public/<int:booking_id>", methods=["GET", "POST"])
+def public_review(booking_id):
+    """
+    GET  – Verify that a token is valid and return booking + provider name for the review form.
+    POST – Submit a review; validated by the completion_token (no login required).
+    """
+    token = request.args.get("token", "").strip() or (request.get_json() or {}).get("token", "").strip()
+
+    if not token:
+        return jsonify({"status": False, "message": "Missing token."}), 400
+
+    try:
+        conn   = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            """SELECT b.*, p.business_name, p.owner_name, s.service_name, c.full_name as customer_name
+               FROM bookings b
+               JOIN providers p ON p.provider_id = b.provider_id
+               JOIN services  s ON s.service_id  = b.service_id
+               JOIN customers c ON c.customer_id  = b.customer_id
+               WHERE b.booking_id = %s""",
+            (booking_id,)
+        )
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close(); conn.close()
+            return jsonify({"status": False, "message": "Booking not found."}), 404
+
+        if booking["completion_token"] != token:
+            cursor.close(); conn.close()
+            return jsonify({"status": False, "message": "Invalid or expired link."}), 403
+
+        if request.method == "GET":
+            cursor.close(); conn.close()
+            return jsonify({
+                "status": True,
+                "booking_id":    booking["booking_id"],
+                "booking_number": booking["booking_number"],
+                "customer_name": booking["customer_name"],
+                "provider_name": booking.get("business_name") or booking.get("owner_name") or "Provider",
+                "service_name":  booking["service_name"],
+                "review_given":  bool(booking.get("review_given")),
+            }), 200
+
+        # POST — submit the review
+        data = request.get_json() or {}
+        rating       = data.get("rating")
+        review_text  = data.get("review_text", "")
+        review_title = data.get("review_title", "")
+
+        if not rating:
+            cursor.close(); conn.close()
+            return jsonify({"status": False, "message": "Rating is required."}), 400
+
+        if booking.get("review_given"):
+            cursor.close(); conn.close()
+            return jsonify({"status": False, "message": "Review already submitted."}), 400
+
+        cursor.execute(
+            "SELECT review_id FROM reviews WHERE booking_id = %s",
+            (booking_id,)
+        )
+        if cursor.fetchone():
+            cursor.close(); conn.close()
+            return jsonify({"status": False, "message": "Review already submitted."}), 400
+
+        cursor.execute(
+            "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text, review_title) VALUES (%s, %s, %s, %s, %s, %s)",
+            (booking_id, booking["customer_id"], booking["provider_id"], rating, review_text, review_title)
+        )
+        cursor.execute("UPDATE bookings SET review_given = 1 WHERE booking_id = %s", (booking_id,))
+        conn.commit()
+
+        # Recalculate provider rating
+        cursor.execute("SELECT AVG(rating) as avg_r, COUNT(*) as cnt FROM reviews WHERE provider_id = %s", (booking["provider_id"],))
+        stats = cursor.fetchone()
+        avg_r = round(float(stats["avg_r"]), 1) if stats["avg_r"] else 0.0
+        cursor.execute(
+            "UPDATE providers SET average_rating = %s, total_reviews = %s WHERE provider_id = %s",
+            (avg_r, stats["cnt"], booking["provider_id"])
+        )
+        conn.commit()
+        cursor.close(); conn.close()
+
+        return jsonify({"status": True, "message": "Review submitted successfully. Thank you!"}), 201
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"public_review error: {e}")
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close(); conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
 
 

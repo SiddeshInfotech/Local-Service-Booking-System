@@ -31,6 +31,8 @@ import ViewReviews from './pages/admin/ViewReviews';
 import AdminReports from './pages/admin/AdminReports';
 
 import ServicesPage from './pages/ServicesPage';
+import ReviewPage from './pages/ReviewPage';
+import ServiceCompletedPage from './pages/ServiceCompletedPage';
 
 // Inner app — needs useLocation so must be inside Router
 const AppInner = () => {
@@ -67,10 +69,12 @@ const AppInner = () => {
           <Route path="/provider/services"         element={<Navigate to="/services" replace />} />
 
           {/* Public routes */}
-          <Route path="/services" element={<ServicesPage />} />
-          <Route path="/about"    element={<AboutPage />} />
-          <Route path="/contact"  element={<ContactPage />} />
-          <Route path="/terms"    element={<TermsPage />} />
+          <Route path="/services"          element={<ServicesPage />} />
+          <Route path="/about"             element={<AboutPage />} />
+          <Route path="/contact"           element={<ContactPage />} />
+          <Route path="/terms"             element={<TermsPage />} />
+          <Route path="/review/:bookingId" element={<ReviewPage />} />
+          <Route path="/service-completed" element={<ServiceCompletedPage />} />
 
           {/* Admin Login (standalone — no sidebar layout) */}
           <Route path="/admin/login" element={<AdminLogin />} />
