@@ -13,117 +13,71 @@ base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(base_dir, ".env")
 load_dotenv(dotenv_path=env_path)
 
-def send_email_detailed(to_email, subject, body_html):
+import os
+import requests
+import traceback
+
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+
+def send_email_detailed(to_email, subject, html_content, text_content=None):
     """
-    Sends an HTML email using SMTP configuration.
-    Supports both TLS (port 587) and SSL (port 465).
-    Returns (success: bool, detail_msg: str).
+    Send email using Brevo REST API.
+    Returns (success, message)
     """
-    host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-    port_val = os.getenv("EMAIL_PORT", "587")
+
+    api_key = os.getenv("BREVO_API_KEY")
+    sender_email = os.getenv("EMAIL_FROM")
+    sender_name = os.getenv("EMAIL_FROM_NAME", "Fixora")
+
+    if not api_key:
+        return False, "BREVO_API_KEY not configured"
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+
+    payload = {
+        "sender": {
+            "name": sender_name,
+            "email": sender_email
+        },
+        "to": [
+            {
+                "email": to_email
+            }
+        ],
+        "subject": subject,
+        "htmlContent": html_content
+    }
+
+    if text_content:
+        payload["textContent"] = text_content
 
     try:
-        port = int(port_val)
-    except (ValueError, TypeError):
-        port = 587
+        response = requests.post(
+            BREVO_URL,
+            headers=headers,
+            json=payload,
+            timeout=20
+        )
 
-    import socket
-    print("Resolved addresses:")
-    print(socket.getaddrinfo(host, port))
+        if response.status_code in (200, 201):
+            print(f"✅ Email sent to {to_email}")
+            return True, "Email sent"
 
-    user = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASSWORD")
-    sender = os.getenv("EMAIL_FROM") or user
+        print("========== BREVO RESPONSE ==========")
+        print("Status:", response.status_code)
+        print("Response:", response.text)
+        print("===================================")
 
-    # Sanitize App Password
-    if password:
-        password = password.replace(" ", "").strip()
-    if user:
-        user = user.strip()
-
-    use_ssl = (port == 465) or (
-        os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
-    )
-    use_tls = (port == 587) or (
-        os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
-    )
-
-    if not user or not password:
-        msg = "SMTP configuration missing: EMAIL_USER or EMAIL_PASSWORD environment variables are not set."
-        print(f"[SMTP ERROR] {msg}")
-        return False, msg
-
-    if not to_email or "@" not in str(to_email):
-        msg = f"Invalid recipient email address: '{to_email}'"
-        print(f"[EMAIL ERROR] {msg}")
-        return False, msg
-
-    msg = MIMEMultipart("alternative")
-    msg["From"] = sender
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body_html, "html", "utf-8"))
-
-    server = None
-
-    try:
-        print(f"[SMTP CONNECT] Connecting to {host}:{port}")
-        print(f"[SMTP USER] {user}")
-        print(f"[SMTP TLS] {use_tls}")
-        print(f"[SMTP SSL] {use_ssl}")
-
-        if use_ssl:
-            server = smtplib.SMTP_SSL(host, port, timeout=15)
-            server.ehlo()
-        else:
-            server = smtplib.SMTP(host, port, timeout=15)
-            server.ehlo()
-
-            if use_tls:
-                server.starttls()
-                server.ehlo()
-
-        print(f"[SMTP AUTH] Authenticating as {user}...")
-        server.login(user, password)
-
-        print(f"[SMTP SEND] Delivering mail to {to_email}...")
-        server.sendmail(sender, [to_email], msg.as_string())
-
-        print(f"[SMTP SUCCESS] Email successfully delivered to {to_email}")
-
-        return True, "Email sent successfully."
-
-    except smtplib.SMTPAuthenticationError as auth_err:
-        err_msg = f"SMTP Authentication failed: {auth_err}"
-        print(err_msg)
-        traceback.print_exc()
-        return False, err_msg
-
-    except smtplib.SMTPConnectError as conn_err:
-        err_msg = f"SMTP Connection failed: {conn_err}"
-        print(err_msg)
-        traceback.print_exc()
-        return False, err_msg
-
-    except smtplib.SMTPException as smtp_err:
-        err_msg = f"SMTP Error: {smtp_err}"
-        print(err_msg)
-        traceback.print_exc()
-        return False, err_msg
+        return False, response.text
 
     except Exception as e:
-        err_msg = f"Failed to send email: {e}"
-        print(err_msg)
         traceback.print_exc()
-        return False, err_msg
-
-    finally:
-        if server:
-            try:
-                server.quit()
-            except Exception:
-                pass
-
+        return False, str(e)
 def send_email(to_email, subject, body_html):
     """
     Sends an HTML email using SMTP configuration.
