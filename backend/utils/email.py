@@ -21,33 +21,36 @@ def send_email_detailed(to_email, subject, body_html):
     """
     host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
     port_val = os.getenv("EMAIL_PORT", "587")
-    import socket
-    print("Resolved addresses:")
-    print(socket.getaddrinfo(host, port))
+
     try:
         port = int(port_val)
     except (ValueError, TypeError):
         port = 587
-        
+
+    import socket
+    print("Resolved addresses:")
+    print(socket.getaddrinfo(host, port))
+
     user = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASSWORD")
     sender = os.getenv("EMAIL_FROM") or user
 
-    # Sanitize App Password (remove spaces if user entered with spaces)
+    # Sanitize App Password
     if password:
         password = password.replace(" ", "").strip()
     if user:
         user = user.strip()
 
-    use_ssl = (port == 465) or (os.getenv("EMAIL_USE_SSL", "false").lower() == "true")
-    use_tls = (port == 587) or (os.getenv("EMAIL_USE_TLS", "true").lower() == "true")
+    use_ssl = (port == 465) or (
+        os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
+    )
+    use_tls = (port == 587) or (
+        os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+    )
 
     if not user or not password:
         msg = "SMTP configuration missing: EMAIL_USER or EMAIL_PASSWORD environment variables are not set."
         print(f"[SMTP ERROR] {msg}")
-        print(f"--- FALLBACK CONSOLE EMAIL TO: {to_email} ---")
-        print(f"--- SUBJECT: {subject} ---")
-        print(f"--- BODY: ---\n{body_html}\n-----------------")
         return False, msg
 
     if not to_email or "@" not in str(to_email):
@@ -56,12 +59,13 @@ def send_email_detailed(to_email, subject, body_html):
         return False, msg
 
     msg = MIMEMultipart("alternative")
-    msg['From'] = sender
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body_html, 'html', 'utf-8'))
+    msg["From"] = sender
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body_html, "html", "utf-8"))
 
     server = None
+
     try:
         print(f"[SMTP CONNECT] Connecting to {host}:{port}")
         print(f"[SMTP USER] {user}")
@@ -69,43 +73,50 @@ def send_email_detailed(to_email, subject, body_html):
         print(f"[SMTP SSL] {use_ssl}")
 
         if use_ssl:
-         server = smtplib.SMTP_SSL(host, port, timeout=15)
-         server.ehlo()
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
+            server.ehlo()
         else:
-          server = smtplib.SMTP(host, port, timeout=15)
-          server.ehlo()
+            server = smtplib.SMTP(host, port, timeout=15)
+            server.ehlo()
 
-        if use_tls:
-          server.starttls()
-          server.ehlo()
-                
+            if use_tls:
+                server.starttls()
+                server.ehlo()
+
         print(f"[SMTP AUTH] Authenticating as {user}...")
         server.login(user, password)
 
         print(f"[SMTP SEND] Delivering mail to {to_email}...")
         server.sendmail(sender, [to_email], msg.as_string())
+
         print(f"[SMTP SUCCESS] Email successfully delivered to {to_email}")
+
         return True, "Email sent successfully."
+
     except smtplib.SMTPAuthenticationError as auth_err:
-        err_msg = f"SMTP Authentication failed for {user}: Invalid credentials or App Password required. ({auth_err})"
-        print(f"[SMTP AUTH ERROR] {err_msg}")
+        err_msg = f"SMTP Authentication failed: {auth_err}"
+        print(err_msg)
         traceback.print_exc()
         return False, err_msg
+
     except smtplib.SMTPConnectError as conn_err:
-        err_msg = f"SMTP Connection failed to {host}:{port}: {conn_err}"
-        print(f"[SMTP CONNECT ERROR] {err_msg}")
+        err_msg = f"SMTP Connection failed: {conn_err}"
+        print(err_msg)
         traceback.print_exc()
         return False, err_msg
+
     except smtplib.SMTPException as smtp_err:
-        err_msg = f"SMTP Protocol error: {smtp_err}"
-        print(f"[SMTP ERROR] {err_msg}")
+        err_msg = f"SMTP Error: {smtp_err}"
+        print(err_msg)
         traceback.print_exc()
         return False, err_msg
+
     except Exception as e:
-        err_msg = f"Failed to send email to {to_email}: {str(e)}"
-        print(f"[EMAIL EXCEPTION] {err_msg}")
+        err_msg = f"Failed to send email: {e}"
+        print(err_msg)
         traceback.print_exc()
         return False, err_msg
+
     finally:
         if server:
             try:
