@@ -58,10 +58,9 @@ const ProviderForgotPassword = () => {
 
   return (
     <div
-      className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative"
-      style={{ background: 'linear-gradient(135deg, #0B1220 0%, #0f172a 100%)' }}
+      className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative bg-[var(--color-primary-bg)]"
     >
-      <div className="absolute inset-0 bg-[#0B1220]/50 z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--color-secondary-bg)]/50 z-0 pointer-events-none" />
 
       {/* Banner Messages */}
       {successMsg && (
@@ -76,10 +75,10 @@ const ProviderForgotPassword = () => {
       )}
 
       {/* Main card */}
-      <div className="w-full max-w-5xl bg-[#131b2e]/30 border border-zinc-800/80 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md relative z-10">
+      <div className="w-full max-w-5xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md relative z-10">
 
         {/* Left Side: Decorative Panel */}
-        <div className="relative hidden md:flex flex-col justify-between overflow-hidden min-h-[480px] bg-[#0B1220]">
+        <div className="relative hidden md:flex flex-col justify-between overflow-hidden min-h-[480px] bg-[var(--color-secondary-bg)]">
           <div className="absolute top-0 left-0 w-80 h-80 bg-blue-600/8 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-blue-500/6 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-blue-500/3 pointer-events-none" />
@@ -103,21 +102,21 @@ const ProviderForgotPassword = () => {
             <span className="text-blue-400 text-xs font-semibold uppercase tracking-widest px-2.5 py-1 rounded bg-blue-600/15 border border-blue-500/30 inline-block mb-3.5 backdrop-blur-sm">
               Provider Account Recovery
             </span>
-            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight drop-shadow-lg">
+            <h2 className="text-3xl font-extrabold text-[var(--color-text-primary)] tracking-tight leading-tight drop-shadow-lg">
               Regain Access <br /> Securely & Instantly
             </h2>
-            <p className="text-zinc-300 mt-2 text-sm leading-relaxed drop-shadow-md">
+            <p className="text-[var(--color-text-primary)] mt-2 text-sm leading-relaxed drop-shadow-md">
               Enter your registered email and we'll send a 6-digit OTP to reset your password.
             </p>
           </div>
         </div>
 
         {/* Right Side: Form Panel */}
-        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#0B1220]/45 text-left">
+        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[var(--color-secondary-bg)]/40 text-left">
           <h2 className="text-3xl font-bold text-[#D4AF37] mb-1">
             Forgot Password
           </h2>
-          <p className="text-zinc-400 text-sm mb-8 text-left">
+          <p className="text-[var(--color-text-secondary)] text-sm mb-8 text-left">
             Enter your registered provider email to receive a 6-digit OTP.
           </p>
 
@@ -130,13 +129,13 @@ const ProviderForgotPassword = () => {
               placeholder="Enter your registered email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              rightElement={<Mail size={18} className="text-zinc-500" />}
+              rightElement={<Mail size={18} className="text-[var(--color-text-secondary)]" />}
             />
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-[#00a8e8] hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg"
+              className="w-full bg-[#00a8e8] hover:bg-blue-500 text-[var(--color-text-primary)] font-semibold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg"
             >
               {isSubmitting ? 'Sending OTP...' : 'Send OTP'}
             </button>
@@ -145,7 +144,7 @@ const ProviderForgotPassword = () => {
           <div className="mt-8 text-center sm:text-left">
             <Link
               to="/provider/login"
-              className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back to Provider Login</span>

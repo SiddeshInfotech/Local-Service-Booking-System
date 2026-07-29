@@ -34,13 +34,15 @@ import ServicesPage from './pages/ServicesPage';
 import ReviewPage from './pages/ReviewPage';
 import ServiceCompletedPage from './pages/ServiceCompletedPage';
 
+import { ThemeProvider } from './contexts/ThemeContext';
+
 // Inner app — needs useLocation so must be inside Router
 const AppInner = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col selection:bg-[#D4AF37]/30 selection:text-white">
+    <div className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] flex flex-col selection:bg-[#D4AF37]/30 selection:text-[var(--color-text-primary)] transition-colors duration-300">
 
       {/* Shared Navbar — shown on all pages except admin */}
       {!isAdminRoute && <Navbar />}
@@ -107,9 +109,11 @@ const AppInner = () => {
 
 function App() {
   return (
-    <Router>
-      <AppInner />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AppInner />
+      </Router>
+    </ThemeProvider>
   );
 }
 

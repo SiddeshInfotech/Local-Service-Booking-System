@@ -100,7 +100,7 @@ const ReviewPage = () => {
             <h2 style={{ color: '#ef4444', margin: '10px 0 6px' }}>Invalid Link</h2>
             <p style={{ color: '#AAA', fontSize: '13px' }}>{error}</p>
           </div>
-          <button style={{ ...styles.btn, marginTop: '20px', background: 'linear-gradient(135deg,#1a1a2e,#16213e)', color: '#fff', border: '1px solid #333' }}
+          <button style={{ ...styles.btn, marginTop: '20px', background: 'var(--color-hover-bg)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-subtle)' }}
             onClick={() => navigate('/')}>Go to Home</button>
         </div>
       </div>
@@ -119,7 +119,7 @@ const ReviewPage = () => {
               Thank you for your feedback! Your review helps others find great service providers.
             </p>
           </div>
-          <button style={{ ...styles.btn, marginTop: '20px', background: 'linear-gradient(135deg,#1a1a2e,#16213e)', color: '#fff', border: '1px solid #333' }}
+          <button style={{ ...styles.btn, marginTop: '20px', background: 'var(--color-hover-bg)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-subtle)' }}
             onClick={() => navigate('/')}>Back to Home</button>
         </div>
       </div>
@@ -213,7 +213,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #0a0a14 0%, #111126 50%, #0a0a14 100%)',
+    background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-secondary-bg) 50%, var(--color-primary-bg) 100%)',
     fontFamily: "'Inter', 'Segoe UI', sans-serif",
     padding: '24px',
     position: 'relative',
@@ -228,9 +228,9 @@ const styles = {
     zIndex: 0,
   },
   card: {
-    background: 'rgba(22,22,40,0.9)',
+    background: 'var(--color-card-bg)',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    border: '1px solid var(--color-border-subtle)',
     borderRadius: '24px',
     padding: '44px 40px',
     maxWidth: '480px',
@@ -248,13 +248,13 @@ const styles = {
   heading: {
     fontSize: '24px',
     fontWeight: '700',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     margin: '0 0 20px',
     letterSpacing: '-0.3px',
   },
   infoBox: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--color-overlay-subtle)',
+    border: '1px solid var(--color-border-subtle)',
     borderRadius: '12px',
     padding: '16px 20px',
     marginBottom: '20px',
@@ -264,22 +264,22 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '5px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    borderBottom: '1px solid var(--color-border-subtle)',
   },
   infoLabel: {
-    color: '#777',
+    color: 'var(--color-text-secondary)',
     fontSize: '12px',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   infoValue: {
-    color: '#E0E0E0',
+    color: 'var(--color-text-primary)',
     fontSize: '13px',
     fontWeight: '500',
   },
   label: {
-    color: '#AAA',
+    color: 'var(--color-text-secondary)',
     fontSize: '13px',
     marginBottom: '10px',
     fontWeight: '500',
@@ -293,9 +293,9 @@ const styles = {
     width: '100%',
     padding: '12px 16px',
     borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.05)',
-    color: '#E0E0E0',
+    border: '1px solid var(--color-border-subtle)',
+    background: 'var(--color-primary-bg)',
+    color: 'var(--color-text-primary)',
     fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box',
@@ -329,14 +329,14 @@ const styles = {
   spinner: {
     width: '32px',
     height: '32px',
-    border: '3px solid rgba(255,255,255,0.1)',
-    borderTop: '3px solid #D4AF37',
+    border: '3px solid var(--color-border-subtle)',
+    borderTop: '3px solid var(--color-gold-accent)',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     margin: '20px auto 0',
   },
   footer: {
-    color: '#444',
+    color: 'var(--color-text-secondary)',
     fontSize: '11px',
     marginTop: '24px',
   },

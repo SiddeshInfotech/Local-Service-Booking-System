@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, LayoutDashboard, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, LayoutDashboard, LogOut, Sun, Moon } from 'lucide-react';
 import fixoraLogo from '../assets/images/fixora_logo.png';
 import { clearAuth, getRole } from '../api';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -12,6 +13,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [authRole, setAuthRole] = useState(null);
+  const { theme, toggleTheme } = useTheme();
 
   const authRoutes = [
     '/customer/login',
@@ -79,15 +81,15 @@ const Navbar = () => {
       {/* ── Global styles (scoped to navbar usage) ── */}
       <style>{`
         .fixora-navbar-glass {
-          background: rgba(15, 17, 21, 0.92);
+          background: var(--theme-card-bg, rgba(15, 17, 21, 0.92));
           backdrop-filter: blur(28px);
           -webkit-backdrop-filter: blur(28px);
         }
         .fixora-login-dropdown {
-          background: rgba(18, 18, 18, 0.96);
+          background: var(--theme-card-bg, rgba(18, 18, 18, 0.96));
           backdrop-filter: blur(28px);
           -webkit-backdrop-filter: blur(28px);
-          border: 1px solid rgba(212, 175, 55, 0.22);
+          border: 1px solid var(--theme-border-gold, rgba(212, 175, 55, 0.22));
         }
         @keyframes navFadeIn {
           from { opacity: 0; transform: translateY(-6px); }
@@ -112,7 +114,7 @@ const Navbar = () => {
       <header
         className={`${isAuthRoute ? 'sticky' : 'fixed'} top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled || isAuthRoute
-            ? 'fixora-navbar-glass shadow-2xl shadow-black/80 border-b border-[#D4AF37]/20'
+            ? 'fixora-navbar-glass shadow-2xl shadow-[var(--theme-glass-shadow-1)] border-b border-[#D4AF37]/20'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
@@ -137,7 +139,7 @@ const Navbar = () => {
                   className={`text-sm font-medium tracking-wide transition-all duration-300 hover:translate-y-[-1px] relative ${
                     isActive(link.path)
                       ? 'text-[#D4AF37] after:content-[""] after:absolute after:bottom-[-6px] after:left-0 after:right-0 after:h-[2px] after:bg-[#D4AF37] after:rounded-full'
-                      : 'text-zinc-300 hover:text-[#D4AF37]'
+                      : 'text-[var(--color-text-primary)] hover:text-[#D4AF37]'
                   }`}
                 >
                   {link.name}
@@ -145,13 +147,21 @@ const Navbar = () => {
               ))}
             </nav>
 
-            {/* ── Desktop Right: Auth-aware ── */}
+            {/* ── Desktop Right: Auth-aware & Theme Toggle ── */}
             <div className="hidden xl:flex items-center gap-3">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-[var(--color-overlay-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-gold-accent)] transition-colors cursor-pointer"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              
               {authRole && (authRole === 'customer' || authRole === 'provider') ? (
                 <>
                   <Link
                     to="/services"
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-all border border-white/10"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[var(--color-overlay-subtle)] hover:bg-[var(--color-overlay-hover)] text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] transition-all border border-[var(--color-border-subtle)]"
                   >
                     Services
                   </Link>
@@ -179,7 +189,7 @@ const Navbar = () => {
                   {loginOpen && (
                     <div className="absolute right-0 top-full mt-3 w-56 fixora-login-dropdown rounded-2xl p-2.5 shadow-2xl z-50 nav-fade-in">
                       <div className="px-3 py-2 border-b border-[#D4AF37]/10 mb-1.5">
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-[var(--color-text-secondary)] font-bold uppercase tracking-widest">
                           Account Portal
                         </p>
                       </div>
@@ -191,7 +201,7 @@ const Navbar = () => {
                           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-all group ${
                             location.pathname === l.path
                               ? 'bg-[#D4AF37]/10 text-[#D4AF37] font-semibold'
-                              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)]'
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] group-hover:scale-125 transition-transform flex-shrink-0" />
@@ -204,14 +214,24 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* ── Mobile Hamburger ── */}
-            <button
-              onClick={() => setMobileOpen((v) => !v)}
-              className="xl:hidden p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* ── Mobile Right Actions (Theme + Hamburger) ── */}
+            <div className="flex items-center gap-2 xl:hidden">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+              </button>
+              
+              <button
+                onClick={() => setMobileOpen((v) => !v)}
+                className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] transition-colors"
+                aria-label="Toggle menu"
+              >
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
 
           </div>
         </div>
@@ -227,7 +247,7 @@ const Navbar = () => {
                 className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive(link.path)
                     ? 'bg-[#D4AF37]/10 text-[#D4AF37]'
-                    : 'text-zinc-300 hover:text-[#D4AF37] hover:bg-white/5'
+                    : 'text-[var(--color-text-primary)] hover:text-[#D4AF37] hover:bg-[var(--color-overlay-subtle)]'
                 }`}
               >
                 {link.name}
@@ -246,12 +266,12 @@ const Navbar = () => {
                 </div>
               ) : (
                 <>
-                  <p className="px-3 text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Portal Access</p>
+                  <p className="px-3 text-[10px] text-[var(--color-text-secondary)] font-bold uppercase tracking-widest mb-2">Portal Access</p>
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       to="/customer/login"
                       onClick={() => setMobileOpen(false)}
-                      className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[#1A1D23] hover:bg-[#232831] text-zinc-300 transition-colors"
+                      className="py-2.5 text-center text-xs font-semibold rounded-xl bg-[var(--color-secondary-bg)] hover:bg-[var(--color-hover-bg)] text-[var(--color-text-primary)] transition-colors"
                     >
                       Customer Login
                     </Link>

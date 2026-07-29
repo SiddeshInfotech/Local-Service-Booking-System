@@ -26,7 +26,7 @@ const SocialButton = ({ provider, onClick, children, ...props }) => {
     }
     if (provider === 'github') {
       return (
-        <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+        <svg className="w-5 h-5 text-[var(--color-text-primary)] shrink-0" viewBox="0 0 24 24" fill="currentColor">
           <path
             fillRule="evenodd"
             clipRule="evenodd"
@@ -42,7 +42,7 @@ const SocialButton = ({ provider, onClick, children, ...props }) => {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center gap-3 w-full py-3 bg-[#1A1D23] border border-[#D4AF37]/20 hover:bg-[#232831] text-white font-medium rounded-xl transition duration-300 cursor-pointer active:scale-[0.98]"
+      className="flex items-center justify-center gap-3 w-full py-3 bg-[var(--color-secondary-bg)] border border-[#D4AF37]/20 hover:bg-[var(--color-hover-bg)] text-[var(--color-text-primary)] font-medium rounded-xl transition duration-300 cursor-pointer active:scale-[0.98]"
       {...props}
     >
       {getProviderIcon()}

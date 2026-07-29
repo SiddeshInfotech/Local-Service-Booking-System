@@ -95,9 +95,9 @@ const ResetPassword = () => {
   return (
     <div
       className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative"
-      style={{ background: 'linear-gradient(135deg, #0F1115 0%, #1A1D23 100%)' }}
+      style={{ background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-secondary-bg) 100%)' }}
     >
-      <div className="absolute inset-0 bg-[#0F1115]/50 z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--color-primary-bg)]/50 z-0 pointer-events-none" />
 
       {/* Banner messages */}
       {successMsg && (
@@ -119,8 +119,8 @@ const ResetPassword = () => {
             <Lock size={32} className="text-gold-accent" />
           </div>
 
-          <h2 className="text-3xl font-bold text-white mb-2 text-center">Reset Password</h2>
-          <p className="text-zinc-400 text-sm mb-8 text-center">
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2 text-center">Reset Password</h2>
+          <p className="text-[var(--color-text-secondary)] text-sm mb-8 text-center">
             Create a new strong password for your account.
           </p>
 
@@ -137,7 +137,7 @@ const ResetPassword = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none cursor-pointer"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors focus:outline-none cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -179,7 +179,7 @@ const ResetPassword = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none cursor-pointer"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors focus:outline-none cursor-pointer"
                 >
                   {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -209,7 +209,7 @@ const ResetPassword = () => {
           <div className="mt-8 text-center">
             <Link
               to={loginLink}
-              className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back to Login</span>

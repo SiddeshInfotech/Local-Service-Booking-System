@@ -9,21 +9,21 @@ import { apiFetchAdmin } from '../../api';
 
 const statusStyle = (s) => ({
   Active:   'bg-green-500/15 text-green-400 border-green-500/20',
-  Inactive: 'bg-zinc-700/30 text-zinc-400 border-zinc-700',
+  Inactive: 'bg-[var(--color-zinc-700)]/30 text-[var(--color-text-secondary)] border-[var(--color-border-subtle)]',
   Blocked:  'bg-red-500/15 text-red-400 border-red-500/20',
-}[s] || 'bg-zinc-700/30 text-zinc-400 border-zinc-700');
+}[s] || 'bg-[var(--color-zinc-700)]/30 text-[var(--color-text-secondary)] border-[var(--color-border-subtle)]');
 
-const StatCard = ({ label, value, color = 'text-white' }) => (
-  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-3 text-center">
+const StatCard = ({ label, value, color = 'text-[var(--color-text-primary)]' }) => (
+  <div className="bg-white/[0.03] border border-[var(--color-border-subtle)] rounded-2xl p-3 text-center">
     <p className={`text-xl font-black ${color}`}>{value}</p>
-    <p className="text-zinc-500 text-[10px] mt-0.5 font-semibold uppercase tracking-wider">{label}</p>
+    <p className="text-[var(--color-text-secondary)] text-[10px] mt-0.5 font-semibold uppercase tracking-wider">{label}</p>
   </div>
 );
 
 const DrawerRow = ({ label, value }) => (
-  <div className="flex items-start justify-between py-2 border-b border-white/5 last:border-0">
-    <span className="text-zinc-500 text-xs shrink-0 mr-3">{label}</span>
-    <span className="text-xs text-right font-semibold text-white">{value || '—'}</span>
+  <div className="flex items-start justify-between py-2 border-b border-[var(--color-border-subtle)] last:border-0">
+    <span className="text-[var(--color-text-secondary)] text-xs shrink-0 mr-3">{label}</span>
+    <span className="text-xs text-right font-semibold text-[var(--color-text-primary)]">{value || '—'}</span>
   </div>
 );
 
@@ -172,33 +172,33 @@ const ManageCustomers = () => {
       {/* Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight flex items-center gap-2">
             Manage Customers <Sparkles className="text-blue-400 w-5 h-5" />
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">Audit credentials, profile parameters, and booking activity of registered customers.</p>
+          <p className="text-[var(--color-text-secondary)] text-sm mt-1">Audit credentials, profile parameters, and booking activity of registered customers.</p>
         </div>
       </div>
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-80">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] pointer-events-none" />
           <input
             type="text"
             placeholder="Search by name, email, or city..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full bg-white/5 border border-white/10 text-white text-xs pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-blue-500/50 focus:bg-white/10 placeholder-zinc-500 transition-all"
+            className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-xs pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-blue-500/50 focus:bg-[var(--color-overlay-hover)] placeholder-zinc-500 transition-all"
           />
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1">
-          <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mr-2 flex items-center gap-1.5"><Filter size={13} /> Filter:</span>
+          <span className="text-xs text-[var(--color-text-secondary)] font-bold uppercase tracking-wider mr-2 flex items-center gap-1.5"><Filter size={13} /> Filter:</span>
           {['All', 'Active', 'Inactive', 'Blocked'].map((f) => (
             <button
               key={f}
               onClick={() => { setFilter(f); setCurrentPage(1); }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                filter === f ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' : 'text-zinc-400 border-white/5 hover:text-white hover:bg-white/5'
+                filter === f ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' : 'text-[var(--color-text-secondary)] border-[var(--color-border-subtle)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)]'
               }`}
             >{f}</button>
           ))}
@@ -206,24 +206,24 @@ const ManageCustomers = () => {
       </div>
 
       {/* Data Table */}
-      <div className="rounded-3xl bg-[#0d1425]/40 border border-white/5 overflow-hidden shadow-2xl backdrop-blur-xl">
+      <div className="rounded-3xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] overflow-hidden shadow-2xl backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-white/5 bg-[#0a0e1b]/40">
-                <th onClick={() => handleSort('customer_id')} className="cursor-pointer hover:text-white px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider select-none">#</th>
-                <th onClick={() => handleSort('full_name')} className="cursor-pointer hover:text-white px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider select-none">Customer</th>
-                <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider hidden md:table-cell">Phone</th>
-                <th onClick={() => handleSort('city')} className="cursor-pointer hover:text-white px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider hidden lg:table-cell select-none">City</th>
-                <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-zinc-500 text-xs font-bold uppercase tracking-wider">Actions</th>
+              <tr className="border-b border-[var(--color-border-subtle)] bg-[var(--color-secondary-bg)]">
+                <th onClick={() => handleSort('customer_id')} className="cursor-pointer hover:text-[var(--color-text-primary)] px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider select-none">#</th>
+                <th onClick={() => handleSort('full_name')} className="cursor-pointer hover:text-[var(--color-text-primary)] px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider select-none">Customer</th>
+                <th className="px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider hidden md:table-cell">Phone</th>
+                <th onClick={() => handleSort('city')} className="cursor-pointer hover:text-[var(--color-text-primary)] px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider hidden lg:table-cell select-none">City</th>
+                <th className="px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-[var(--color-text-secondary)] text-xs font-bold uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={6} className="text-center py-16"><Loader2 size={28} className="mx-auto animate-spin text-blue-400" /></td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={6} className="text-center text-zinc-500 py-16 text-xs">
+                <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-16 text-xs">
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-3xl">👤</span>
                     <span className="font-semibold">No customers found.</span>
@@ -232,34 +232,34 @@ const ManageCustomers = () => {
                 </td></tr>
               ) : (
                 paginated.map((c) => (
-                  <tr key={c.customer_id} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors duration-300">
-                    <td className="px-6 py-4 text-zinc-500 text-xs font-mono">{c.customer_id}</td>
+                  <tr key={c.customer_id} className="border-b border-[var(--color-border-subtle)] hover:bg-white/[0.01] transition-colors duration-300">
+                    <td className="px-6 py-4 text-[var(--color-text-secondary)] text-xs font-mono">{c.customer_id}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-md flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[var(--color-text-primary)] text-xs font-black shadow-md flex-shrink-0">
                           {(c.full_name || '?')[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-white text-xs font-bold">{c.full_name}</p>
-                          <p className="text-zinc-500 text-[10px] mt-0.5">{c.email}</p>
+                          <p className="text-[var(--color-text-primary)] text-xs font-bold">{c.full_name}</p>
+                          <p className="text-[var(--color-text-secondary)] text-[10px] mt-0.5">{c.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 text-xs hidden md:table-cell">{c.phone || '—'}</td>
-                    <td className="px-6 py-4 text-zinc-400 text-xs hidden lg:table-cell">{c.city || '—'}</td>
+                    <td className="px-6 py-4 text-[var(--color-text-secondary)] text-xs hidden md:table-cell">{c.phone || '—'}</td>
+                    <td className="px-6 py-4 text-[var(--color-text-secondary)] text-xs hidden lg:table-cell">{c.city || '—'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${statusStyle(c.status)}`}>{c.status}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openDrawer(c)} title="View Profile" className="p-2 rounded-xl text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all cursor-pointer"><Eye size={14} /></button>
-                        <button onClick={() => setEditingCustomer({ ...c })} title="Edit Information" className="p-2 rounded-xl text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all cursor-pointer"><Pencil size={14} /></button>
+                        <button onClick={() => openDrawer(c)} title="View Profile" className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-blue-400 hover:bg-blue-500/10 transition-all cursor-pointer"><Eye size={14} /></button>
+                        <button onClick={() => setEditingCustomer({ ...c })} title="Edit Information" className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-amber-400 hover:bg-amber-500/10 transition-all cursor-pointer"><Pencil size={14} /></button>
                         <button
                           onClick={() => setShowBlockConfirm(c)}
                           title={c.status === 'Blocked' ? 'Unblock Customer' : 'Block Customer'}
-                          className={`p-2 rounded-xl text-zinc-400 hover:bg-white/5 transition-all cursor-pointer ${c.status === 'Blocked' ? 'hover:text-green-400' : 'hover:text-red-400'}`}
+                          className={`p-2 rounded-xl text-[var(--color-text-secondary)] hover:bg-[var(--color-overlay-subtle)] transition-all cursor-pointer ${c.status === 'Blocked' ? 'hover:text-green-400' : 'hover:text-red-400'}`}
                         ><ShieldAlert size={14} /></button>
-                        <button onClick={() => setShowDeleteConfirm(c.customer_id)} title="Delete Member" className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"><Trash2 size={14} /></button>
+                        <button onClick={() => setShowDeleteConfirm(c.customer_id)} title="Delete Member" className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -270,14 +270,14 @@ const ManageCustomers = () => {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
-            <p className="text-zinc-500 text-xs">Showing {(currentPage-1)*itemsPerPage+1}–{Math.min(currentPage*itemsPerPage, sorted.length)} of {sorted.length} records</p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--color-border-subtle)]">
+            <p className="text-[var(--color-text-secondary)] text-xs">Showing {(currentPage-1)*itemsPerPage+1}–{Math.min(currentPage*itemsPerPage, sorted.length)} of {sorted.length} records</p>
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"><ChevronLeft size={16} /></button>
+              <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"><ChevronLeft size={16} /></button>
               {[...Array(totalPages)].map((_, i) => (
-                <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentPage === i+1 ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'}`}>{i+1}</button>
+                <button key={i+1} onClick={() => setCurrentPage(i+1)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentPage === i+1 ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] border border-transparent'}`}>{i+1}</button>
               ))}
-              <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"><ChevronRight size={16} /></button>
+              <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"><ChevronRight size={16} /></button>
             </div>
           </div>
         )}
@@ -287,20 +287,20 @@ const ManageCustomers = () => {
       {drawerOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={closeDrawer} />
-          <div className="fixed top-0 right-0 z-50 h-full w-full max-w-md bg-[#090d1c] border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right overflow-hidden">
+          <div className="fixed top-0 right-0 z-50 h-full w-full max-w-md bg-[var(--color-card-bg)] border-l border-[var(--color-border-subtle)] shadow-2xl flex flex-col animate-slide-in-right overflow-hidden">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-[#0a0f20]/80 backdrop-blur-xl shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border-subtle)] bg-[var(--color-secondary-bg)] backdrop-blur-xl shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-lg">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[var(--color-text-primary)] font-black text-sm shadow-lg">
                   {(drawerCustomer?.full_name || '?')[0].toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-sm leading-tight">{drawerCustomer?.full_name || '…'}</h2>
-                  <p className="text-zinc-500 text-[10px] mt-0.5">Customer · ID #{drawerCustomer?.customer_id}</p>
+                  <h2 className="text-[var(--color-text-primary)] font-bold text-sm leading-tight">{drawerCustomer?.full_name || '…'}</h2>
+                  <p className="text-[var(--color-text-secondary)] text-[10px] mt-0.5">Customer · ID #{drawerCustomer?.customer_id}</p>
                 </div>
               </div>
-              <button onClick={closeDrawer} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"><X size={18} /></button>
+              <button onClick={closeDrawer} className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-hover)] transition-all cursor-pointer"><X size={18} /></button>
             </div>
 
             {/* Scrollable body */}
@@ -308,7 +308,7 @@ const ManageCustomers = () => {
               {drawerLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 size={28} className="animate-spin text-blue-400" />
-                  <p className="text-zinc-500 text-xs">Loading customer details…</p>
+                  <p className="text-[var(--color-text-secondary)] text-xs">Loading customer details…</p>
                 </div>
               ) : (
                 <>
@@ -334,13 +334,13 @@ const ManageCustomers = () => {
                   {drawerCustomer?.reviews_given != null && (
                     <div className="flex items-center gap-2 p-3 bg-purple-500/5 border border-purple-500/15 rounded-2xl">
                       <Star size={14} className="text-purple-400" />
-                      <span className="text-white font-black text-base">{drawerCustomer.reviews_given}</span>
-                      <span className="text-zinc-500 text-xs">review{drawerCustomer.reviews_given !== 1 ? 's' : ''} submitted</span>
+                      <span className="text-[var(--color-text-primary)] font-black text-base">{drawerCustomer.reviews_given}</span>
+                      <span className="text-[var(--color-text-secondary)] text-xs">review{drawerCustomer.reviews_given !== 1 ? 's' : ''} submitted</span>
                     </div>
                   )}
 
                   {/* Contact & Profile */}
-                  <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-0">
+                  <div className="bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl p-4 space-y-0">
                     <DrawerRow label={<span className="flex items-center gap-1.5"><Mail size={11} />Email</span>} value={drawerCustomer?.email} />
                     <DrawerRow label={<span className="flex items-center gap-1.5"><Phone size={11} />Phone</span>} value={drawerCustomer?.phone} />
                     <DrawerRow label={<span className="flex items-center gap-1.5"><MapPin size={11} />City</span>} value={drawerCustomer?.city} />
@@ -367,7 +367,7 @@ const ManageCustomers = () => {
 
             {/* Action buttons footer */}
             {!drawerLoading && drawerCustomer && (
-              <div className="px-6 py-4 border-t border-white/10 bg-[#0a0f20]/60 shrink-0 space-y-3">
+              <div className="px-6 py-4 border-t border-[var(--color-border-subtle)] bg-[var(--color-secondary-bg)] shrink-0 space-y-3">
                 {/* Block / Unblock */}
                 <button
                   disabled={actionLoading}
@@ -400,32 +400,32 @@ const ManageCustomers = () => {
       {/* Edit Customer Dialog */}
       {editingCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
-          <div className="relative w-full max-w-md bg-[#0e162c] border border-white/10 rounded-[32px] p-6 shadow-2xl">
+          <div className="relative w-full max-w-md bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
             <div className="absolute top-0 right-0 p-4">
-              <button onClick={() => setEditingCustomer(null)} className="p-2 rounded-xl text-zinc-400 hover:text-white cursor-pointer"><X size={18} /></button>
+              <button onClick={() => setEditingCustomer(null)} className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer"><X size={18} /></button>
             </div>
-            <h3 className="text-white font-bold text-lg mb-1">Edit Information</h3>
-            <p className="text-zinc-500 text-xs mb-5">Modify account data for customer ID {editingCustomer.customer_id}</p>
+            <h3 className="text-[var(--color-text-primary)] font-bold text-lg mb-1">Edit Information</h3>
+            <p className="text-[var(--color-text-secondary)] text-xs mb-5">Modify account data for customer ID {editingCustomer.customer_id}</p>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-zinc-500 text-xs font-bold mb-1.5">Full Name</label>
-                <input type="text" value={editingCustomer.full_name || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, full_name: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl text-white text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" required />
+                <label className="block text-[var(--color-text-secondary)] text-xs font-bold mb-1.5">Full Name</label>
+                <input type="text" value={editingCustomer.full_name || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, full_name: e.target.value })} className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] rounded-xl text-[var(--color-text-primary)] text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" required />
               </div>
               <div>
-                <label className="block text-zinc-500 text-xs font-bold mb-1.5">Phone Number</label>
-                <input type="text" value={editingCustomer.phone || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl text-white text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
+                <label className="block text-[var(--color-text-secondary)] text-xs font-bold mb-1.5">Phone Number</label>
+                <input type="text" value={editingCustomer.phone || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })} className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] rounded-xl text-[var(--color-text-primary)] text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
               </div>
               <div>
-                <label className="block text-zinc-500 text-xs font-bold mb-1.5">City</label>
-                <input type="text" value={editingCustomer.city || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, city: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl text-white text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
+                <label className="block text-[var(--color-text-secondary)] text-xs font-bold mb-1.5">City</label>
+                <input type="text" value={editingCustomer.city || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, city: e.target.value })} className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] rounded-xl text-[var(--color-text-primary)] text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
               </div>
               <div>
-                <label className="block text-zinc-500 text-xs font-bold mb-1.5">Address</label>
-                <input type="text" value={editingCustomer.address || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl text-white text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
+                <label className="block text-[var(--color-text-secondary)] text-xs font-bold mb-1.5">Address</label>
+                <input type="text" value={editingCustomer.address || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })} className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] rounded-xl text-[var(--color-text-primary)] text-xs px-3 py-2.5 focus:border-blue-500/50 outline-none" />
               </div>
               <div className="pt-2 flex justify-end gap-3">
-                <button type="button" onClick={() => setEditingCustomer(null)} className="px-4 py-2 bg-transparent border border-white/10 text-zinc-400 hover:text-white rounded-xl text-xs cursor-pointer">Cancel</button>
-                <button type="submit" disabled={actionLoading} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-blue-500/10 flex items-center gap-2">
+                <button type="button" onClick={() => setEditingCustomer(null)} className="px-4 py-2 bg-transparent border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl text-xs cursor-pointer">Cancel</button>
+                <button type="submit" disabled={actionLoading} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-[var(--color-text-primary)] font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-blue-500/10 flex items-center gap-2">
                   {actionLoading && <Loader2 size={12} className="animate-spin" />}
                   Save Parameters
                 </button>
@@ -438,18 +438,18 @@ const ManageCustomers = () => {
       {/* Block/Unblock Confirm */}
       {showBlockConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
-          <div className="relative w-full max-w-sm bg-[#0e162c] border border-white/10 rounded-[32px] p-6 shadow-2xl">
-            <h3 className="text-white font-bold text-lg mb-1">{showBlockConfirm.status === 'Blocked' ? 'Unblock Customer?' : 'Block Customer?'}</h3>
-            <p className="text-zinc-500 text-xs mt-2 leading-relaxed">
-              Are you sure you want to {showBlockConfirm.status === 'Blocked' ? 'restore access for' : 'suspend'} <span className="text-white font-bold">{showBlockConfirm.full_name}</span>?
+          <div className="relative w-full max-w-sm bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
+            <h3 className="text-[var(--color-text-primary)] font-bold text-lg mb-1">{showBlockConfirm.status === 'Blocked' ? 'Unblock Customer?' : 'Block Customer?'}</h3>
+            <p className="text-[var(--color-text-secondary)] text-xs mt-2 leading-relaxed">
+              Are you sure you want to {showBlockConfirm.status === 'Blocked' ? 'restore access for' : 'suspend'} <span className="text-[var(--color-text-primary)] font-bold">{showBlockConfirm.full_name}</span>?
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setShowBlockConfirm(null)} className="px-4 py-2 border border-white/10 text-zinc-400 hover:text-white rounded-xl text-xs cursor-pointer">Cancel</button>
+              <button onClick={() => setShowBlockConfirm(null)} className="px-4 py-2 border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl text-xs cursor-pointer">Cancel</button>
               <button
                 disabled={actionLoading}
                 onClick={() => toggleBlockStatus(showBlockConfirm.customer_id)}
                 className={`px-5 py-2.5 font-bold rounded-xl text-xs cursor-pointer shadow-lg flex items-center gap-2 ${
-                  showBlockConfirm.status === 'Blocked' ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-500/10' : 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/10'
+                  showBlockConfirm.status === 'Blocked' ? 'bg-green-600 hover:bg-green-500 text-[var(--color-text-primary)] shadow-green-500/10' : 'bg-red-600 hover:bg-red-500 text-[var(--color-text-primary)] shadow-red-500/10'
                 }`}
               >
                 {actionLoading && <Loader2 size={12} className="animate-spin" />}
@@ -463,17 +463,17 @@ const ManageCustomers = () => {
       {/* Delete Confirm */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
-          <div className="relative w-full max-w-sm bg-[#0e162c] border border-white/10 rounded-[32px] p-6 shadow-2xl">
-            <h3 className="text-white font-bold text-lg mb-1">Delete Customer Registry?</h3>
-            <p className="text-zinc-500 text-xs mt-2 leading-relaxed">
+          <div className="relative w-full max-w-sm bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
+            <h3 className="text-[var(--color-text-primary)] font-bold text-lg mb-1">Delete Customer Registry?</h3>
+            <p className="text-[var(--color-text-secondary)] text-xs mt-2 leading-relaxed">
               Caution: This action is permanent. Deleting this profile removes all historical logs, linked bookings, and cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setShowDeleteConfirm(null)} className="px-4 py-2 border border-white/10 text-zinc-400 hover:text-white rounded-xl text-xs cursor-pointer">Cancel</button>
+              <button onClick={() => setShowDeleteConfirm(null)} className="px-4 py-2 border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl text-xs cursor-pointer">Cancel</button>
               <button
                 disabled={actionLoading}
                 onClick={() => deleteCustomer(showDeleteConfirm)}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-red-500/10 flex items-center gap-2"
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-[var(--color-text-primary)] font-bold rounded-xl text-xs cursor-pointer shadow-lg shadow-red-500/10 flex items-center gap-2"
               >
                 {actionLoading && <Loader2 size={12} className="animate-spin" />}
                 Confirm Delete

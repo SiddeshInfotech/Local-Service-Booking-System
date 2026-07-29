@@ -13,9 +13,9 @@ const Button = ({
   
   const variants = {
     primary: 'bg-[#D4AF37] hover:bg-[#F4C542] text-[#111111] shadow-lg shadow-gold-accent/10 hover:shadow-gold-accent/20 active:scale-[0.98]',
-    secondary: 'bg-[#1A1D23] hover:bg-[#232831] text-[#FFFFFF] border border-[#D4AF37]/20 active:scale-[0.98]',
-    outline: 'border border-[#D4AF37]/20 text-zinc-300 hover:bg-[#232831] hover:text-white active:scale-[0.98]',
-    ghost: 'text-zinc-400 hover:text-white hover:bg-zinc-900/50 active:scale-[0.98]'
+    secondary: 'bg-[var(--color-secondary-bg)] hover:bg-[var(--color-hover-bg)] text-[var(--color-text-primary)] border border-[#D4AF37]/20 active:scale-[0.98]',
+    outline: 'border border-[#D4AF37]/20 text-[var(--color-text-primary)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-primary)] active:scale-[0.98]',
+    ghost: 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-secondary-bg)]/50 active:scale-[0.98]'
   };
 
   return (

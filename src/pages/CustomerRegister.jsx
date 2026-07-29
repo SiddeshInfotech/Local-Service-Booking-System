@@ -5,6 +5,7 @@ import InputField from '../components/InputField';
 import customerRegisterIllustration from '../assets/images/customer_register_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
 import { API_BASE_URL } from '../config';
+import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 
 const CustomerRegister = () => {
   const [fullName, setFullName] = useState('');
@@ -92,7 +93,7 @@ const CustomerRegister = () => {
       )}
 
       {/* Main split card */}
-      <div className="w-full max-w-6xl bg-[#131b2e]/30 border border-zinc-800/80 rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 shadow-2xl backdrop-blur-md">
+      <div className="w-full max-w-6xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 shadow-2xl backdrop-blur-md">
 
         {/* Left Side: Full-bleed Illustration Panel */}
         <div className="relative hidden lg:block overflow-hidden min-h-[520px]">
@@ -102,28 +103,28 @@ const CustomerRegister = () => {
             className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a]/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-bg)]/30 to-transparent" />
 
           {/* Caption at the bottom */}
           <div className="absolute bottom-8 left-8 right-8">
-            <h2 className="text-2xl font-bold text-white tracking-tight leading-snug drop-shadow-md">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight leading-snug drop-shadow-md">
               Join Fixora 🚀
             </h2>
-            <p className="text-white/70 mt-2 text-sm leading-relaxed drop-shadow-md">
+            <p className="text-[var(--color-text-primary)]/70 mt-2 text-sm leading-relaxed drop-shadow-md">
               Create your account and start booking trusted local services instantly.
             </p>
           </div>
         </div>
 
         {/* Right Side: Account Creation Form Card */}
-        <div className="p-8 sm:p-10 flex flex-col justify-center bg-[#0B1220]/45">
+        <div className="p-8 sm:p-10 flex flex-col justify-center bg-[var(--color-secondary-bg)]/40">
           
 
           
-          <h2 className="text-3xl font-bold text-white mb-1">
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-1">
             Create Account
           </h2>
-          <p className="text-zinc-500 text-sm mb-6">
+          <p className="text-[var(--color-text-secondary)] text-sm mb-6">
             Sign up to continue
           </p>
 
@@ -160,7 +161,7 @@ const CustomerRegister = () => {
 
             {/* Select Role Dropdown */}
             <div className="flex flex-col w-full">
-              <label htmlFor="role" className="text-gray-300 font-medium text-sm sm:text-base">
+              <label htmlFor="role" className="text-[var(--color-text-primary)] font-medium text-sm sm:text-base">
                 Select Role <span className="text-blue-500">*</span>
               </label>
               <select
@@ -168,23 +169,26 @@ const CustomerRegister = () => {
                 required
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full p-3 bg-[#262626] border border-gray-700 rounded-xl text-white outline-none mt-2 cursor-pointer focus:border-blue-500 transition duration-300"
+                className="w-full p-3 bg-[var(--color-secondary-bg)] border border-[var(--color-border-subtle)] rounded-xl text-[var(--color-text-primary)] outline-none mt-2 cursor-pointer focus:border-[#D4AF37] transition duration-300"
               >
                 <option value="" disabled>Choose Role</option>
-                <option value="customer" className="bg-[#111827]">Customer</option>
-                <option value="provider" className="bg-[#111827]">Service Provider</option>
+                <option value="customer" className="bg-[var(--color-primary-bg)]">Customer</option>
+                <option value="provider" className="bg-[var(--color-primary-bg)]">Service Provider</option>
               </select>
             </div>
 
-            <InputField
-              label="Password"
-              id="password"
-              type="password"
-              required
-              placeholder="Create password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div>
+              <InputField
+                label="Password"
+                id="password"
+                type="password"
+                required
+                placeholder="Create password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <PasswordStrengthIndicator password={password} />
+            </div>
 
             <InputField
               label="Confirm Password"
@@ -199,7 +203,7 @@ const CustomerRegister = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition duration-300 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-[var(--color-text-primary)] font-semibold py-3 rounded-xl transition duration-300 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2"
             >
               {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
@@ -209,9 +213,9 @@ const CustomerRegister = () => {
           {/* OR divider */}
           <div className="relative flex items-center justify-center my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-800" />
+              <div className="w-full border-t border-[var(--color-border-subtle)]" />
             </div>
-            <span className="relative z-10 px-4 bg-[#111827] text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+            <span className="relative z-10 px-4 bg-[var(--color-secondary-bg)] text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest">
               OR
             </span>
           </div>
@@ -243,7 +247,7 @@ const CustomerRegister = () => {
             <span>Sign up with Google</span>
           </button>
 
-          <p className="text-center mt-6 text-sm text-zinc-400">
+          <p className="text-center mt-6 text-sm text-[var(--color-text-secondary)]">
             Already have an account?{' '}
             <Link to="/customer/login" className="text-blue-500 hover:text-blue-400 font-semibold transition-colors underline underline-offset-4">
               Login Here

@@ -1,7 +1,8 @@
 // src/api.js
 // Centralized fetch helper — attaches auth tokens, handles 401 refresh
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://local-service-booking-system.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 /** Return the stored token for the current role */
 export function getToken() {

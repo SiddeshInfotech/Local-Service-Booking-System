@@ -40,6 +40,71 @@ const serviceInclusions = {
   'Electrician': ['Certified safety audit of local wiring terminal','High-durability insulated wiring replacements','MCB diagnostics to prevent short circuits','Appliance grounding verification','100% compliance with local electrical safety code'],
 };
 
+/* ─── Specific Service Image Mapping ─── */
+const getServiceImgUrl = (serviceName, catName) => {
+  if (!serviceName) return null;
+  const name = serviceName.toLowerCase();
+
+  // Electrician
+  if (name.includes('wiring')) return 'https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('fan')) return 'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('switchboard')) return 'https://images.unsplash.com/photo-1555626906-f8a00d8811f9?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('light')) return 'https://images.unsplash.com/photo-1557992260-ec58e38d363c?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('socket')) return 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=700&auto=format&fit=crop';
+
+  // Plumber
+  if (name.includes('pipe')) return 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('bathroom') && catName === 'Plumbing') return 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('drain')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('leak')) return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('tank')) return 'https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('water') && catName === 'Plumbing') return 'https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?q=80&w=700&auto=format&fit=crop';
+
+  // Carpenter
+  if (name.includes('furniture')) return 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('door')) return 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('window')) return 'https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('cabinet')) return 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('shelf') || name.includes('shelv')) return 'https://images.unsplash.com/photo-1497367664687-f8319baee20e?q=80&w=700&auto=format&fit=crop';
+
+  // Painter
+  if (name.includes('interior')) return 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('exterior')) return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('texture')) return 'https://images.unsplash.com/photo-1563842137996-039c3a372134?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('waterproof')) return 'https://images.unsplash.com/photo-1588874020942-0f04746f3453?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('paint')) return 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=700&auto=format&fit=crop';
+
+  // Cleaner
+  if (name.includes('deep clean') || name.includes('home clean') || name.includes('deep')) return 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('office')) return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('kitchen')) return 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('bathroom') && catName === 'Cleaning') return 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('sofa')) return 'https://images.unsplash.com/photo-1558211583-d26f610c1eb1?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('clean')) return 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop';
+
+  // Mechanic
+  if (name.includes('bike') || name.includes('motorcycle')) return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('car')) return 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('engine')) return 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('oil')) return 'https://images.unsplash.com/photo-1621373516086-4fc642642d99?q=80&w=700&auto=format&fit=crop';
+  if (catName === 'Mechanic') return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=700&auto=format&fit=crop';
+
+  // AC Repair
+  if (name.includes('install') && catName === 'AC Repair') return 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('gas') || name.includes('refill')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('servic')) return 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('repair') && catName === 'AC Repair') return 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?q=80&w=700&auto=format&fit=crop';
+
+  // Appliance Repair
+  if (name.includes('washing')) return 'https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('refrigerator') || name.includes('fridge')) return 'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('microwave') || name.includes('oven')) return 'https://images.unsplash.com/photo-1586208958839-06c17cacdf08?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('tv') || name.includes('television')) return 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('purifier') || name.includes('ro')) return 'https://images.unsplash.com/photo-1579730598818-a6b68b375b42?q=80&w=700&auto=format&fit=crop';
+  
+  return null;
+};
+
 /* ─── Intersection Observer hook ─── */
 const useInView = (threshold = 0.12) => {
   const ref = useRef(null);
@@ -339,11 +404,13 @@ const ServicesPage = () => {
       availability: 'Mon - Sun',
       rating: '4.8',
       reviewsCount: '150',
-      imgUrl: catName === 'Cleaning' ? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop' :
+      imgUrl: getServiceImgUrl(s.service_name, catName) || (
+              catName === 'Cleaning' ? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop' :
               catName === 'Plumbing' ? 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop' :
               catName === 'AC Repair' ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop' :
               catName === 'Carpenter' ? 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop' :
-              ELECTRICIAN_IMG,
+              ELECTRICIAN_IMG
+      ),
       fallbackImgUrl: ELECTRICIAN_FALLBACK,
       accentColor: categoryColors[catName] || '#60a5fa'
     };
@@ -356,7 +423,7 @@ const ServicesPage = () => {
   return (
     <div
       onMouseMove={handleMouseMove}
-      className="min-h-screen bg-[#0D0D0D] text-white selection:bg-[#D4AF37]/30 selection:text-white font-sans relative overflow-x-hidden"
+      className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] selection:bg-[#D4AF37]/30 selection:text-[var(--color-text-primary)] font-sans relative overflow-x-hidden"
     >
 
       {/* ─── Global Styles ─── */}
@@ -387,7 +454,7 @@ const ServicesPage = () => {
 
         /* Glass panel */
         .glass-panel {
-          background: rgba(18,18,18,0.68);
+          background: var(--color-card-bg);
           backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
           border: 1px solid rgba(212,175,55,0.13);
         }
@@ -500,7 +567,7 @@ const ServicesPage = () => {
 
         /* Input focus */
         .form-input {
-          background: rgba(26,29,35,0.8);
+          background: var(--color-secondary-bg);
           border: 1px solid rgba(212,175,55,0.22);
           transition: all 0.3s ease;
         }
@@ -511,7 +578,7 @@ const ServicesPage = () => {
         }
 
         /* Select dark */
-        select option { background: #1a1a1a; color: #fff; }
+        select option { background: var(--color-primary-bg); color: var(--color-text-primary); }
 
         /* Fade-in animation */
         @keyframes fadeSlideUp {
@@ -531,7 +598,7 @@ const ServicesPage = () => {
           className="absolute inset-0 bg-cover bg-center z-0 hero-video-zoom brightness-[0.22] saturate-[0.8]"
           style={{ backgroundImage: `url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1800&auto=format&fit=crop')` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-[#0D0D0D]/55 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-primary-bg)] via-[var(--color-primary-bg)]/40 to-[var(--color-primary-bg)]/55 z-[1]" />
 
         {/* Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
@@ -542,25 +609,25 @@ const ServicesPage = () => {
             </div>
           </AnimSection>
           <AnimSection dir="up" delay={100}>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight mb-5 text-white leading-[1.08]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight mb-5 text-[var(--color-text-primary)] leading-[1.08]">
               Exquisite Solutions For<br />
               <span className="svc-gold-shimmer">Every Household Task</span>
             </h1>
           </AnimSection>
           <AnimSection dir="up" delay={200}>
-            <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-7">
+            <p className="text-[var(--color-text-secondary)] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-7">
               Certified, vetted practitioners who bring tools, experience, and supreme quality right to your doorstep. Choose from our curated service menu below.
             </p>
           </AnimSection>
           <AnimSection dir="up" delay={300}>
             <div className="flex flex-wrap gap-3 justify-center">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+              <div className="flex items-center gap-2 bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] px-4 py-2 rounded-full text-xs text-[var(--color-text-primary)]">
                 <span className="text-[#D4AF37]">✔</span> Vetted Professionals
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+              <div className="flex items-center gap-2 bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] px-4 py-2 rounded-full text-xs text-[var(--color-text-primary)]">
                 <span className="text-[#D4AF37]">⚡</span> &lt; 30 Min Response
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-zinc-300">
+              <div className="flex items-center gap-2 bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] px-4 py-2 rounded-full text-xs text-[var(--color-text-primary)]">
                 <span className="text-[#D4AF37]">🔒</span> Secure Booking
               </div>
             </div>
@@ -586,7 +653,7 @@ const ServicesPage = () => {
                   className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
                     activeCategoryTab === cat
                       ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
-                      : 'bg-[#1A1D23]/80 border border-[#D4AF37]/15 text-zinc-400 hover:text-white hover:border-[#D4AF37]/45 hover:bg-[#1A1D23]'
+                      : 'bg-[var(--color-secondary-bg)]/80 border border-[#D4AF37]/15 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[#D4AF37]/45 hover:bg-[var(--color-secondary-bg)]'
                   }`}
                 >
                   {cat}
@@ -606,7 +673,7 @@ const ServicesPage = () => {
 
                   {/* Image */}
                   <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/10 to-transparent z-[2]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card-bg)] via-[var(--color-card-bg)]/10 to-transparent z-[2]" />
                     <img
                       src={svc.imgUrl}
                       alt={svc.title}
@@ -624,9 +691,9 @@ const ServicesPage = () => {
                       style={{ background: `radial-gradient(ellipse at center, ${svc.accentColor}08 0%, transparent 70%)` }} />
 
                     {/* Category badge */}
-                    <div className="absolute top-4 left-4 z-10 bg-black/65 backdrop-blur-md border border-[#D4AF37]/22 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                    <div className="absolute top-4 left-4 z-10 bg-[var(--color-modal-overlay)] backdrop-blur-md border border-[#D4AF37]/22 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
                       <IconComponent size={13} className="text-[#D4AF37]" />
-                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">{svc.category}</span>
+                      <span className="text-[10px] font-bold text-[var(--color-text-primary)] uppercase tracking-wider">{svc.category}</span>
                     </div>
                     {/* Rating badge */}
                     <div className="absolute top-4 right-4 z-10 bg-[#D4AF37]/12 backdrop-blur-md border border-[#D4AF37]/32 px-3.5 py-1.5 rounded-full flex items-center gap-1">
@@ -637,24 +704,24 @@ const ServicesPage = () => {
 
                   {/* Card content */}
                   <div className="p-7 flex flex-col flex-grow">
-                    <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#D4AF37] transition-colors duration-300">
+                    <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2.5 group-hover:text-[#D4AF37] transition-colors duration-300">
                       {svc.title}
                     </h3>
-                    <p className="text-zinc-400 text-xs leading-relaxed mb-5 flex-grow">
+                    <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed mb-5 flex-grow">
                       {svc.desc}
                     </p>
 
                     {/* Metadata */}
-                    <div className="border-t border-[#D4AF37]/10 pt-4 space-y-3 mb-5 text-xs text-zinc-300">
+                    <div className="border-t border-[#D4AF37]/10 pt-4 space-y-3 mb-5 text-xs text-[var(--color-text-primary)]">
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-500">Duration</span>
-                        <span className="flex items-center gap-1.5 font-medium text-white">
+                        <span className="text-[var(--color-text-secondary)]">Duration</span>
+                        <span className="flex items-center gap-1.5 font-medium text-[var(--color-text-primary)]">
                           <Clock size={12} className="text-[#D4AF37]" /> {svc.duration}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-zinc-500">Availability</span>
-                        <span className="flex items-center gap-1.5 font-medium text-white">
+                        <span className="text-[var(--color-text-secondary)]">Availability</span>
+                        <span className="flex items-center gap-1.5 font-medium text-[var(--color-text-primary)]">
                           <Calendar size={12} className="text-[#D4AF37]" /> {svc.availability}
                         </span>
                       </div>
@@ -662,12 +729,12 @@ const ServicesPage = () => {
 
                     {/* Pricing */}
                     <div className="mt-auto">
-                      <div className="flex justify-between items-end border-b border-white/5 pb-3.5 mb-4">
+                      <div className="flex justify-between items-end border-b border-[var(--color-border-subtle)] pb-3.5 mb-4">
                         <div>
-                          <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold mb-0.5">Starting From</p>
+                          <p className="text-[9px] text-[var(--color-text-secondary)] uppercase tracking-widest font-semibold mb-0.5">Starting From</p>
                           <p className="text-2xl font-black text-[#D4AF37]">{svc.price}</p>
                         </div>
-                        <span className="text-[10px] text-zinc-500 italic pb-1">Pre-vetted rates</span>
+                        <span className="text-[10px] text-[var(--color-text-secondary)] italic pb-1">Pre-vetted rates</span>
                       </div>
 
                       <div className="flex gap-3">
@@ -695,7 +762,7 @@ const ServicesPage = () => {
 
         {/* Empty state */}
         {!loading && filteredServices.length === 0 && (
-          <div className="text-center py-20 text-zinc-500">
+          <div className="text-center py-20 text-[var(--color-text-secondary)]">
             <p className="text-lg font-semibold mb-2">No services found</p>
             <p className="text-sm">Try selecting a different category.</p>
           </div>
@@ -706,33 +773,33 @@ const ServicesPage = () => {
       {detailOpen && detailService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setDetailOpen(false)}
-            className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
+            className="absolute inset-0 bg-[var(--color-modal-overlay)] backdrop-blur-2xl" />
 
-          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-lg overflow-hidden shadow-2xl shadow-black/80 fade-slide-up z-10 p-8 space-y-6 text-left">
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-lg overflow-hidden shadow-2xl shadow-[var(--theme-glass-shadow-1)] fade-slide-up z-10 p-8 space-y-6 text-left">
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-widest border border-[#D4AF37]/25 px-3 py-1 rounded-full">Service Details</span>
-                <h3 className="text-2xl font-black text-white mt-3">{detailService.title}</h3>
+                <h3 className="text-2xl font-black text-[var(--color-text-primary)] mt-3">{detailService.title}</h3>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Star size={13} className="text-[#D4AF37] fill-[#D4AF37]" />
                   <span className="text-sm text-[#D4AF37] font-bold">{detailService.rating}</span>
-                  <span className="text-zinc-500 text-xs">({detailService.reviewsCount} reviews)</span>
+                  <span className="text-[var(--color-text-secondary)] text-xs">({detailService.reviewsCount} reviews)</span>
                 </div>
               </div>
               <button onClick={() => setDetailOpen(false)}
-                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer flex-shrink-0">
+                className="w-9 h-9 rounded-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] flex items-center justify-center hover:bg-[var(--color-overlay-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all cursor-pointer flex-shrink-0">
                 <X size={18} />
               </button>
             </div>
 
             {/* Inclusions */}
             <div className="space-y-3.5">
-              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-widest flex items-center gap-1.5">
                 <ClipboardList size={14} className="text-[#D4AF37]" /> What is Included
               </h4>
               <ul className="space-y-2.5">
                 {(serviceInclusions[detailService.category] || ['Standard safety inspections','Full tools setup and cleanup','Premium components checking','Diagnostics checklist verification']).map((inc, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-400">
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-[var(--color-text-secondary)]">
                     <span className="text-[#D4AF37] font-black mt-0.5 text-base leading-none">✓</span>
                     <span>{inc}</span>
                   </li>
@@ -769,13 +836,13 @@ const ServicesPage = () => {
       {bookingOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => !successBooking && !submittingBooking && setBookingOpen(false)}
-            className="absolute inset-0 bg-black/87 backdrop-blur-2xl" />
+            className="absolute inset-0 bg-[var(--color-modal-overlay)] backdrop-blur-2xl" />
 
-          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-2xl overflow-hidden shadow-2xl shadow-black/80 max-h-[92vh] flex flex-col fade-slide-up z-10 text-left">
+          <div className="relative glass-panel rounded-[36px] border border-[#D4AF37]/25 w-full max-w-2xl overflow-hidden shadow-2xl shadow-[var(--theme-glass-shadow-1)] max-h-[92vh] flex flex-col fade-slide-up z-10 text-left">
 
             {/* Success overlay */}
             {successBooking && (
-              <div className="absolute inset-0 bg-[#0D0D0D]/98 flex flex-col items-center justify-center z-50 p-8 text-center">
+              <div className="absolute inset-0 bg-[var(--color-primary-bg)]/98 flex flex-col items-center justify-center z-50 p-8 text-center">
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {[...Array(24)].map((_, i) => (
                     <div key={i} className="sparkle-particle"
@@ -790,8 +857,8 @@ const ServicesPage = () => {
                 <div className="w-24 h-24 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/35 flex items-center justify-center mb-6 animate-checkmark">
                   <CheckCircle size={56} className="text-[#D4AF37]" />
                 </div>
-                <h2 className="text-3xl font-black mb-3 text-white">Booking Confirmed!</h2>
-                <p className="text-zinc-400 text-sm max-w-md leading-relaxed mb-6">
+                <h2 className="text-3xl font-black mb-3 text-[var(--color-text-primary)]">Booking Confirmed!</h2>
+                <p className="text-[var(--color-text-secondary)] text-sm max-w-md leading-relaxed mb-6">
                   Your booking has been submitted. A Fixora certified expert will contact you shortly to confirm the schedule.
                 </p>
                 <div className="text-[#D4AF37] font-semibold text-xs tracking-wider uppercase border border-[#D4AF37]/22 bg-[#D4AF37]/5 px-5 py-2.5 rounded-full">
@@ -801,15 +868,15 @@ const ServicesPage = () => {
             )}
 
             {/* Header */}
-            <div className="px-8 py-6 border-b border-[#D4AF37]/15 flex items-center justify-between bg-[#141414]/90 flex-shrink-0">
+            <div className="px-8 py-6 border-b border-[#D4AF37]/15 flex items-center justify-between bg-[var(--color-secondary-bg)]/90 flex-shrink-0">
               <div>
-                <h2 className="text-2xl font-black text-white">
+                <h2 className="text-2xl font-black text-[var(--color-text-primary)]">
                   Schedule <span className="gold-text-gradient">Your Booking</span>
                 </h2>
-                <p className="text-zinc-500 text-xs mt-1">Vetted professionals at your fingertips</p>
+                <p className="text-[var(--color-text-secondary)] text-xs mt-1">Vetted professionals at your fingertips</p>
               </div>
               <button onClick={() => setBookingOpen(false)}
-                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer">
+                className="w-9 h-9 rounded-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] flex items-center justify-center hover:bg-[var(--color-overlay-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all cursor-pointer">
                 <X size={18} />
               </button>
             </div>
@@ -818,63 +885,63 @@ const ServicesPage = () => {
             <form onSubmit={handleBookingSubmit} className="flex-grow overflow-y-auto p-8 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <User size={12} className="text-[#D4AF37]" /> Full Name
                   </label>
                   <input type="text" name="name" required value={formData.name} onChange={handleInputChange}
                     placeholder="Enter full name"
-                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <Phone size={12} className="text-[#D4AF37]" /> Mobile Number
                   </label>
                   <input type="tel" name="mobile" required value={formData.mobile} onChange={handleInputChange}
                     placeholder="+91 9876543210"
-                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                   <Mail size={12} className="text-[#D4AF37]" /> Email Address
                 </label>
                 <input type="email" name="email" required value={formData.email} onChange={handleInputChange}
                   placeholder="name@example.com"
-                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div className="sm:col-span-2 space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <MapPin size={12} className="text-[#D4AF37]" /> Address
                   </label>
                   <input type="text" name="address" required value={formData.address} onChange={handleInputChange}
                     placeholder="House No, Street, Landmark"
-                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <Map size={12} className="text-[#D4AF37]" /> City
                   </label>
                   <input type="text" name="city" required value={formData.city} onChange={handleInputChange}
                     placeholder="City"
-                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600" />
+                    className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Service Category</label>
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider">Service Category</label>
                   <select name="category" value={formData.category} onChange={handleInputChange}
-                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    className="form-input w-full bg-[var(--color-secondary-bg)] rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] cursor-pointer">
                     {categories.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Specific Service</label>
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider">Specific Service</label>
                   <select name="subService" value={formData.subService} onChange={handleInputChange}
-                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    className="form-input w-full bg-[var(--color-secondary-bg)] rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] cursor-pointer">
                     {serviceOptions[formData.category]?.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
@@ -882,14 +949,14 @@ const ServicesPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Preferred Date</label>
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider">Preferred Date</label>
                   <input type="date" name="date" required value={formData.date} onChange={handleInputChange}
-                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer" />
+                    className="form-input w-full bg-[var(--color-secondary-bg)] rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] cursor-pointer" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Time Slot</label>
+                  <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider">Time Slot</label>
                   <select name="time" required value={formData.time} onChange={handleInputChange}
-                    className="form-input w-full bg-[#1A1D23] rounded-xl px-4 py-3.5 text-xs text-white cursor-pointer">
+                    className="form-input w-full bg-[var(--color-secondary-bg)] rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] cursor-pointer">
                     <option value="">Choose a Slot</option>
                     <option value="08:00 AM - 11:00 AM">08:00 AM – 11:00 AM (Morning)</option>
                     <option value="11:00 AM - 02:00 PM">11:00 AM – 02:00 PM (Midday)</option>
@@ -900,15 +967,15 @@ const ServicesPage = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Explain the Problem</label>
+                <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider">Explain the Problem</label>
                 <textarea name="problemDesc" rows="3" required value={formData.problemDesc} onChange={handleInputChange}
                   placeholder="Describe what you need help with (e.g. leaky faucet, AC not cooling, wiring issue…)"
-                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-white placeholder-zinc-600 resize-none" />
+                  className="form-input w-full rounded-xl px-4 py-3.5 text-xs text-[var(--color-text-primary)] placeholder-zinc-600 resize-none" />
               </div>
             </form>
 
             {/* Footer */}
-            <div className="px-8 py-5 border-t border-[#D4AF37]/15 flex justify-end gap-3 bg-[#141414]/90 flex-shrink-0">
+            <div className="px-8 py-5 border-t border-[#D4AF37]/15 flex justify-end gap-3 bg-[var(--color-secondary-bg)]/90 flex-shrink-0">
               <RippleBtn disabled={submittingBooking} onClick={() => setBookingOpen(false)} className="outline-gold-btn px-6 py-3 rounded-full text-xs cursor-pointer">
                 Cancel
               </RippleBtn>

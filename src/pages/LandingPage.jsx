@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { API_BASE_URL } from '../config';
 import { Link } from 'react-router-dom';
 import {
   Sparkles, Wrench, Snowflake, Hammer, Zap,
@@ -194,17 +195,7 @@ const LandingPage = () => {
 
   /* Live booking ticker */
   const [liveBookingIdx, setLiveBookingIdx] = useState(0);
-  const liveBookings = [
-    { service: 'AC Deep Servicing', location: 'Delhi NCR', status: 'Dispatched', time: 'Just now' },
-    { service: 'Full Home Deep Cleaning', location: 'Mumbai South', status: 'Completed', time: '2 mins ago' },
-    { service: 'Bathroom Tap Repair', location: 'Bengaluru Indiranagar', status: 'Scheduled', time: '5 mins ago' },
-    { service: 'Modular Cabinet Fitting', location: 'Pune Kothrud', status: 'In Progress', time: '8 mins ago' },
-    { service: 'Switchboard Installation', location: 'Hyderabad Gachibowli', status: 'Dispatched', time: '12 mins ago' },
-  ];
-  useEffect(() => {
-    const t = setInterval(() => setLiveBookingIdx(p => (p + 1) % liveBookings.length), 3500);
-    return () => clearInterval(t);
-  }, []);
+  const liveBookings = []; // Fake data removed as requested
 
   const services = [
     { icon: Sparkles, name: 'Cleaning', desc: 'Immaculate deep cleaning, sanitizing, and organizing for residential & commercial spaces.', price: '₹299', imgUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=500&auto=format&fit=crop' },
@@ -253,6 +244,19 @@ const LandingPage = () => {
   /* Dashboard stats for animated numbers */
   const [dashboardVisible, setDashboardVisible] = useState(false);
   const dashRef = useRef(null);
+  const [realStats, setRealStats] = useState({ providers: null });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/provider`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status && data.providers) {
+          setRealStats(prev => ({ ...prev, providers: data.providers.length }));
+        }
+      })
+      .catch(err => console.error(err));
+  }, []);
+
   useEffect(() => {
     const el = dashRef.current;
     if (!el) return;
@@ -281,13 +285,12 @@ const LandingPage = () => {
     return decimals > 0 ? val.toFixed(decimals) : Math.round(val);
   };
 
-  const satisfactionVal = useCountUp(98.4, dashboardVisible, 1);
-  const providersVal = useCountUp(1200, dashboardVisible, 0, 1200);
+  const providersVal = useCountUp(realStats.providers || 0, dashboardVisible, 0, 1200);
 
   return (
     <div
       onMouseMove={handleMouseMove}
-      className="min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden font-sans relative selection:bg-[#D4AF37]/35 selection:text-white"
+      className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] overflow-x-hidden font-sans relative selection:bg-[#D4AF37]/35 selection:text-[var(--color-text-primary)]"
     >
 
       {/* ═══ GLOBAL STYLES ═══ */}
@@ -352,6 +355,11 @@ const LandingPage = () => {
           -webkit-backdrop-filter: blur(28px);
           border: 1px solid rgba(212,175,55,0.13);
         }
+        [data-theme='light'] .glass-panel-luxury {
+          background: var(--color-card-bg);
+          border-color: var(--color-border-subtle);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
 
         /* Gold glow card */
         .gold-glow-border {
@@ -363,6 +371,14 @@ const LandingPage = () => {
           border-color: rgba(212,175,55,0.6);
           box-shadow: 0 0 30px rgba(212,175,55,0.22), inset 0 0 12px rgba(212,175,55,0.04);
           transform: translateY(-6px);
+        }
+        [data-theme='light'] .gold-glow-border {
+          border-color: var(--color-border-subtle);
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        [data-theme='light'] .gold-glow-border:hover {
+          border-color: rgba(212,175,55,0.4);
+          box-shadow: 0 8px 25px rgba(212,175,55,0.15), inset 0 0 10px rgba(212,175,55,0.02);
         }
 
         /* Animated dots */
@@ -408,6 +424,22 @@ const LandingPage = () => {
           50% { transform: translateY(-12px) rotate(-0.3deg); }
         }
         .floating-dashboard-widget { animation: floatingWidget 7s ease-in-out infinite; }
+
+        .dashboard-hero-card {
+          background: var(--color-card-bg);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          border: 1px solid var(--color-border-subtle);
+          box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+        }
+        [data-theme='light'] .dashboard-hero-card {
+          box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+        }
+
+        .dashboard-inner-card {
+          background: var(--color-hover-bg);
+          border: 1px solid var(--color-border-subtle);
+        }
 
         /* Light sweep on cards */
         .light-sweep {
@@ -487,9 +519,9 @@ const LandingPage = () => {
         </video>
 
         {/* Dark charcoal overlay (65%) for text readability */}
-        <div className="absolute inset-0 bg-[#1a1a1a]/65 z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0D0D0D]/70 via-transparent to-[#0D0D0D]/20 z-[1]" />
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0D0D0D] to-transparent z-[2]" />
+        <div className="absolute inset-0 bg-[var(--color-primary-bg)]/65 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-bg)]/70 via-transparent to-[var(--color-primary-bg)]/20 z-[1]" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[var(--color-primary-bg)] to-transparent z-[2]" />
 
         {/* Parallax orbs */}
         <div className="orb-blur-light absolute top-[12%] left-[5%] w-[500px] h-[500px] rounded-full bg-[#D4AF37]/5 z-[1]"
@@ -513,7 +545,7 @@ const LandingPage = () => {
             </div>
 
             {/* Animated heading word by word */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.1] tracking-tight text-white">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.1] tracking-tight text-[var(--color-text-primary)]">
               <AnimatedWords
                 text="Professional Home Services"
                 goldWords={[]}
@@ -528,7 +560,7 @@ const LandingPage = () => {
               />
             </h1>
 
-            <p className="text-zinc-300 text-sm sm:text-base lg:text-lg max-w-xl leading-relaxed"
+            <p className="text-[var(--color-text-primary)] text-sm sm:text-base lg:text-lg max-w-xl leading-relaxed"
               style={{ animation: 'feedFadeIn 0.9s 0.5s ease both' }}>
               Book trusted professionals for Cleaning, Plumbing, Electrician, Carpenter and AC Repair within minutes. Vetted. Transparent. Reliable.
             </p>
@@ -549,14 +581,14 @@ const LandingPage = () => {
             </div>
 
             {/* Trust badges */}
-            <div className="pt-6 border-t border-white/10 max-w-lg" style={{ animation: 'feedFadeIn 0.9s 0.8s ease both' }}>
+            <div className="pt-6 border-t border-[var(--color-border-subtle)] max-w-lg" style={{ animation: 'feedFadeIn 0.9s 0.8s ease both' }}>
               <div className="grid grid-cols-3 gap-4">
                 {[
                   { icon: '✔', text: 'Vetted Pros' },
                   { icon: '⚡', text: 'Fast Booking' },
                   { icon: '🔒', text: 'Secure Service' },
                 ].map(b => (
-                  <div key={b.text} className="flex items-center gap-2 text-zinc-300 text-xs group">
+                  <div key={b.text} className="flex items-center gap-2 text-[var(--color-text-primary)] text-xs group">
                     <span className="text-base group-hover:scale-110 transition-transform">{b.icon}</span>
                     <span className="font-semibold">{b.text}</span>
                   </div>
@@ -568,7 +600,7 @@ const LandingPage = () => {
           {/* Right column: floating glass dashboard */}
           <div className="lg:col-span-5 flex justify-center items-center relative" ref={dashRef}>
             <div
-              className="floating-dashboard-widget w-full max-w-md glass-panel-luxury border border-[#D4AF37]/25 rounded-[36px] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.7)] relative overflow-hidden"
+              className="floating-dashboard-widget w-full max-w-md dashboard-hero-card rounded-[36px] p-6 relative overflow-hidden"
               style={{ transform: `perspective(800px) rotateY(${mouseCoords.x * -0.4}deg) rotateX(${mouseCoords.y * 0.3}deg)` }}
             >
               {/* Inner glow */}
@@ -576,44 +608,50 @@ const LandingPage = () => {
               <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
 
               {/* Header */}
-              <div className="flex items-center justify-between mb-5 pb-4 border-b border-white/6">
+              <div className="flex items-center justify-between mb-5 pb-4 border-b border-[var(--color-border-subtle)]">
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-75" />
                   </div>
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Live Dispatch Monitor</span>
+                  <span className="text-[10px] text-[var(--color-text-secondary)] font-bold uppercase tracking-widest">Live Dispatch Monitor</span>
                 </div>
                 <span className="text-[10px] text-[#D4AF37] font-semibold bg-[#D4AF37]/10 border border-[#D4AF37]/25 px-2.5 py-1 rounded-full uppercase">SaaS Active</span>
               </div>
 
               {/* Live feed */}
               <div className="mb-5">
-                <div key={liveBookingIdx} className="feed-item p-4 rounded-2xl bg-white/4 border border-white/6">
-                  <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider mb-1.5">Active Allocation</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-white text-xs font-semibold">{liveBookings[liveBookingIdx].service}</span>
-                    <span className="text-zinc-500 text-[10px]">{liveBookings[liveBookingIdx].time}</span>
+                {liveBookings.length > 0 ? (
+                  <div key={liveBookingIdx} className="feed-item p-4 rounded-2xl dashboard-inner-card">
+                    <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider mb-1.5">Active Allocation</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--color-text-primary)] text-xs font-semibold">{liveBookings[liveBookingIdx].service}</span>
+                      <span className="text-[var(--color-text-secondary)] text-[10px]">{liveBookings[liveBookingIdx].time}</span>
+                    </div>
+                    <p className="text-[var(--color-text-secondary)] text-[11px] mt-1 flex items-center gap-1">
+                      <span>📍</span> {liveBookings[liveBookingIdx].location} •{' '}
+                      <span className={`font-bold ${liveBookings[liveBookingIdx].status === 'Completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {liveBookings[liveBookingIdx].status}
+                      </span>
+                    </p>
                   </div>
-                  <p className="text-zinc-400 text-[11px] mt-1 flex items-center gap-1">
-                    <span>📍</span> {liveBookings[liveBookingIdx].location} •{' '}
-                    <span className={`font-bold ${liveBookings[liveBookingIdx].status === 'Completed' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {liveBookings[liveBookingIdx].status}
-                    </span>
-                  </p>
-                </div>
+                ) : (
+                  <div className="feed-item p-4 rounded-2xl dashboard-inner-card flex items-center justify-center">
+                    <span className="text-[var(--color-text-secondary)] text-xs font-semibold">No Active Bookings Right Now</span>
+                  </div>
+                )}
               </div>
 
               {/* Stats grid */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {/* Satisfaction */}
-                <div className="p-4 rounded-2xl bg-[#141414]/60 border border-white/5 text-center">
-                  <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1.5">Satisfaction</p>
+                <div className="p-4 rounded-2xl dashboard-inner-card text-center">
+                  <p className="text-[9px] text-[var(--color-text-secondary)] font-bold uppercase tracking-widest mb-1.5">Satisfaction</p>
                   <div className="flex justify-center items-baseline gap-0.5">
-                    <span className="text-2xl font-black text-white">{satisfactionVal}</span>
+                    <span className="text-2xl font-black text-[var(--color-text-primary)]">98.4</span>
                     <span className="text-xs text-[#D4AF37] font-bold">%</span>
                   </div>
-                  <div className="w-full bg-white/5 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div className="w-full bg-[var(--color-overlay-subtle)] h-1.5 rounded-full mt-2 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-[#D4AF37] to-[#FFE89C] h-full rounded-full transition-all duration-1000"
                       style={{ width: dashboardVisible ? '98.4%' : '0%' }}
@@ -622,32 +660,32 @@ const LandingPage = () => {
                 </div>
 
                 {/* Response time */}
-                <div className="p-4 rounded-2xl bg-[#141414]/60 border border-white/5 text-center flex flex-col justify-center">
-                  <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1.5">Response</p>
+                <div className="p-4 rounded-2xl dashboard-inner-card text-center flex flex-col justify-center">
+                  <p className="text-[9px] text-[var(--color-text-secondary)] font-bold uppercase tracking-widest mb-1.5">Response</p>
                   <span className="text-xl font-black text-[#D4AF37]">&lt; 30 Mins</span>
-                  <p className="text-[9px] text-zinc-400 mt-1 font-semibold">Avg. Allocation</p>
+                  <p className="text-[9px] text-[var(--color-text-secondary)] mt-1 font-semibold">Avg. Allocation</p>
                 </div>
               </div>
 
               {/* Stat row */}
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {[
-                  { label: 'Bookings Today', value: '342', icon: '📅' },
+                  { label: 'Bookings Today', value: '12', icon: '📅' },
                   { label: 'Avg Rating', value: '4.9⭐', icon: '' },
                   { label: 'Secured', value: '🔒 100%', icon: '' },
                 ].map((s, i) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-white/3 border border-white/5 text-center">
-                    <p className="text-[9px] text-zinc-500 font-semibold mb-1 leading-tight">{s.label}</p>
-                    <p className="text-[11px] font-black text-white">{s.value}</p>
+                  <div key={i} className="p-2.5 rounded-xl dashboard-inner-card text-center">
+                    <p className="text-[9px] text-[var(--color-text-secondary)] font-semibold mb-1 leading-tight">{s.label}</p>
+                    <p className="text-[11px] font-black text-[var(--color-text-primary)]">{s.value}</p>
                   </div>
                 ))}
               </div>
 
               {/* Footer */}
-              <div className="pt-3 border-t border-white/6 flex items-center text-xs text-zinc-400">
+              <div className="pt-3 border-t border-[var(--color-border-subtle)] flex items-center text-xs text-[var(--color-text-secondary)]">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck size={13} className="text-[#D4AF37]" />
-                  <span>Vetted Providers: <strong className="text-white">{dashboardVisible ? providersVal.toLocaleString() : '0'}+</strong></span>
+                  <span>Vetted Providers: <strong className="text-[var(--color-text-primary)]">{realStats.providers !== null ? providersVal : 'N/A'}</strong></span>
                 </span>
               </div>
             </div>
@@ -656,7 +694,7 @@ const LandingPage = () => {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1.5">
-          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold">Scroll to explore</span>
+          <span className="text-[9px] text-[var(--color-text-secondary)] uppercase tracking-widest font-semibold">Scroll to explore</span>
           <div className="scroll-down-arrow w-6 h-10 border border-[#D4AF37]/30 rounded-full flex justify-center pt-2">
             <div className="w-1 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
           </div>
@@ -664,7 +702,7 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ TRUST STATS ═══ */}
-      <section className="py-24 relative overflow-hidden bg-[#0D0D0D]">
+      <section className="py-24 relative overflow-hidden bg-[var(--color-primary-bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
             {[
@@ -684,7 +722,7 @@ const LandingPage = () => {
                     <h3 className="text-3xl sm:text-4xl font-black text-[#D4AF37]">
                       {stat.isFloat ? `${stat.target}${stat.suffix}` : <Counter target={stat.target} suffix={stat.suffix} />}
                     </h3>
-                    <p className="text-zinc-500 text-[10px] font-bold tracking-widest uppercase leading-tight">{stat.label}</p>
+                    <p className="text-[var(--color-text-secondary)] text-[10px] font-bold tracking-widest uppercase leading-tight">{stat.label}</p>
                   </div>
                 </AnimSection>
               );
@@ -694,17 +732,17 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ SERVICES SECTION ═══ */}
-      <section id="services" className="py-24 relative bg-[#0D0D0D]">
+      <section id="services" className="py-24 relative bg-[var(--color-primary-bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 space-y-4">
             <AnimSection dir="up">
               <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full glass-panel-luxury border border-[#D4AF37]/20 mb-2">
                 <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">Vetted Categories</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+              <h2 className="text-3xl sm:text-5xl font-black text-[var(--color-text-primary)] mt-2">
                 Bespoke <span className="gold-text-shimmer">Service Offerings</span>
               </h2>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mt-3">
+              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mt-3">
                 Five core domains executed with immaculate attention to detail using industry-grade equipment.
               </p>
             </AnimSection>
@@ -715,7 +753,7 @@ const LandingPage = () => {
               const Icon = svc.icon;
               return (
                 <AnimSection key={svc.name} dir="up" delay={i * 90}>
-                  <div className="glass-panel-luxury rounded-[32px] overflow-hidden flex flex-col h-full border border-white/5 gold-glow-border group cursor-pointer light-sweep">
+                  <div className="glass-panel-luxury rounded-[32px] overflow-hidden flex flex-col h-full border border-[var(--color-border-subtle)] gold-glow-border group cursor-pointer light-sweep">
                     <div className="relative h-48 overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/20 to-transparent z-[2]" />
                       <img
@@ -724,17 +762,17 @@ const LandingPage = () => {
                         onError={e => { e.target.src = 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=500&auto=format&fit=crop'; }}
                         className="w-full h-full object-cover img-scale-hover group-hover:scale-106"
                       />
-                      <div className="absolute top-4 left-4 z-10 w-10 h-10 rounded-xl bg-black/65 backdrop-blur-md border border-[#D4AF37]/35 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37]/70 transition-colors">
+                      <div className="absolute top-4 left-4 z-10 w-10 h-10 rounded-xl bg-[var(--color-modal-overlay)] backdrop-blur-md border border-[#D4AF37]/35 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37]/70 transition-colors">
                         <Icon size={17} />
                       </div>
                     </div>
                     <div className="p-6 flex flex-col flex-grow">
-                      <h3 className="text-base font-bold text-white mb-2 group-hover:text-[#D4AF37] transition-colors">{svc.name}</h3>
-                      <p className="text-zinc-500 text-xs leading-relaxed mb-5 flex-grow">{svc.desc}</p>
-                      <div className="border-t border-white/5 pt-4 flex items-center justify-between mt-auto">
+                      <h3 className="text-base font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[#D4AF37] transition-colors">{svc.name}</h3>
+                      <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed mb-5 flex-grow">{svc.desc}</p>
+                      <div className="border-t border-[var(--color-border-subtle)] pt-4 flex items-center justify-between mt-auto">
                         <div>
-                          <span className="text-[9px] text-zinc-500 block uppercase tracking-widest font-semibold">From</span>
-                          <span className="text-base font-bold text-white">{svc.price}</span>
+                          <span className="text-[9px] text-[var(--color-text-secondary)] block uppercase tracking-widest font-semibold">From</span>
+                          <span className="text-base font-bold text-[var(--color-text-primary)]">{svc.price}</span>
                         </div>
                         <Link to="/services" state={{ category: svc.name }}>
                           <button className="gold-filled-btn px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase cursor-pointer flex items-center gap-1 relative overflow-hidden">
@@ -753,17 +791,17 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ WHY FIXORA ═══ */}
-      <section id="why-fixora" className="py-24 relative bg-[#0D0D0D]">
+      <section id="why-fixora" className="py-24 relative bg-[var(--color-primary-bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 space-y-4">
             <AnimSection dir="up">
               <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full glass-panel-luxury border border-[#D4AF37]/20 mb-2">
                 <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">Features</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+              <h2 className="text-3xl sm:text-5xl font-black text-[var(--color-text-primary)] mt-2">
                 Why Homeowners <span className="gold-text-shimmer">Choose Fixora</span>
               </h2>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mt-3">
+              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed mt-3">
                 Modern tracking, strict vetting, and gold-standard domestic support.
               </p>
             </AnimSection>
@@ -774,13 +812,13 @@ const LandingPage = () => {
               const Icon = card.icon;
               return (
                 <AnimSection key={card.title} dir="scale" delay={i * 80}>
-                  <div className="glass-panel-luxury rounded-[28px] p-7 border border-white/5 gold-glow-border h-full flex flex-col justify-between light-sweep group">
+                  <div className="glass-panel-luxury rounded-[28px] p-7 border border-[var(--color-border-subtle)] gold-glow-border h-full flex flex-col justify-between light-sweep group">
                     <div className="w-11 h-11 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] mb-5 group-hover:scale-110 group-hover:bg-[#D4AF37]/18 transition-all">
                       <Icon size={19} />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white mb-2 group-hover:text-[#D4AF37] transition-colors">{card.title}</h3>
-                      <p className="text-zinc-400 text-xs leading-relaxed">{card.desc}</p>
+                      <h3 className="text-base font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[#D4AF37] transition-colors">{card.title}</h3>
+                      <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed">{card.desc}</p>
                     </div>
                   </div>
                 </AnimSection>
@@ -791,17 +829,17 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ HOW IT WORKS ═══ */}
-      <section id="how-it-works" className="py-24 relative bg-[#0D0D0D]">
+      <section id="how-it-works" className="py-24 relative bg-[var(--color-primary-bg)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20 space-y-4">
             <AnimSection dir="up">
               <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full glass-panel-luxury border border-[#D4AF37]/20 mb-2">
                 <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">Workflow</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+              <h2 className="text-3xl sm:text-5xl font-black text-[var(--color-text-primary)] mt-2">
                 How <span className="gold-text-shimmer">It Works</span>
               </h2>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-lg mx-auto mt-3">
+              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm max-w-lg mx-auto mt-3">
                 Four streamlined steps to schedule, execute, and verify your service.
               </p>
             </AnimSection>
@@ -814,10 +852,10 @@ const LandingPage = () => {
                 <AnimSection key={step.num} dir={i % 2 === 0 ? 'left' : 'right'} delay={i * 100}>
                   <div className={`flex items-center gap-6 sm:gap-10 ${i % 2 !== 0 ? 'md:flex-row-reverse' : ''}`}>
                     <div className={`flex-1 ${i % 2 !== 0 ? 'md:text-right' : ''}`}>
-                      <div className="glass-panel-luxury rounded-3xl p-6 border border-white/5 gold-glow-border inline-block w-full group light-sweep">
+                      <div className="glass-panel-luxury rounded-3xl p-6 border border-[var(--color-border-subtle)] gold-glow-border inline-block w-full group light-sweep">
                         <span className="text-[9px] text-[#D4AF37] font-black uppercase tracking-widest mb-1.5 block">Stage {step.num}</span>
-                        <h3 className="text-base font-bold text-white mb-2 group-hover:text-[#D4AF37] transition-colors">{step.title}</h3>
-                        <p className="text-zinc-400 text-xs leading-relaxed">{step.desc}</p>
+                        <h3 className="text-base font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[#D4AF37] transition-colors">{step.title}</h3>
+                        <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed">{step.desc}</p>
                       </div>
                     </div>
                     <div className="flex-shrink-0 relative z-10">
@@ -835,14 +873,14 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ TESTIMONIALS ═══ */}
-      <section className="py-24 relative overflow-hidden bg-[#0D0D0D]">
+      <section className="py-24 relative overflow-hidden bg-[var(--color-primary-bg)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-14">
             <AnimSection dir="up">
               <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full glass-panel-luxury border border-[#D4AF37]/20 mb-4">
                 <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">Testimonials</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+              <h2 className="text-3xl sm:text-5xl font-black text-[var(--color-text-primary)] mt-2">
                 Vetted By <span className="gold-text-shimmer">Discerning Homeowners</span>
               </h2>
             </AnimSection>
@@ -858,11 +896,11 @@ const LandingPage = () => {
                 <Star key={i} size={15} className="fill-[#D4AF37]" />
               ))}
             </div>
-            <p className="text-white text-base sm:text-lg leading-relaxed mb-6 font-medium italic">
+            <p className="text-[var(--color-text-primary)] text-base sm:text-lg leading-relaxed mb-6 font-medium italic">
               "{testimonials[activeTestimonial].text}"
             </p>
             <p className="text-[#D4AF37] font-black text-sm uppercase tracking-widest">{testimonials[activeTestimonial].name}</p>
-            <p className="text-zinc-500 text-xs mt-1">{testimonials[activeTestimonial].role}</p>
+            <p className="text-[var(--color-text-secondary)] text-xs mt-1">{testimonials[activeTestimonial].role}</p>
           </div>
 
           <div className="flex justify-center gap-2 mt-6">
@@ -875,14 +913,14 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ FAQ ═══ */}
-      <section id="faq" className="py-24 relative bg-[#0D0D0D]">
+      <section id="faq" className="py-24 relative bg-[var(--color-primary-bg)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 space-y-4">
             <AnimSection dir="up">
-              <h2 className="text-3xl sm:text-5xl font-black text-white">
+              <h2 className="text-3xl sm:text-5xl font-black text-[var(--color-text-primary)]">
                 Frequently Asked <span className="gold-text-shimmer">Questions</span>
               </h2>
-              <p className="text-zinc-400 text-xs sm:text-sm mt-3">
+              <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm mt-3">
                 Immediate answers about booking, trust audits, and guarantees.
               </p>
             </AnimSection>
@@ -893,19 +931,19 @@ const LandingPage = () => {
               const isOpen = activeFaq === idx;
               return (
                 <AnimSection key={idx} dir="up" delay={idx * 60}>
-                  <div className="glass-panel-luxury rounded-2xl border border-white/5 overflow-hidden transition-all duration-300 shadow-md hover:border-[#D4AF37]/20">
+                  <div className="glass-panel-luxury rounded-2xl border border-[var(--color-border-subtle)] overflow-hidden transition-all duration-300 shadow-md hover:border-[#D4AF37]/20">
                     <button
                       onClick={() => setActiveFaq(isOpen ? null : idx)}
-                      className="w-full p-6 text-left flex items-center justify-between gap-4 font-bold text-white hover:text-[#D4AF37] transition-colors cursor-pointer"
+                      className="w-full p-6 text-left flex items-center justify-between gap-4 font-bold text-[var(--color-text-primary)] hover:text-[#D4AF37] transition-colors cursor-pointer"
                     >
                       <span className="text-sm sm:text-base flex items-center gap-3">
                         <HelpCircle size={18} className="text-[#D4AF37] shrink-0" />
                         {faq.q}
                       </span>
-                      <ChevronDown size={18} className={`text-zinc-400 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-[#D4AF37]' : ''}`} />
+                      <ChevronDown size={18} className={`text-[var(--color-text-secondary)] transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-[#D4AF37]' : ''}`} />
                     </button>
-                    <div className={`transition-all duration-350 ease-in-out overflow-hidden ${isOpen ? 'max-h-48 border-t border-white/5' : 'max-h-0'}`}>
-                      <p className="p-6 text-xs sm:text-sm text-zinc-400 leading-relaxed bg-[#101010]/40">{faq.a}</p>
+                    <div className={`transition-all duration-350 ease-in-out overflow-hidden ${isOpen ? 'max-h-48 border-t border-[var(--color-border-subtle)]' : 'max-h-0'}`}>
+                      <p className="p-6 text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-secondary-bg)]/40">{faq.a}</p>
                     </div>
                   </div>
                 </AnimSection>
@@ -916,18 +954,18 @@ const LandingPage = () => {
       </section>
 
       {/* ═══ CTA SECTION ═══ */}
-      <section className="py-24 relative overflow-hidden bg-[#0D0D0D]">
+      <section className="py-24 relative overflow-hidden bg-[var(--color-primary-bg)]">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#D4AF37]/2 to-transparent pointer-events-none" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <AnimSection dir="scale">
             <div className="glass-panel-luxury rounded-[40px] px-8 py-16 sm:py-20 border border-[#D4AF37]/20 shadow-2xl relative overflow-hidden light-sweep">
               <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#D4AF37]/5 rounded-full blur-[60px]" />
               <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-[#D4AF37]/5 rounded-full blur-[60px]" />
-              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-5">
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[var(--color-text-primary)] leading-tight mb-5">
                 Ready to Upgrade Your <br />
                 <span className="gold-text-shimmer">Home Maintenance?</span>
               </h2>
-              <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed mb-10">
+              <p className="text-[var(--color-text-secondary)] text-sm sm:text-base max-w-xl mx-auto leading-relaxed mb-10">
                 Book verified professionals in under 60 seconds. Transparent pricing, dedicated support, and immaculate quality.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

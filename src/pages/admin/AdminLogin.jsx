@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, ShieldCheck, LogIn, Loader2, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ShieldCheck, LogIn, Loader2, Sparkles, Sun, Moon } from 'lucide-react';
 import InputField from '../../components/InputField';
 import fixoraLogo from '../../assets/images/fixora_logo.png';
 import adminIllustration from '../../assets/images/admin_login_illustration.png';
 import { API_BASE_URL, setAdminTokens } from '../../api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const AdminLogin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackType, setFeedbackType] = useState('success'); // 'success' | 'error'
+  const { theme, toggleTheme } = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,16 +55,25 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-[#0F1115] overflow-hidden select-none">
+    <div className="min-h-screen relative flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-[var(--color-primary-bg)] overflow-hidden select-none">
       
-      {/* Background Decorative Animated Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }} />
+      {/* Theme Toggle */}
+      <button
+        onClick={toggleTheme}
+        className="absolute top-6 right-6 p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] border border-transparent hover:border-[var(--color-border-subtle)] transition-colors z-[100]"
+        aria-label="Toggle Theme"
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
 
-      <div className="relative z-10 w-full max-w-5xl bg-[#1A1D23]/90 border border-[#D4AF37]/18 rounded-[32px] overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-[0_0_60px_-12px_rgba(212,175,55,0.15)] backdrop-blur-xl transition-all duration-500">
+      {/* Background Decorative Animated Orbs */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px] animate-pulse pointer-events-none" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[100px] animate-pulse pointer-events-none" style={{ animationDuration: '6s' }} />
+
+      <div className="relative z-10 w-full max-w-5xl bg-[var(--color-secondary-bg)]/90 border border-[#D4AF37]/18 rounded-[32px] overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-[0_0_60px_-12px_rgba(212,175,55,0.15)] backdrop-blur-xl transition-all duration-500">
 
         {/* Left Panel */}
-        <div className="relative hidden md:flex flex-col justify-between p-12 bg-gradient-to-br from-[#1A1D23] via-[#0F1115] to-[#1A1D23] border-r border-[#D4AF37]/10">
+        <div className="relative hidden md:flex flex-col justify-between p-12 bg-gradient-to-br from-[var(--color-secondary-bg)] via-[var(--color-primary-bg)] to-[var(--color-secondary-bg)] border-r border-[#D4AF37]/10">
           {/* Orbital Glows */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-[#D4AF37]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 right-0 w-56 h-56 bg-[#D4AF37]/3 rounded-full blur-3xl translate-x-1/4 translate-y-1/4" />
@@ -79,11 +90,11 @@ const AdminLogin = () => {
                 <p className="text-[#D4AF37] text-xs font-semibold tracking-widest uppercase mt-1">Admin Portal</p>
               </div>
             </div>
-            <h2 className="text-3xl font-black text-white leading-snug">
+            <h2 className="text-3xl font-black text-[var(--color-text-primary)] leading-snug">
               Secure Admin<br />
               <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4C542] bg-clip-text text-transparent">Control Panel</span>
             </h2>
-            <p className="text-zinc-400 mt-4 text-sm leading-relaxed">
+            <p className="text-[var(--color-text-secondary)] mt-4 text-sm leading-relaxed">
               Real-time monitoring, service moderation, customer & provider registries, analytics, and platform controls from one centralized panel.
             </p>
           </div>
@@ -96,16 +107,16 @@ const AdminLogin = () => {
               'Monitor bookings & reviews',
               'View platform reports & analytics',
             ].map((item, idx) => (
-              <div key={item} className="flex items-center gap-3 text-sm text-zinc-300 group">
+              <div key={item} className="flex items-center gap-3 text-sm text-[var(--color-text-primary)] group">
                 <div className="w-2 h-2 rounded-full bg-[#D4AF37] shadow-lg shadow-[#D4AF37]/50 flex-shrink-0 group-hover:scale-125 transition-transform" />
-                <span className="transition-colors group-hover:text-white">{item}</span>
+                <span className="transition-colors group-hover:text-[var(--color-text-primary)]">{item}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Right Panel: Form */}
-        <div className="p-8 sm:p-12 flex flex-col justify-center bg-black/10">
+        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[var(--color-secondary-bg)]/40">
 
           <div className="flex items-center gap-3 mb-4 md:hidden">
             <img
@@ -116,8 +127,8 @@ const AdminLogin = () => {
             <span className="text-[#D4AF37] text-sm font-semibold tracking-widest uppercase">Admin Portal</span>
           </div>
 
-          <h2 className="text-3xl font-bold text-white mb-1 tracking-tight">Welcome Back</h2>
-          <p className="text-zinc-500 text-sm mb-8">Restricted access — authorized personnel only</p>
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-1 tracking-tight">Welcome Back</h2>
+          <p className="text-[var(--color-text-secondary)] text-sm mb-8">Restricted access — authorized personnel only</p>
 
           {/* Floating alert notifications */}
           {feedbackMsg && (
@@ -141,7 +152,7 @@ const AdminLogin = () => {
               placeholder="admin@fixora.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              rightElement={<Mail size={18} className="text-zinc-500" />}
+              rightElement={<Mail size={18} className="text-[var(--color-text-secondary)]" />}
               className="focus-within:ring-2 focus-within:ring-[#D4AF37]/20"
             />
 
@@ -157,7 +168,7 @@ const AdminLogin = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none cursor-pointer"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors focus:outline-none cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -166,12 +177,12 @@ const AdminLogin = () => {
             />
 
             <div className="flex justify-between items-center text-xs sm:text-sm mt-1">
-              <label className="flex items-center gap-2 text-zinc-400 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-[var(--color-text-secondary)] cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#D4AF37]/20 bg-[#1A1D23] text-[#D4AF37] focus:ring-[#D4AF37]/20 transition-all cursor-pointer"
+                  className="w-4 h-4 rounded border-[#D4AF37]/20 bg-[var(--color-secondary-bg)] text-[#D4AF37] focus:ring-[#D4AF37]/20 transition-all cursor-pointer"
                 />
                 Remember Me
               </label>
@@ -207,7 +218,7 @@ const AdminLogin = () => {
 
           </form>
 
-          <div className="mt-8 space-y-2 text-center sm:text-left text-sm text-zinc-500">
+          <div className="mt-8 space-y-2 text-center sm:text-left text-sm text-[var(--color-text-secondary)]">
             <p>
               Not an admin?{' '}
               <Link to="/customer/login" className="text-[#D4AF37] hover:text-[#F4C542] transition-colors font-medium">

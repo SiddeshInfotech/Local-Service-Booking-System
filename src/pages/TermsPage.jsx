@@ -122,7 +122,7 @@ const TermsPage = () => {
   const [activeSection, setActiveSection] = useState(null);
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-white">
+    <div className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-[var(--color-text-primary)]">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Outfit', sans-serif; }
@@ -137,9 +137,9 @@ const TermsPage = () => {
           100% { background-position: 250% center; }
         }
         .glass-terms {
-          background: rgba(18,18,18,0.7);
+          background: var(--color-card-bg);
           backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(212,175,55,0.13);
+          border: 1px solid var(--color-border-subtle);
         }
         .terms-section {
           border: 1px solid rgba(212,175,55,0.1);
@@ -190,7 +190,7 @@ const TermsPage = () => {
             </h1>
           </AnimSection>
           <AnimSection dir="up" delay={200}>
-            <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-[var(--color-text-secondary)] text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               These terms govern your use of the Fixora platform. Please read them carefully — they protect both you and the professionals you work with.
             </p>
           </AnimSection>
@@ -203,7 +203,7 @@ const TermsPage = () => {
               ].map(tab => {
                 const Icon = tab.icon;
                 return (
-                  <div key={tab.label} className="flex items-center gap-2 glass-terms border border-[#D4AF37]/18 px-4 py-2.5 rounded-full text-xs text-zinc-300 font-medium">
+                  <div key={tab.label} className="flex items-center gap-2 glass-terms border border-[#D4AF37]/18 px-4 py-2.5 rounded-full text-xs text-[var(--color-text-primary)] font-medium">
                     <Icon size={13} className="text-[#D4AF37]" />
                     {tab.label}
                   </div>
@@ -221,8 +221,8 @@ const TermsPage = () => {
             <div className="flex items-center gap-3">
               <FileText size={16} className="text-[#D4AF37] flex-shrink-0" />
               <div>
-                <p className="text-white text-xs font-bold">Last Updated: January 15, 2025</p>
-                <p className="text-zinc-500 text-xs">These terms are effective immediately upon publication.</p>
+                <p className="text-[var(--color-text-primary)] text-xs font-bold">Last Updated: January 15, 2025</p>
+                <p className="text-[var(--color-text-secondary)] text-xs">These terms are effective immediately upon publication.</p>
               </div>
             </div>
             <Link to="/contact">
@@ -249,7 +249,7 @@ const TermsPage = () => {
                       key={s.id}
                       href={`#${s.id}`}
                       onClick={() => setActiveSection(s.id)}
-                      className={`nav-pill flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs cursor-pointer block ${activeSection === s.id ? 'active' : 'text-zinc-400'}`}
+                      className={`nav-pill flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs cursor-pointer block ${activeSection === s.id ? 'active' : 'text-[var(--color-text-secondary)]'}`}
                     >
                       <span className="w-1 h-1 rounded-full bg-[#D4AF37] flex-shrink-0" />
                       {s.title.replace(/^\d+\.\s/, '')}
@@ -276,18 +276,18 @@ const TermsPage = () => {
                         <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#D4AF37]/15 transition-colors">
                           <Icon size={18} className="text-[#D4AF37]" />
                         </div>
-                        <h2 className="text-white font-bold text-sm sm:text-base">{sec.title}</h2>
+                        <h2 className="text-[var(--color-text-primary)] font-bold text-sm sm:text-base">{sec.title}</h2>
                       </div>
                       <ChevronDown
                         size={18}
-                        className={`text-zinc-500 transition-transform duration-300 flex-shrink-0 ml-4 ${isOpen ? 'rotate-180 text-[#D4AF37]' : ''}`}
+                        className={`text-[var(--color-text-secondary)] transition-transform duration-300 flex-shrink-0 ml-4 ${isOpen ? 'rotate-180 text-[#D4AF37]' : ''}`}
                       />
                     </button>
                     {isOpen && (
-                      <div className="px-7 pb-7 border-t border-white/5">
+                      <div className="px-7 pb-7 border-t border-[var(--color-border-subtle)]">
                         <div className="pt-5">
                           {sec.content.split('\n\n').map((para, pi) => (
-                            <p key={pi} className={`text-zinc-400 text-sm leading-relaxed ${pi > 0 ? 'mt-4' : ''}`}>
+                            <p key={pi} className={`text-[var(--color-text-secondary)] text-sm leading-relaxed ${pi > 0 ? 'mt-4' : ''}`}>
                               {para}
                             </p>
                           ))}
@@ -303,12 +303,12 @@ const TermsPage = () => {
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A] border-t border-[#D4AF37]/10">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[var(--color-primary-bg)] border-t border-[#D4AF37]/10">
         <AnimSection dir="scale" className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+          <h2 className="text-2xl sm:text-3xl font-black text-[var(--color-text-primary)] mb-3">
             Still have questions about our <span className="terms-gold-shimmer">policies?</span>
           </h2>
-          <p className="text-zinc-400 text-sm mb-8">Our legal and support team is available to clarify any concerns.</p>
+          <p className="text-[var(--color-text-secondary)] text-sm mb-8">Our legal and support team is available to clarify any concerns.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/contact">
               <button className="gold-submit-terms px-8 py-3.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 cursor-pointer">

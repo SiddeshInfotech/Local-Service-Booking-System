@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-bg: #0F1115;
-  --color-secondary-bg: #1A1D23;
-  --color-card-bg: rgba(26, 29, 35, 0.92);
-  --color-gold-accent: #D4AF37;
-  --color-gold-hover: #F4C542;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #B0B3B8;
-  --color-border-gold: rgba(212, 175, 55, 0.18);
-  --color-hover-bg: #232831;
+  --color-primary-bg: var(--theme-primary-bg, #0F1115);
+  --color-secondary-bg: var(--theme-secondary-bg, #1A1D23);
+  --color-card-bg: var(--theme-card-bg, rgba(26, 29, 35, 0.92));
+  --color-gold-accent: var(--theme-gold-accent, #D4AF37);
+  --color-gold-hover: var(--theme-gold-hover, #F4C542);
+  --color-text-primary: var(--theme-text-primary, #FFFFFF);
+  --color-text-secondary: var(--theme-text-secondary, #B0B3B8);
+  --color-border-gold: var(--theme-border-gold, rgba(212, 175, 55, 0.18));
+  --color-hover-bg: var(--theme-hover-bg, #232831);
   --color-success: #22C55E;
   --color-error: #EF4444;
 
+  /* Modals, Borders, Overlays */
+  --color-border-subtle: var(--theme-border-subtle, rgba(255, 255, 255, 0.1));
+  --color-overlay-hover: var(--theme-overlay-hover, rgba(255, 255, 255, 0.1));
+  --color-overlay-subtle: var(--theme-overlay-subtle, rgba(255, 255, 255, 0.05));
+  --color-modal-overlay: var(--theme-modal-overlay, rgba(0, 0, 0, 0.7));
+
   /* Global background / surface overrides */
-  --color-black: #0F1115;
-  --color-bg-dark: #0F1115;
-  --color-bg-secondary: #1A1D23;
-  --color-card-dark: rgba(26, 29, 35, 0.92);
+  --color-black: var(--theme-primary-bg, #0F1115);
+  --color-bg-dark: var(--theme-primary-bg, #0F1115);
+  --color-bg-secondary: var(--theme-secondary-bg, #1A1D23);
+  --color-card-dark: var(--theme-card-bg, rgba(26, 29, 35, 0.92));
   
   /* Overwrite blue classes to map to gold accents */
   --color-blue-50: #FCF9EC;
@@ -33,56 +39,123 @@
   --color-blue-950: #292209;
 
   /* Overwrite zinc dark grays to look premium charcoal */
-  --color-zinc-950: #0F1115;
-  --color-zinc-900: #1A1D23;
-  --color-zinc-800: rgba(212, 175, 55, 0.18);
-  --color-zinc-700: rgba(212, 175, 55, 0.12);
+  --color-zinc-950: var(--theme-zinc-950, #0F1115);
+  --color-zinc-900: var(--theme-zinc-900, #1A1D23);
+  --color-zinc-800: var(--theme-zinc-800, rgba(212, 175, 55, 0.18));
+  --color-zinc-700: var(--theme-zinc-700, rgba(212, 175, 55, 0.12));
   
   /* Text and shadows */
-  --color-zinc-500: #B0B3B8;
-  --color-zinc-400: #B0B3B8;
-  --color-zinc-300: #FFFFFF;
-  --color-zinc-200: #FFFFFF;
+  --color-zinc-500: var(--theme-zinc-500, #B0B3B8);
+  --color-zinc-400: var(--theme-zinc-400, #B0B3B8);
+  --color-zinc-300: var(--theme-zinc-300, #FFFFFF);
+  --color-zinc-200: var(--theme-zinc-200, #FFFFFF);
 
   /* Soft gold shadows and outlines */
-  --shadow-2xl: 0 25px 50px -12px rgba(212, 175, 55, 0.15);
-  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+  --shadow-2xl: var(--theme-shadow-2xl, 0 25px 50px -12px rgba(212, 175, 55, 0.15));
+  --shadow-gold: var(--theme-shadow-gold, 0 0 20px rgba(212, 175, 55, 0.15));
 }
 
-/* Custom Scrollbar Styles for Dark Theme */
+:root, [data-theme="dark"] {
+  --theme-primary-bg: #0F1115;
+  --theme-secondary-bg: #1A1D23;
+  --theme-card-bg: rgba(26, 29, 35, 0.92);
+  --theme-gold-accent: #D4AF37;
+  --theme-gold-hover: #F4C542;
+  --theme-text-primary: #FFFFFF;
+  --theme-text-secondary: #B0B3B8;
+  --theme-border-gold: rgba(212, 175, 55, 0.18);
+  --theme-hover-bg: #232831;
+
+  --theme-border-subtle: rgba(255, 255, 255, 0.1);
+  --theme-overlay-hover: rgba(255, 255, 255, 0.1);
+  --theme-overlay-subtle: rgba(255, 255, 255, 0.05);
+  --theme-modal-overlay: rgba(0, 0, 0, 0.7);
+
+  --theme-zinc-950: #0F1115;
+  --theme-zinc-900: #1A1D23;
+  --theme-zinc-800: rgba(212, 175, 55, 0.18);
+  --theme-zinc-700: rgba(212, 175, 55, 0.12);
+  
+  --theme-zinc-500: #B0B3B8;
+  --theme-zinc-400: #B0B3B8;
+  --theme-zinc-300: #FFFFFF;
+  --theme-zinc-200: #FFFFFF;
+
+  --theme-shadow-2xl: 0 25px 50px -12px rgba(212, 175, 55, 0.15);
+  --theme-shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+  
+  --theme-glass-shadow-1: rgba(0, 0, 0, 0.5);
+  --theme-glass-shadow-2: rgba(212, 175, 55, 0.08);
+}
+
+[data-theme="light"] {
+  --theme-primary-bg: #F9FAFB; /* gray-50 */
+  --theme-secondary-bg: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.95);
+  --theme-gold-accent: #D4AF37;
+  --theme-gold-hover: #BCA032;
+  --theme-text-primary: #111827; /* gray-900 */
+  --theme-text-secondary: #4B5563; /* gray-600 */
+  --theme-border-gold: rgba(212, 175, 55, 0.4);
+  --theme-hover-bg: #F3F4F6; /* gray-100 */
+
+  --theme-border-subtle: rgba(0, 0, 0, 0.1);
+  --theme-overlay-hover: rgba(0, 0, 0, 0.08);
+  --theme-overlay-subtle: rgba(0, 0, 0, 0.03);
+  --theme-modal-overlay: rgba(255, 255, 255, 0.7);
+
+  --theme-zinc-950: #F9FAFB;
+  --theme-zinc-900: #FFFFFF;
+  --theme-zinc-800: #E5E7EB; /* gray-200 */
+  --theme-zinc-700: #D1D5DB; /* gray-300 */
+  
+  --theme-zinc-500: #6B7280; /* gray-500 */
+  --theme-zinc-400: #4B5563; /* gray-600 */
+  --theme-zinc-300: #111827;
+  --theme-zinc-200: #111827;
+
+  --theme-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  --theme-shadow-gold: 0 0 20px rgba(0, 0, 0, 0.05);
+  
+  --theme-glass-shadow-1: rgba(0, 0, 0, 0.1);
+  --theme-glass-shadow-2: rgba(0, 0, 0, 0.05);
+}
+
+/* Custom scrollbar matching dark theme vibes */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F1115;
+  background: var(--theme-primary-bg, #0F1115);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1A1D23;
+  background: var(--theme-secondary-bg, #1A1D23);
   border-radius: 9999px;
-  border: 2px solid #0F1115;
+  border: 2px solid var(--theme-primary-bg, #0F1115);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #D4AF37;
+  background: var(--theme-gold-accent, #D4AF37);
 }
 
 /* Base settings */
 html, body {
   scroll-behavior: smooth;
-  background-color: #0F1115;
-  color: #FFFFFF;
+  background-color: var(--theme-primary-bg, #0F1115);
+  color: var(--theme-text-primary, #FFFFFF);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Global premium glassmorphism classes */
 .glass-card {
-  background: rgba(26, 29, 35, 0.92) !important;
-  border: 1px solid rgba(212, 175, 55, 0.18) !important;
+  background: var(--theme-card-bg, rgba(26, 29, 35, 0.92)) !important;
+  border: 1px solid var(--theme-border-gold, rgba(212, 175, 55, 0.18)) !important;
   backdrop-filter: blur(12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.08);
+  box-shadow: 0 25px 50px -12px var(--theme-glass-shadow-1, rgba(0, 0, 0, 0.5)), 0 0 40px var(--theme-glass-shadow-2, rgba(212, 175, 55, 0.08));
 }
 
 /* Side drawer slide-in animation */
@@ -111,3 +184,15 @@ html, body {
   animation: fade-in 0.2s ease both;
 }
 
+/* Keep colored buttons readable in light mode */
+[data-theme="light"] .bg-blue-600,
+[data-theme="light"] .bg-blue-500,
+[data-theme="light"] .bg-red-600,
+[data-theme="light"] .bg-red-500,
+[data-theme="light"] .bg-green-600,
+[data-theme="light"] .bg-green-500,
+[data-theme="light"] .bg-purple-600,
+[data-theme="light"] .bg-purple-500,
+[data-theme="light"] .bg-\[\#00a8e8\] {
+  color: #FFFFFF !important;
+}

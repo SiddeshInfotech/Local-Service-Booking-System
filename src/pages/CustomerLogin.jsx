@@ -81,7 +81,7 @@ const CustomerLogin = () => {
 
 
       {/* Main card matching the visual aspect ratio and background of the image */}
-      <div className="w-full max-w-5xl bg-[#131b2e]/30 border border-zinc-800/80 rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md">
+      <div className="w-full max-w-5xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl backdrop-blur-md">
 
         {/* Left Side: Full-bleed Illustration Panel */}
         <div className="relative hidden md:block overflow-hidden min-h-[480px]">
@@ -91,26 +91,26 @@ const CustomerLogin = () => {
             className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Subtle gradient overlay so the panel blends into the card */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a]/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-bg)]/30 to-transparent" />
 
           {/* Caption at the bottom */}
           <div className="absolute bottom-8 left-8 right-8">
-            <h2 className="text-2xl font-bold text-white tracking-tight leading-snug drop-shadow-md">
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight leading-snug drop-shadow-md">
               Welcome Back to Fixora
             </h2>
-            <p className="text-white/70 mt-2 text-sm leading-relaxed drop-shadow-md">
+            <p className="text-[var(--color-text-primary)]/70 mt-2 text-sm leading-relaxed drop-shadow-md">
               Login to book trusted local services near you.
             </p>
           </div>
         </div>
 
         {/* Right Side: Actual Actionable Form */}
-        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#0B1220]/45">
+        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[var(--color-secondary-bg)]/40">
 
-          <h2 className="text-3xl font-bold text-white mb-1">
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-1">
             Login
           </h2>
-          <p className="text-zinc-500 text-sm mb-8">
+          <p className="text-[var(--color-text-secondary)] text-sm mb-8">
             Access your Fixora account
           </p>
 
@@ -124,7 +124,7 @@ const CustomerLogin = () => {
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              rightElement={<Mail size={18} className="text-zinc-500" />}
+              rightElement={<Mail size={18} className="text-[var(--color-text-secondary)]" />}
             />
 
             <InputField
@@ -139,7 +139,7 @@ const CustomerLogin = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none cursor-pointer"
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors focus:outline-none cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -161,7 +161,7 @@ const CustomerLogin = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-[var(--color-text-primary)] font-semibold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 mt-2"
             >
               {isSubmitting ? 'Signing in...' : 'Login \u2192'}
             </button>
@@ -169,7 +169,7 @@ const CustomerLogin = () => {
           </form>
 
           {/* Navigation Links */}
-          <div className="mt-8 space-y-3 text-center sm:text-left text-sm text-zinc-400">
+          <div className="mt-8 space-y-3 text-center sm:text-left text-sm text-[var(--color-text-secondary)]">
             <p>
               Don't have an account?{' '}
               <Link to="/customer/register" className="text-blue-500 hover:text-blue-400 transition-colors font-medium">

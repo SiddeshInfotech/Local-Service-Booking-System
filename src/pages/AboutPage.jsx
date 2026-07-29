@@ -56,7 +56,7 @@ const stats = [
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-white">
+    <div className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-[var(--color-text-primary)]">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Outfit', sans-serif; }
@@ -71,10 +71,10 @@ const AboutPage = () => {
           100% { background-position: 250% center; }
         }
         .glass-card-about {
-          background: rgba(18,18,18,0.7);
+          background: var(--color-card-bg);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(212,175,55,0.15);
+          border: 1px solid var(--color-border-subtle);
         }
         .gold-filled-about {
           background: linear-gradient(135deg, #F4C542 0%, #D4AF37 55%, #BCA032 100%);
@@ -143,7 +143,7 @@ const AboutPage = () => {
           </AnimSection>
 
           <AnimSection dir="up" delay={200}>
-            <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-[var(--color-text-secondary)] text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               Fixora was born from a simple frustration — finding a trustworthy, skilled professional for your home shouldn't feel like a gamble. We built the platform we always wished existed.
             </p>
           </AnimSection>
@@ -151,14 +151,14 @@ const AboutPage = () => {
       </section>
 
       {/* ─── STATS BAR ─── */}
-      <section className="py-16 border-y border-[#D4AF37]/10 bg-[#0A0A0A]">
+      <section className="py-16 border-y border-[#D4AF37]/10 bg-[var(--color-primary-bg)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((s, i) => (
               <AnimSection key={s.label} dir="scale" delay={i * 80}>
                 <div className="text-center">
-                  <p className="text-3xl sm:text-4xl font-black text-white mb-1">{s.value}</p>
-                  <p className="text-xs text-zinc-500 font-semibold uppercase tracking-widest">{s.label}</p>
+                  <p className="text-3xl sm:text-4xl font-black text-[var(--color-text-primary)] mb-1">{s.value}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)] font-semibold uppercase tracking-widest">{s.label}</p>
                 </div>
               </AnimSection>
             ))}
@@ -178,12 +178,12 @@ const AboutPage = () => {
                 Trust, built into every{' '}
                 <span className="about-gold-shimmer">service interaction</span>
               </h2>
-              <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              <p className="text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed">
                 We believe every homeowner deserves access to verified, skilled professionals without the uncertainty that's plagued the home service industry for decades. Our vetting process, real-time transparency tools, and quality guarantees make that possible at scale.
               </p>
               <ul className="space-y-3">
                 {['Background-verified professionals only', 'Real-time booking & live tracking', 'Transparent, upfront pricing', '30-day workmanship guarantee'].map(item => (
-                  <li key={item} className="flex items-center gap-3 text-sm text-zinc-300">
+                  <li key={item} className="flex items-center gap-3 text-sm text-[var(--color-text-primary)]">
                     <CheckCircle size={16} className="text-[#D4AF37] flex-shrink-0" />
                     {item}
                   </li>
@@ -198,13 +198,13 @@ const AboutPage = () => {
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#D4AF37]/6 rounded-full blur-3xl" />
                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#D4AF37]/4 rounded-full blur-3xl" />
                 <div className="relative z-10 space-y-6">
-                  <div className="flex items-center gap-3 pb-4 border-b border-white/6">
+                  <div className="flex items-center gap-3 pb-4 border-b border-[var(--color-border-subtle)]">
                     <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/15 flex items-center justify-center">
                       <ShieldCheck size={20} className="text-[#D4AF37]" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">Quality Promise</p>
-                      <p className="text-zinc-500 text-xs">Every booking guaranteed</p>
+                      <p className="text-[var(--color-text-primary)] font-bold text-sm">Quality Promise</p>
+                      <p className="text-[var(--color-text-secondary)] text-xs">Every booking guaranteed</p>
                     </div>
                   </div>
                   {[
@@ -214,10 +214,10 @@ const AboutPage = () => {
                   ].map(m => (
                     <div key={m.label}>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-zinc-400 font-medium">{m.label}</span>
+                        <span className="text-xs text-[var(--color-text-secondary)] font-medium">{m.label}</span>
                         <span className="text-xs font-black" style={{ color: m.color }}>{m.value}</span>
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-[var(--color-overlay-subtle)] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-1000"
                           style={{ width: m.value, background: `linear-gradient(90deg, ${m.color}88, ${m.color})` }} />
                       </div>
@@ -231,14 +231,14 @@ const AboutPage = () => {
       </section>
 
       {/* ─── VALUES ─── */}
-      <section className="py-24 bg-[#0A0A0A] relative overflow-hidden">
+      <section className="py-24 bg-[var(--color-primary-bg)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(212,175,55,0.03)_0%,_transparent_65%)] pointer-events-none" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimSection dir="up" className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 w-max mx-auto mb-5">
               <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">Our Values</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[var(--color-text-primary)] leading-tight">
               Principles we{' '}
               <span className="about-gold-shimmer">never compromise on</span>
             </h2>
@@ -252,8 +252,8 @@ const AboutPage = () => {
                     <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
                       <Icon size={22} className="text-[#D4AF37]" />
                     </div>
-                    <h3 className="text-white font-bold text-base">{v.title}</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed flex-grow">{v.desc}</p>
+                    <h3 className="text-[var(--color-text-primary)] font-bold text-base">{v.title}</h3>
+                    <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed flex-grow">{v.desc}</p>
                   </div>
                 </AnimSection>
               );
@@ -268,7 +268,7 @@ const AboutPage = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 w-max mx-auto mb-5">
             <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">The Team</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[var(--color-text-primary)]">
             People behind{' '}
             <span className="about-gold-shimmer">Fixora</span>
           </h2>
@@ -277,13 +277,13 @@ const AboutPage = () => {
           {team.map((member, i) => (
             <AnimSection key={member.name} dir="up" delay={i * 80} className="h-full">
               <div className="glass-card-about team-card rounded-3xl overflow-hidden flex flex-col h-full w-full">
-                <div className="overflow-hidden h-56 w-full bg-zinc-900 shrink-0">
+                <div className="overflow-hidden h-56 w-full bg-[var(--color-secondary-bg)] shrink-0">
                   <img src={member.img} alt={member.name} className="w-full h-full object-cover object-[50%_15%]" />
                 </div>
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-white font-bold text-sm mb-0.5">{member.name}</h3>
+                  <h3 className="text-[var(--color-text-primary)] font-bold text-sm mb-0.5">{member.name}</h3>
                   <p className="text-[#D4AF37] text-xs font-semibold uppercase tracking-wider mb-3">{member.role}</p>
-                  <p className="text-zinc-400 text-xs leading-relaxed flex-grow">{member.desc}</p>
+                  <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed flex-grow">{member.desc}</p>
                 </div>
               </div>
             </AnimSection>
@@ -298,11 +298,11 @@ const AboutPage = () => {
             <div className="absolute -top-20 -left-20 w-56 h-56 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-20 -right-20 w-56 h-56 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10">
-              <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
+              <h2 className="text-3xl sm:text-4xl font-black text-[var(--color-text-primary)] mb-4">
                 Ready to experience{' '}
                 <span className="about-gold-shimmer">Fixora quality?</span>
               </h2>
-              <p className="text-zinc-400 text-sm sm:text-base mb-8 max-w-lg mx-auto">
+              <p className="text-[var(--color-text-secondary)] text-sm sm:text-base mb-8 max-w-lg mx-auto">
                 Join thousands of homeowners who've made the switch to verified, premium home services.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

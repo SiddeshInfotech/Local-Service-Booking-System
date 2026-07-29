@@ -5,6 +5,9 @@ import datetime
 import os
 import secrets
 from werkzeug.utils import secure_filename
+import cloudinary
+import cloudinary.uploader
+import cloudinary_config
 from utils.email import send_email, send_email_detailed, send_email_async, get_otp_email_template
 from utils.auth_utils import (
     generate_access_token,
@@ -17,9 +20,40 @@ provider_bp = Blueprint("provider", __name__)
 # Config for file uploads
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
+ALLOWED_ID_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+MAX_ID_FILE_SIZE = 5 * 1024 * 1024  # 5 MB limit
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_and_upload_id_proof(file, folder="provider-id-proofs"):
+    if not file or not file.filename:
+        return False, "No file uploaded or selected.", None
+    
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_ID_IMAGE_EXTENSIONS:
+        return False, f"Invalid file format '.{ext}'. Only JPG, JPEG, PNG, and WEBP image files are allowed.", None
+    
+    # Check file size limit (5 MB)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    if file_size > MAX_ID_FILE_SIZE:
+        return False, "File size exceeds maximum limit of 5 MB.", None
+
+    try:
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder=folder,
+            resource_type="image"
+        )
+        url = upload_result.get("secure_url") or upload_result.get("url")
+        if not url:
+            return False, "Failed to obtain URL from Cloudinary upload.", None
+        return True, None, url
+    except Exception as upload_err:
+        return False, f"Cloudinary upload error: {str(upload_err)}", None
 
 # ====================================================
 # PROVIDER AUTHENTICATION
@@ -28,8 +62,14 @@ def allowed_file(filename):
 @provider_bp.route("/api/provider/register", methods=["POST"])
 def register_provider():
     try:
-        data = request.get_json() or {}
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+        else:
+            data = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
         email = data.get("email")
+
+
+
         password = data.get("password")
         phone = data.get("phone")
         address = data.get("address")
@@ -146,6 +186,20 @@ def register_provider():
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
+        # Check if ID proof file is attached in request.files during registration
+        id_proof_file = (
+            request.files.get("id_proof")
+            or request.files.get("document_file")
+            or request.files.get("idProof")
+        )
+        id_proof_url = None
+        if id_proof_file and id_proof_file.filename != "":
+            success, err_msg, id_proof_url = validate_and_upload_id_proof(id_proof_file, folder="provider-id-proofs")
+            if not success:
+                cursor.close()
+                conn.close()
+                return jsonify({"status": False, "message": err_msg}), 400
+
         cursor.execute(query, (
             business_name,
             owner_name,
@@ -162,6 +216,14 @@ def register_provider():
             status,
             email_verified
         ))
+        provider_id = cursor.lastrowid
+
+        if id_proof_url:
+            cursor.execute(
+                "INSERT INTO provider_documents (provider_id, document_type, file_path, verification_status) VALUES (%s, 'ID Proof', %s, 'Pending')",
+                (provider_id, id_proof_url)
+            )
+
         conn.commit()
 
         cursor.close()
@@ -171,6 +233,7 @@ def register_provider():
             "status": True,
             "message": "Provider registered successfully."
         }), 201
+
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -766,44 +829,37 @@ def upload_document():
         if file.filename == "":
             return jsonify({"status": False, "message": "No file selected."}), 400
 
-        if not document_type or document_type not in ['Aadhaar', 'PAN', 'License', 'Profile Photo', 'Certificate']:
+        if not document_type or document_type not in ['Aadhaar', 'PAN', 'License', 'Profile Photo', 'Certificate', 'ID Proof']:
             return jsonify({"status": False, "message": "Invalid or missing document type."}), 400
 
-        if file and allowed_file(file.filename):
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
+        success, err_msg, cloudinary_url = validate_and_upload_id_proof(file, folder="provider-id-proofs")
+        if not success:
+            return jsonify({"status": False, "message": err_msg}), 400
 
-            filename = secure_filename(f"prov_{user_payload['user_id']}_{document_type}_{int(datetime.datetime.utcnow().timestamp())}_{file.filename}")
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(file_path)
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-            db_path = f"uploads/{filename}"
+        cursor.execute(
+            "INSERT INTO provider_documents (provider_id, document_type, file_path, verification_status) VALUES (%s, %s, %s, 'Pending')",
+            (user_payload["user_id"], document_type, cloudinary_url)
+        )
+        doc_id = cursor.lastrowid
+        conn.commit()
 
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
+        cursor.close()
+        conn.close()
 
-            cursor.execute(
-                "INSERT INTO provider_documents (provider_id, document_type, file_path, verification_status) VALUES (%s, %s, %s, 'Pending')",
-                (user_payload["user_id"], document_type, db_path)
-            )
-            doc_id = cursor.lastrowid
-            conn.commit()
+        return jsonify({
+            "status": True,
+            "message": "Document uploaded successfully.",
+            "document": {
+                "document_id": doc_id,
+                "document_type": document_type,
+                "file_path": cloudinary_url,
+                "verification_status": "Pending"
+            }
+        }), 201
 
-            cursor.close()
-            conn.close()
-
-            return jsonify({
-                "status": True,
-                "message": "Document uploaded successfully.",
-                "document": {
-                    "document_id": doc_id,
-                    "document_type": document_type,
-                    "file_path": db_path,
-                    "verification_status": "Pending"
-                }
-            }), 201
-
-        return jsonify({"status": False, "message": "File type not allowed."}), 400
 
     except Exception as e:
         if 'conn' in locals() and conn:

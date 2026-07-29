@@ -72,7 +72,7 @@ const ServiceCompletedPage = () => {
               ⭐ Write a Review
             </button>
           )}
-          <button style={{ ...styles.btn, background: 'linear-gradient(135deg,#1a1a2e,#16213e)', color: '#fff', border: '1px solid #333' }}
+          <button style={{ ...styles.btn, background: 'var(--color-hover-bg)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-subtle)' }}
             onClick={() => navigate('/')}>
             🏠 Go to Home
           </button>
@@ -90,7 +90,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #0a0a14 0%, #111126 50%, #0a0a14 100%)',
+    background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-secondary-bg) 50%, var(--color-primary-bg) 100%)',
     fontFamily: "'Inter', 'Segoe UI', sans-serif",
     padding: '24px',
     position: 'relative',
@@ -106,9 +106,9 @@ const styles = {
     zIndex: 0,
   },
   card: {
-    background: 'rgba(22,22,40,0.85)',
+    background: 'var(--color-card-bg)',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    border: '1px solid var(--color-border-subtle)',
     borderRadius: '24px',
     padding: '48px 40px',
     maxWidth: '480px',
@@ -141,7 +141,7 @@ const styles = {
     letterSpacing: '-0.3px',
   },
   message: {
-    color: '#AAA',
+    color: 'var(--color-text-secondary)',
     fontSize: '14px',
     lineHeight: '1.7',
     margin: 0,
@@ -163,7 +163,7 @@ const styles = {
     width: '100%',
   },
   footer: {
-    color: '#444',
+    color: 'var(--color-text-secondary)',
     fontSize: '11px',
     marginTop: '28px',
   },

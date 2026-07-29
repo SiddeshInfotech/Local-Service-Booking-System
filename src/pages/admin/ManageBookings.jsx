@@ -116,24 +116,24 @@ const ManageBookings = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Manage Bookings</h1>
-        <p className="text-zinc-500 text-sm mt-1">View, filter, update and cancel service bookings.</p>
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Manage Bookings</h1>
+        <p className="text-[var(--color-text-secondary)] text-sm mt-1">View, filter, update and cancel service bookings.</p>
       </div>
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] pointer-events-none" />
           <input
             type="text"
             placeholder="Search by ID, customer or service..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full bg-[#131b2e] border border-zinc-700 text-white text-sm pl-9 pr-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
+            className="w-full bg-[var(--color-secondary-bg)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-sm pl-9 pr-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-[var(--color-text-secondary)] transition-colors"
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Filter size={15} className="text-zinc-500 flex-shrink-0" />
+          <Filter size={15} className="text-[var(--color-text-secondary)] flex-shrink-0" />
           {['All', ...STATUS_OPTIONS].map((f) => (
             <button
               key={f}
@@ -141,7 +141,7 @@ const ManageBookings = () => {
               className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border flex-shrink-0 cursor-pointer ${
                 filter === f
                   ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
-                  : 'text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-600'
+                  : 'text-[var(--color-text-secondary)] border-[var(--color-border-subtle)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-subtle)]'
               }`}
             >
               {f}
@@ -151,19 +151,19 @@ const ManageBookings = () => {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-[#131b2e]/50 border border-zinc-800/80 overflow-hidden">
+      <div className="rounded-2xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-zinc-800/60 bg-[#0B1220]/40">
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide">ID</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide">Customer</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide hidden md:table-cell">Provider</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide hidden lg:table-cell">Service</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide hidden xl:table-cell">Date</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide">Amount</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3.5 text-zinc-500 text-xs font-semibold uppercase tracking-wide">Actions</th>
+              <tr className="border-b border-[var(--color-border-subtle)] bg-[var(--color-secondary-bg)]">
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide">ID</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide">Customer</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide hidden md:table-cell">Provider</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide hidden lg:table-cell">Service</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide hidden xl:table-cell">Date</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide">Amount</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide">Status</th>
+                <th className="px-5 py-3.5 text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -174,24 +174,24 @@ const ManageBookings = () => {
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center text-zinc-500 py-10">No bookings found.</td></tr>
+                <tr><td colSpan={8} className="text-center text-[var(--color-text-secondary)] py-10">No bookings found.</td></tr>
               ) : (
                 paginated.map((b) => (
-                  <tr key={b.id} className="border-b border-zinc-800/30 hover:bg-zinc-900/30 transition-colors">
-                    <td className="px-5 py-4 text-zinc-400 text-xs font-mono">{b.number}</td>
+                  <tr key={b.id} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-secondary-bg)]/30 transition-colors">
+                    <td className="px-5 py-4 text-[var(--color-text-secondary)] text-xs font-mono">{b.number}</td>
                     <td className="px-5 py-4 text-left">
                       <div>
-                        <p className="text-white text-xs font-medium">{b.customer}</p>
-                        <p className="text-zinc-500 text-[10px]">{b.customerEmail}</p>
+                        <p className="text-[var(--color-text-primary)] text-xs font-medium">{b.customer}</p>
+                        <p className="text-[var(--color-text-secondary)] text-[10px]">{b.customerEmail}</p>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-zinc-400 text-xs hidden md:table-cell">{b.provider}</td>
-                    <td className="px-5 py-4 text-zinc-400 text-xs hidden lg:table-cell">{b.service}</td>
-                    <td className="px-5 py-4 text-zinc-400 text-xs hidden xl:table-cell">
+                    <td className="px-5 py-4 text-[var(--color-text-secondary)] text-xs hidden md:table-cell">{b.provider}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-secondary)] text-xs hidden lg:table-cell">{b.service}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-secondary)] text-xs hidden xl:table-cell">
                       <div>{b.date}</div>
                       <div className="text-zinc-600">{b.time}</div>
                     </td>
-                    <td className="px-5 py-4 text-white text-xs font-semibold">₹{Number(b.amount).toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-primary)] text-xs font-semibold">₹{Number(b.amount).toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4">
                       <div className="relative group inline-block">
                         <select
@@ -200,7 +200,7 @@ const ManageBookings = () => {
                           className={`pl-2.5 pr-5 py-1 rounded-full text-[10px] font-semibold border appearance-none cursor-pointer bg-transparent outline-none ${statusStyle(b.status)}`}
                         >
                           {STATUS_OPTIONS.map((o) => (
-                            <option key={o} value={o} className="bg-[#0B1220] text-white">
+                            <option key={o} value={o} className="bg-[var(--color-primary-bg)] text-[var(--color-text-primary)]">
                               {o}
                             </option>
                           ))}
@@ -212,7 +212,7 @@ const ManageBookings = () => {
                         <button 
                           onClick={() => setSelectedBooking(b)} 
                           title="View Details" 
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
                         >
                           <Eye size={14} />
                         </button>
@@ -220,7 +220,7 @@ const ManageBookings = () => {
                           <button 
                             onClick={() => cancelBooking(b.id)} 
                             title="Cancel Booking" 
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                           >
                             <XCircle size={14} />
                           </button>
@@ -234,13 +234,13 @@ const ManageBookings = () => {
           </table>
         </div>
         {!loading && totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/60">
-            <p className="text-zinc-500 text-xs">Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} bookings</p>
+          <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border-subtle)]">
+            <p className="text-[var(--color-text-secondary)] text-xs">Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} bookings</p>
             <div className="flex items-center gap-1">
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-30"
+                className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] transition-colors cursor-pointer disabled:opacity-30"
               >
                 <ChevronLeft size={15} />
               </button>
@@ -248,7 +248,7 @@ const ManageBookings = () => {
               <button 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-30"
+                className="p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] transition-colors cursor-pointer disabled:opacity-30"
               >
                 <ChevronRight size={15} />
               </button>
@@ -260,31 +260,31 @@ const ManageBookings = () => {
       {/* Booking Inspect Details Modal */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
-          <div className="relative w-full max-w-lg bg-[#0e162c] border border-white/10 rounded-[32px] p-6 shadow-2xl">
+          <div className="relative w-full max-w-lg bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
             <div className="absolute top-0 right-0 p-4">
               <button 
                 onClick={() => setSelectedBooking(null)}
-                className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer bg-transparent border-0"
+                className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] cursor-pointer bg-transparent border-0"
               >
                 X
               </button>
             </div>
-            <h3 className="text-white font-bold text-lg mb-1">Booking Detail Audit</h3>
-            <p className="text-zinc-500 text-xs mb-5">Booking Transaction Reference: {selectedBooking.number}</p>
+            <h3 className="text-[var(--color-text-primary)] font-bold text-lg mb-1">Booking Detail Audit</h3>
+            <p className="text-[var(--color-text-secondary)] text-xs mb-5">Booking Transaction Reference: {selectedBooking.number}</p>
 
-            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2 text-xs">
-              <p className="text-zinc-500">Service: <span className="text-white font-semibold ml-1">{selectedBooking.service}</span></p>
-              <p className="text-zinc-500">Customer: <span className="text-white font-semibold ml-1">{selectedBooking.customer} ({selectedBooking.customerEmail})</span></p>
-              <p className="text-zinc-500">Provider: <span className="text-white font-semibold ml-1">{selectedBooking.provider} ({selectedBooking.providerEmail})</span></p>
-              <p className="text-zinc-500">Schedule Date: <span className="text-white font-semibold ml-1">{selectedBooking.date} • {selectedBooking.time}</span></p>
-              <p className="text-zinc-500">Scheduled At: <span className="text-white font-semibold ml-1">{selectedBooking.raw.created_at ? new Date(selectedBooking.raw.created_at).toLocaleString() : '—'}</span></p>
-              <p className="text-zinc-500">Base Price: <span className="text-white font-semibold ml-1">₹{selectedBooking.raw.estimated_price || 0}</span></p>
-              <p className="text-zinc-500">Total Price: <span className="text-green-400 font-bold ml-1">₹{selectedBooking.raw.final_price || selectedBooking.raw.estimated_price || 0}</span></p>
-              <p className="text-zinc-500">Payment Status: <span className="text-white font-semibold ml-1">{selectedBooking.raw.payment_status || 'Pending'}</span></p>
+            <div className="p-4 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl space-y-2 text-xs">
+              <p className="text-[var(--color-text-secondary)]">Service: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.service}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Customer: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.customer} ({selectedBooking.customerEmail})</span></p>
+              <p className="text-[var(--color-text-secondary)]">Provider: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.provider} ({selectedBooking.providerEmail})</span></p>
+              <p className="text-[var(--color-text-secondary)]">Schedule Date: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.date} • {selectedBooking.time}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Scheduled At: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.raw.created_at ? new Date(selectedBooking.raw.created_at).toLocaleString() : '—'}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Base Price: <span className="text-[var(--color-text-primary)] font-semibold ml-1">₹{selectedBooking.raw.estimated_price || 0}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Total Price: <span className="text-green-400 font-bold ml-1">₹{selectedBooking.raw.final_price || selectedBooking.raw.estimated_price || 0}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Payment Status: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.raw.payment_status || 'Pending'}</span></p>
               {selectedBooking.raw.cancellation_reason && (
                 <p className="text-red-400">Cancel Reason: <span className="font-semibold ml-1">{selectedBooking.raw.cancellation_reason}</span></p>
               )}
-              <p className="text-zinc-500">Status: <span className={`ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusStyle(selectedBooking.status)}`}>{selectedBooking.status}</span></p>
+              <p className="text-[var(--color-text-secondary)]">Status: <span className={`ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusStyle(selectedBooking.status)}`}>{selectedBooking.status}</span></p>
             </div>
           </div>
         </div>

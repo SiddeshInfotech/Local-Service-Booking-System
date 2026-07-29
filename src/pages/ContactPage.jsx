@@ -58,7 +58,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-white">
+    <div className="min-h-screen bg-[var(--color-primary-bg)] text-[var(--color-text-primary)] font-sans overflow-x-hidden selection:bg-[#D4AF37]/30 selection:text-[var(--color-text-primary)]">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Outfit', sans-serif; }
@@ -73,9 +73,9 @@ const ContactPage = () => {
           100% { background-position: 250% center; }
         }
         .glass-contact {
-          background: rgba(18,18,18,0.7);
+          background: var(--color-card-bg);
           backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(212,175,55,0.15);
+          border: 1px solid var(--color-border-subtle);
         }
         .contact-card {
           border: 1px solid rgba(212,175,55,0.12);
@@ -87,10 +87,10 @@ const ContactPage = () => {
           transform: translateY(-6px);
         }
         .contact-input {
-          background: rgba(26,29,35,0.8);
-          border: 1px solid rgba(212,175,55,0.22);
+          background: var(--color-hover-bg);
+          border: 1px solid var(--color-border-subtle);
           transition: all 0.3s ease;
-          color: white;
+          color: var(--color-text-primary);
         }
         .contact-input:focus {
           outline: none;
@@ -138,7 +138,7 @@ const ContactPage = () => {
             </h1>
           </AnimSection>
           <AnimSection dir="up" delay={200}>
-            <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-[var(--color-text-secondary)] text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               Whether you have a question about a booking, need support with a service, or want to become a provider — our team is ready to respond.
             </p>
           </AnimSection>
@@ -157,9 +157,9 @@ const ContactPage = () => {
                     <Icon size={22} className="text-[#D4AF37]" />
                   </div>
                   <div className="flex-grow">
-                    <h3 className="text-white font-bold text-sm mb-1">{c.title}</h3>
+                    <h3 className="text-[var(--color-text-primary)] font-bold text-sm mb-1">{c.title}</h3>
                     <p className="text-[#D4AF37] font-semibold text-sm mb-1">{c.value}</p>
-                    <p className="text-zinc-500 text-xs leading-relaxed">{c.sub}</p>
+                    <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed">{c.sub}</p>
                   </div>
                   <a href={c.href}
                     className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] uppercase tracking-wider hover:gap-3 transition-all">
@@ -179,41 +179,41 @@ const ContactPage = () => {
           {/* Form — 3 cols */}
           <AnimSection dir="left" className="lg:col-span-3">
             <div className="glass-contact rounded-[32px] p-8 sm:p-10">
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">Send us a message</h2>
-              <p className="text-zinc-500 text-sm mb-8">We'll get back to you within 2 business hours.</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-[var(--color-text-primary)] mb-2">Send us a message</h2>
+              <p className="text-[var(--color-text-secondary)] text-sm mb-8">We'll get back to you within 2 business hours.</p>
 
               {submitted ? (
                 <div className="success-pop flex flex-col items-center justify-center py-16 gap-4">
                   <div className="w-20 h-20 rounded-full bg-[#D4AF37]/15 flex items-center justify-center">
                     <CheckCircle size={40} className="text-[#D4AF37]" />
                   </div>
-                  <h3 className="text-xl font-black text-white">Message Sent!</h3>
-                  <p className="text-zinc-400 text-sm text-center">Our team will respond to your query within 2 business hours.</p>
+                  <h3 className="text-xl font-black text-[var(--color-text-primary)]">Message Sent!</h3>
+                  <p className="text-[var(--color-text-secondary)] text-sm text-center">Our team will respond to your query within 2 business hours.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">Full Name *</label>
+                      <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider block mb-2">Full Name *</label>
                       <input name="name" value={form.name} onChange={handleChange} required
                         placeholder="Your full name"
                         className="contact-input w-full rounded-xl px-4 py-3.5 text-sm" />
                     </div>
                     <div>
-                      <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">Email Address *</label>
+                      <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider block mb-2">Email Address *</label>
                       <input name="email" type="email" value={form.email} onChange={handleChange} required
                         placeholder="your@email.com"
                         className="contact-input w-full rounded-xl px-4 py-3.5 text-sm" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">Subject *</label>
+                    <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider block mb-2">Subject *</label>
                     <input name="subject" value={form.subject} onChange={handleChange} required
                       placeholder="How can we help you?"
                       className="contact-input w-full rounded-xl px-4 py-3.5 text-sm" />
                   </div>
                   <div>
-                    <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">Message *</label>
+                    <label className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wider block mb-2">Message *</label>
                     <textarea name="message" rows="5" value={form.message} onChange={handleChange} required
                       placeholder="Describe your query in detail..."
                       className="contact-input w-full rounded-xl px-4 py-3.5 text-sm resize-none" />
@@ -234,20 +234,20 @@ const ContactPage = () => {
                 <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center">
                   <Building size={18} className="text-[#D4AF37]" />
                 </div>
-                <h3 className="text-white font-bold text-sm">Our Office</h3>
+                <h3 className="text-[var(--color-text-primary)] font-bold text-sm">Our Office</h3>
               </div>
               <div className="space-y-3.5">
                 <div className="flex items-start gap-3">
                   <MapPin size={15} className="text-[#D4AF37] flex-shrink-0 mt-0.5" />
-                  <span className="text-zinc-400 text-sm leading-relaxed">100 Service Plaza, Suite 400,<br />New York, NY 10001</span>
+                  <span className="text-[var(--color-text-secondary)] text-sm leading-relaxed">100 Service Plaza, Suite 400,<br />New York, NY 10001</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone size={15} className="text-[#D4AF37] flex-shrink-0" />
-                  <span className="text-zinc-400 text-sm">+1 (800) 555-0199</span>
+                  <span className="text-[var(--color-text-secondary)] text-sm">+1 (800) 555-0199</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail size={15} className="text-[#D4AF37] flex-shrink-0" />
-                  <span className="text-zinc-400 text-sm">support@fixora.com</span>
+                  <span className="text-[var(--color-text-secondary)] text-sm">support@fixora.com</span>
                 </div>
               </div>
             </div>
@@ -257,7 +257,7 @@ const ContactPage = () => {
                 <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center">
                   <Clock size={18} className="text-[#D4AF37]" />
                 </div>
-                <h3 className="text-white font-bold text-sm">Support Hours</h3>
+                <h3 className="text-[var(--color-text-primary)] font-bold text-sm">Support Hours</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -265,9 +265,9 @@ const ContactPage = () => {
                   { day: 'Saturday', hrs: '10:00 AM – 6:00 PM' },
                   { day: 'Sunday & Holidays', hrs: 'Emergency only' },
                 ].map(h => (
-                  <div key={h.day} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                    <span className="text-zinc-400 text-xs">{h.day}</span>
-                    <span className="text-white text-xs font-semibold">{h.hrs}</span>
+                  <div key={h.day} className="flex justify-between items-center py-2 border-b border-[var(--color-border-subtle)] last:border-0">
+                    <span className="text-[var(--color-text-secondary)] text-xs">{h.day}</span>
+                    <span className="text-[var(--color-text-primary)] text-xs font-semibold">{h.hrs}</span>
                   </div>
                 ))}
                 <div className="flex items-center gap-2 pt-2">
@@ -282,9 +282,9 @@ const ContactPage = () => {
                 <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center">
                   <Headphones size={18} className="text-[#D4AF37]" />
                 </div>
-                <h3 className="text-white font-bold text-sm">Become a Provider</h3>
+                <h3 className="text-[var(--color-text-primary)] font-bold text-sm">Become a Provider</h3>
               </div>
-              <p className="text-zinc-400 text-xs leading-relaxed mb-4">Join our network of verified professionals and grow your service business with guaranteed work.</p>
+              <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed mb-4">Join our network of verified professionals and grow your service business with guaranteed work.</p>
               <Link to="/provider/register">
                 <button className="gold-submit px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider cursor-pointer">
                   Apply Now →
@@ -296,13 +296,13 @@ const ContactPage = () => {
       </section>
 
       {/* ─── FAQ ─── */}
-      <section className="py-24 bg-[#0A0A0A]">
+      <section className="py-24 bg-[var(--color-primary-bg)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimSection dir="up" className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 w-max mx-auto mb-5">
               <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">FAQ</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-white">
+            <h2 className="text-3xl sm:text-4xl font-black text-[var(--color-text-primary)]">
               Common <span className="contact-gold-shimmer">Questions</span>
             </h2>
           </AnimSection>
@@ -314,12 +314,12 @@ const ContactPage = () => {
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
                     className="w-full flex items-center justify-between px-6 py-5 text-left cursor-pointer"
                   >
-                    <span className="text-white text-sm font-semibold pr-4">{faq.q}</span>
+                    <span className="text-[var(--color-text-primary)] text-sm font-semibold pr-4">{faq.q}</span>
                     <span className={`text-[#D4AF37] text-lg font-bold flex-shrink-0 transition-transform duration-300 ${openFaq === i ? 'rotate-45' : ''}`}>+</span>
                   </button>
                   {openFaq === i && (
-                    <div className="px-6 pb-5 border-t border-white/5 pt-4">
-                      <p className="text-zinc-400 text-sm leading-relaxed">{faq.a}</p>
+                    <div className="px-6 pb-5 border-t border-[var(--color-border-subtle)] pt-4">
+                      <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">{faq.a}</p>
                     </div>
                   )}
                 </div>

@@ -151,9 +151,9 @@ const VerifyOTP = () => {
   return (
     <div
       className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative"
-      style={{ background: 'linear-gradient(135deg, #0F1115 0%, #1A1D23 100%)' }}
+      style={{ background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-secondary-bg) 100%)' }}
     >
-      <div className="absolute inset-0 bg-[#0F1115]/50 z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--color-primary-bg)]/50 z-0 pointer-events-none" />
 
       {/* Banner Messages */}
       {successMsg && (
@@ -175,8 +175,8 @@ const VerifyOTP = () => {
             <ShieldCheck size={32} className="text-gold-accent" />
           </div>
 
-          <h2 className="text-3xl font-bold text-white mb-2 text-center">Verify OTP</h2>
-          <p className="text-zinc-400 text-sm mb-2 text-center">
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2 text-center">Verify OTP</h2>
+          <p className="text-[var(--color-text-secondary)] text-sm mb-2 text-center">
             Enter the 6-digit code sent to
           </p>
           <p className="text-gold-accent font-semibold text-sm mb-8 text-center truncate max-w-[280px]">
@@ -196,7 +196,7 @@ const VerifyOTP = () => {
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-11 h-14 text-center text-xl font-bold rounded-xl border bg-zinc-900/80 text-white outline-none transition-all duration-200 
+                  className={`w-11 h-14 text-center text-xl font-bold rounded-xl border bg-[var(--color-secondary-bg)]/80 text-[var(--color-text-primary)] outline-none transition-all duration-200 
                     ${digit ? 'border-gold-accent/60 bg-gold-accent/5 shadow-[0_0_12px_rgba(212,175,55,0.15)]' : 'border-zinc-700/60'} 
                     focus:border-gold-accent focus:bg-gold-accent/5 focus:shadow-[0_0_16px_rgba(212,175,55,0.2)]`}
                 />
@@ -215,7 +215,7 @@ const VerifyOTP = () => {
 
           {/* Resend */}
           <div className="mt-6 text-center">
-            <p className="text-zinc-500 text-sm mb-2">Didn't receive the code?</p>
+            <p className="text-[var(--color-text-secondary)] text-sm mb-2">Didn't receive the code?</p>
             <button
               onClick={handleResend}
               disabled={resendCooldown > 0 || isResending}
@@ -230,7 +230,7 @@ const VerifyOTP = () => {
           <div className="mt-8">
             <Link
               to={backLink}
-              className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back</span>

@@ -60,13 +60,10 @@ const ForgotPassword = () => {
 
   return (
     <div
-      className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-cover bg-center bg-no-repeat relative"
-      style={{
-        background: 'linear-gradient(135deg, #0F1115 0%, #1A1D23 100%)',
-      }}
+      className="min-h-[calc(100vh-96px)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 bg-cover bg-center bg-no-repeat relative bg-[var(--color-primary-bg)]"
     >
       {/* Background overlay */}
-      <div className="absolute inset-0 bg-[#0F1115]/50 z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--color-primary-bg)]/50 z-0 pointer-events-none" />
 
       {/* Top Banner Alert Message */}
       {successMsg && (
@@ -85,7 +82,7 @@ const ForgotPassword = () => {
       <div className="w-full max-w-5xl glass-card rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl relative z-10 transition-all duration-300">
         
         {/* Left Side: Illustration Panel */}
-        <div className="relative hidden md:flex flex-col justify-between overflow-hidden min-h-[480px] bg-[#0F1115]">
+        <div className="relative hidden md:flex flex-col justify-between overflow-hidden min-h-[480px] bg-[var(--color-primary-bg)]">
           <div className="absolute top-0 left-0 w-80 h-80 bg-[#D4AF37]/8 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#D4AF37]/6 rounded-full blur-3xl translate-x-1/4 translate-y-1/4 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 via-transparent to-[#D4AF37]/3 pointer-events-none" />
@@ -100,8 +97,8 @@ const ForgotPassword = () => {
             />
           </div>
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0F1115]/90 via-transparent to-[#0F1115]/40 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0F1115]/20 via-transparent to-[#0F1115]/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-primary-bg)]/90 via-transparent to-[var(--color-primary-bg)]/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary-bg)]/20 via-transparent to-[var(--color-primary-bg)]/60 pointer-events-none" />
 
           {/* Feature pills */}
           <div className="absolute top-8 right-8 z-10 flex flex-col gap-2">
@@ -122,24 +119,24 @@ const ForgotPassword = () => {
             <span className="text-gold-accent text-xs font-semibold uppercase tracking-widest px-2.5 py-1 rounded bg-gold-accent/15 border border-gold-accent/30 inline-block mb-3.5 backdrop-blur-sm">
               Account Recovery
             </span>
-            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight drop-shadow-lg">
+            <h2 className="text-3xl font-extrabold text-[var(--color-text-primary)] tracking-tight leading-tight drop-shadow-lg">
               Regain Access <br /> Securely & Instantly
             </h2>
-            <p className="text-zinc-300 mt-2 text-sm leading-relaxed drop-shadow-md">
+            <p className="text-[var(--color-text-primary)] mt-2 text-sm leading-relaxed drop-shadow-md">
               Your account security is our priority. Get a reset link in seconds.
             </p>
           </div>
         </div>
 
         {/* Right Side: Form Panel */}
-        <div className="p-8 sm:p-12 flex flex-col justify-center bg-card-dark/85 backdrop-blur-md">
-          <h2 className="text-3xl font-bold text-white mb-1">
+        <div className="p-8 sm:p-12 flex flex-col justify-center bg-[var(--color-secondary-bg)]/40 backdrop-blur-md">
+          <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-1">
             Forgot Password
           </h2>
           
           {!successMsg ? (
             <>
-              <p className="text-zinc-400 text-sm mb-8 text-left">
+              <p className="text-[var(--color-text-secondary)] text-sm mb-8 text-left">
                 Enter your registered email address to receive a 6-digit OTP code.
               </p>
 
@@ -152,7 +149,7 @@ const ForgotPassword = () => {
                   placeholder="Enter your registered email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  rightElement={<Mail size={18} className="text-zinc-500" />}
+                  rightElement={<Mail size={18} className="text-[var(--color-text-secondary)]" />}
                 />
 
                 <button
@@ -167,7 +164,7 @@ const ForgotPassword = () => {
               <div className="mt-8 text-center sm:text-left">
                 <Link
                   to="/customer/login"
-                  className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                 >
                   <ArrowLeft size={16} />
                   <span>Back to Login</span>
@@ -176,14 +173,14 @@ const ForgotPassword = () => {
             </>
           ) : (
             <div className="mt-6 flex flex-col gap-6 text-left">
-              <p className="text-zinc-300 text-sm leading-relaxed">
+              <p className="text-[var(--color-text-primary)] text-sm leading-relaxed">
                 We've processed your recovery request. You can check your inbox for instructions to reset your password.
               </p>
               
               <Link to="/customer/login" className="w-full">
                 <button
                   type="button"
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] shadow-lg"
+                  className="w-full bg-[var(--color-zinc-800)] hover:bg-[var(--color-zinc-700)] text-[var(--color-text-primary)] font-bold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] shadow-lg"
                 >
                   <ArrowLeft size={16} />
                   <span>Back to Login</span>
