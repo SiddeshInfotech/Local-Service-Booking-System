@@ -1,6 +1,6 @@
 # Installation & Setup Guide
 
-Follow these instructions to configure and run the Local Service Booking System database, Flask backend API, and Vite React frontend development server.
+Follow these instructions to configure and run the Local Service Booking System database, Django backend API, and Vite React frontend development server.
 
 ---
 
@@ -53,8 +53,8 @@ Make sure you have the following software installed:
 4. **Configure Environment Variables**:
    Create a `.env` file inside the `backend/` folder and place the following parameters:
    ```env
-   FLASK_APP=app.py
-   FLASK_ENV=development
+   DJANGO_SETTINGS_MODULE=config.settings
+   
    JWT_SECRET_KEY=super_secure_access_secret_key_123
    JWT_REFRESH_SECRET_KEY=super_secure_refresh_secret_key_123
    DB_HOST=your_mysql_host
@@ -69,11 +69,11 @@ Make sure you have the following software installed:
    MAIL_PASSWORD=your_email_app_password
    ```
 5. **Run the Backend API**:
-   Launch the Flask server:
+   Launch the Django server:
    ```bash
    python backend/app.py
    ```
-   The Flask backend server will launch at: `http://127.0.0.1:5000`
+   The Django backend server will launch at: `http://127.0.0.1:5000`
 
 ---
 

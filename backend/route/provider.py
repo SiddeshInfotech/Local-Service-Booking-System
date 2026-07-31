@@ -1,4 +1,8 @@
-from flask import Blueprint, request, jsonify, g
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from utils.compat import jsonify, get_json_data, get_current_user
 from database.db import get_connection
 import bcrypt
 import datetime
@@ -15,7 +19,6 @@ from utils.auth_utils import (
     token_required
 )
 
-provider_bp = Blueprint("provider", __name__)
 
 # Config for file uploads
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
@@ -23,10 +26,10 @@ ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 ALLOWED_ID_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_ID_FILE_SIZE = 5 * 1024 * 1024  # 5 MB limit
 
-def allowed_file(filename):
+def allowed_file(request, filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def validate_and_upload_id_proof(file, folder="provider-id-proofs"):
+def validate_and_upload_id_proof(request, file, folder="provider-id-proofs"):
     if not file or not file.filename:
         return False, "No file uploaded or selected.", None
     
@@ -59,13 +62,11 @@ def validate_and_upload_id_proof(file, folder="provider-id-proofs"):
 # PROVIDER AUTHENTICATION
 # ====================================================
 
-@provider_bp.route("/api/provider/register", methods=["POST"])
-def register_provider():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_provider(request):
     try:
-        if request.is_json:
-            data = request.get_json(silent=True) or {}
-        else:
-            data = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
+        data = get_json_data(request)
         email = data.get("email")
 
 
@@ -105,7 +106,7 @@ def register_provider():
             return jsonify({
                 "status": False,
                 "message": "Full Name, Email and Password are required."
-            }), 400
+            }, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -115,7 +116,7 @@ def register_provider():
         if cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email already exists."}), 409
+            return jsonify({"status": False, "message": "Email already exists."}, status=409)
 
         # Check duplicate phone
         if phone:
@@ -123,7 +124,7 @@ def register_provider():
             if cursor.fetchone():
                 cursor.close()
                 conn.close()
-                return jsonify({"status": False, "message": "Phone number already registered."}), 400
+                return jsonify({"status": False, "message": "Phone number already registered."}, status=400)
 
         # Resolve category_id: prefer direct ID, else look up by name
         category_id = None
@@ -186,11 +187,11 @@ def register_provider():
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
-        # Check if ID proof file is attached in request.files during registration
+        # Check if ID proof file is attached in request.FILES during registration
         id_proof_file = (
-            request.files.get("id_proof")
-            or request.files.get("document_file")
-            or request.files.get("idProof")
+            request.FILES.get("id_proof")
+            or request.FILES.get("document_file")
+            or request.FILES.get("idProof")
         )
         id_proof_url = None
         if id_proof_file and id_proof_file.filename != "":
@@ -198,7 +199,7 @@ def register_provider():
             if not success:
                 cursor.close()
                 conn.close()
-                return jsonify({"status": False, "message": err_msg}), 400
+                return jsonify({"status": False, "message": err_msg}, status=400)
 
         cursor.execute(query, (
             business_name,
@@ -232,7 +233,7 @@ def register_provider():
         return jsonify({
             "status": True,
             "message": "Provider registered successfully."
-        }), 201
+        }, status=201)
 
 
     except Exception as e:
@@ -240,21 +241,22 @@ def register_provider():
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/verify-email", methods=["GET", "POST"])
-def verify_provider_email():
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def verify_provider_email(request):
     try:
         token = None
         if request.method == "POST":
-            data = request.get_json() or {}
+            data = get_json_data(request)
             token = data.get("token")
         else:
-            token = request.args.get("token")
+            token = request.GET.get("token")
 
         if not token:
-            return jsonify({"status": False, "message": "Verification token is required."}), 400
+            return jsonify({"status": False, "message": "Verification token is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -268,12 +270,12 @@ def verify_provider_email():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid email verification token."}), 400
+            return jsonify({"status": False, "message": "Invalid email verification token."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email verification token has expired."}), 400
+            return jsonify({"status": False, "message": "Email verification token has expired."}, status=400)
 
         # Mark token as verified
         cursor.execute(
@@ -291,10 +293,9 @@ def verify_provider_email():
         conn.close()
 
         if request.method == "POST":
-            return jsonify({"status": True, "message": "Email verified successfully."}), 200
+            return jsonify({"status": True, "message": "Email verified successfully."}, status=200)
         else:
             frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-            from flask import redirect
             return redirect(f"{frontend_url}/email-verified")
 
     except Exception as e:
@@ -302,13 +303,14 @@ def verify_provider_email():
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/login", methods=["POST"])
-def login_provider():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_provider(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         password = data.get("password")
 
@@ -316,7 +318,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Email and Password are required."
-            }), 400
+            }, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -331,7 +333,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Provider not found."
-            }), 404
+            }, status=404)
 
         # Verify password
         if not bcrypt.checkpw(
@@ -343,7 +345,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Invalid email or password."
-            }), 401
+            }, status=401)
 
         # Email verification check
         if not user["email_verified"]:
@@ -352,7 +354,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Please verify your email before logging in."
-            }), 403
+            }, status=403)
 
         # Provider status checks
         if user["status"] == "Pending":
@@ -361,7 +363,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Your account is awaiting admin approval."
-            }), 403
+            }, status=403)
 
         if user["status"] == "Rejected":
             cursor.close()
@@ -369,7 +371,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Your registration has been rejected by the admin."
-            }), 403
+            }, status=403)
 
         # Block both 'Blocked' and legacy 'Suspended' statuses
         if user["status"] in ("Blocked", "Suspended"):
@@ -378,7 +380,7 @@ def login_provider():
             return jsonify({
                 "status": False,
                 "message": "Your account has been blocked by the admin. Please contact support."
-            }), 403
+            }, status=403)
 
         # Generate JWT tokens
         access_token = generate_access_token(
@@ -426,7 +428,7 @@ def login_provider():
                 "total_reviews": user.get("total_reviews", 0),
                 "status": user["status"]
             }
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -437,15 +439,16 @@ def login_provider():
         return jsonify({
             "status": False,
             "message": f"Server Error: {str(e)}"
-        }), 500
+        }, status=500)
 
-@provider_bp.route("/api/provider/forgot-password", methods=["POST"])
-def provider_forgot_password():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def provider_forgot_password(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         if not email:
-            return jsonify({"status": False, "message": "Email is required."}), 400
+            return jsonify({"status": False, "message": "Email is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -456,7 +459,7 @@ def provider_forgot_password():
         if not user:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email not found."}), 404
+            return jsonify({"status": False, "message": "Email not found."}, status=404)
 
         # Generate Secure 6 Digit OTP
         import random
@@ -484,28 +487,29 @@ def provider_forgot_password():
             return jsonify({
                 "status": False,
                 "message": f"OTP generated, but email delivery failed: {email_msg}"
-            }), 500
+            }, status=500)
 
-        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}), 200
+        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/verify-otp", methods=["POST"])
-def provider_verify_otp():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def provider_verify_otp(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         # Accept both 'otp_code' and 'otp' as field names
         otp_code = data.get("otp_code") or data.get("otp")
 
         if not otp_code:
-            return jsonify({"status": False, "message": "OTP code is required."}), 400
+            return jsonify({"status": False, "message": "OTP code is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -526,32 +530,33 @@ def provider_verify_otp():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}, status=400)
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}), 200
+        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/reset-password", methods=["POST"])
-def provider_reset_password():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def provider_reset_password(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         # Accept both 'otp_code' and 'otp' as field names
         otp_code = data.get("otp_code") or data.get("otp")
         new_password = data.get("new_password")
 
         if not otp_code or not new_password:
-            return jsonify({"status": False, "message": "OTP code and new password are required."}), 400
+            return jsonify({"status": False, "message": "OTP code and new password are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -572,12 +577,12 @@ def provider_reset_password():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid OTP code or request."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code or request."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}, status=400)
 
         # Resolve email from token (handles case where email was not passed by frontend)
         email = token_record["email"]
@@ -599,24 +604,25 @@ def provider_reset_password():
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Password reset successfully."}), 200
+        return jsonify({"status": True, "message": "Password reset successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/refresh-token", methods=["POST"])
-def provider_refresh_token():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def provider_refresh_token(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         refresh_token = data.get("refresh_token")
 
         if not refresh_token:
-            return jsonify({"status": False, "message": "Refresh token is required."}), 400
+            return jsonify({"status": False, "message": "Refresh token is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -630,14 +636,14 @@ def provider_refresh_token():
         if not token_record or token_record["revoked"]:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid refresh token."}), 401
+            return jsonify({"status": False, "message": "Invalid refresh token."}, status=401)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.execute("DELETE FROM refresh_tokens WHERE refresh_token = %s", (refresh_token,))
             conn.commit()
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Expired refresh token."}), 401
+            return jsonify({"status": False, "message": "Expired refresh token."}, status=401)
 
         # Fetch provider details
         cursor.execute("SELECT email FROM providers WHERE provider_id = %s", (token_record["provider_id"],))
@@ -647,7 +653,7 @@ def provider_refresh_token():
         conn.close()
 
         if not provider:
-            return jsonify({"status": False, "message": "Provider associated with token not found."}), 401
+            return jsonify({"status": False, "message": "Provider associated with token not found."}, status=401)
 
         access_token = generate_access_token(token_record["provider_id"], provider["email"], "provider", provider_id=token_record["provider_id"])
 
@@ -656,16 +662,17 @@ def provider_refresh_token():
             "message": "Access token refreshed successfully.",
             "access_token": access_token,
             "token": access_token
-        }), 200
+        }, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/logout", methods=["POST"])
-def provider_logout():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def provider_logout(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         refresh_token = data.get("refresh_token")
         if refresh_token:
             conn = get_connection()
@@ -675,20 +682,21 @@ def provider_logout():
             cursor.close()
             conn.close()
 
-        return jsonify({"status": True, "message": "Logged out successfully."}), 200
+        return jsonify({"status": True, "message": "Logged out successfully."}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # PROVIDER PROFILE
 # ====================================================
 
-@provider_bp.route("/api/provider/profile", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def get_provider_profile():
+def get_provider_profile(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -701,7 +709,7 @@ def get_provider_profile():
         if not provider:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Add full_name alias for frontend compatibility
         provider["full_name"] = provider.get("business_name") or provider.get("owner_name") or ""
@@ -730,18 +738,19 @@ def get_provider_profile():
             "status": True,
             "message": "Profile fetched successfully.",
             "provider": provider
-        }), 200
+        }, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/profile", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
-def update_provider_profile():
+def update_provider_profile(request):
     try:
-        user_payload = g.current_user
-        data = request.get_json() or {}
+        user_payload = get_current_user(request)
+        data = get_json_data(request)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -753,7 +762,7 @@ def update_provider_profile():
         if not provider:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Accept full_name or its aliases from frontend
         existing_name = provider.get("business_name") or provider.get("owner_name") or ""
@@ -802,39 +811,40 @@ def update_provider_profile():
             "status": True,
             "message": "Profile updated successfully.",
             "provider": updated_provider
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/provider/documents", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def upload_document():
+def upload_document(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Only providers can upload documents."}), 403
+            return jsonify({"status": False, "message": "Only providers can upload documents."}, status=403)
 
-        if "document_file" not in request.files:
-            return jsonify({"status": False, "message": "No file part in request."}), 400
+        if "document_file" not in request.FILES:
+            return jsonify({"status": False, "message": "No file part in request."}, status=400)
 
-        file = request.files["document_file"]
-        document_type = request.form.get("document_type")
+        file = request.FILES["document_file"]
+        document_type = request.POST.get("document_type")
 
         if file.filename == "":
-            return jsonify({"status": False, "message": "No file selected."}), 400
+            return jsonify({"status": False, "message": "No file selected."}, status=400)
 
         if not document_type or document_type not in ['Aadhaar', 'PAN', 'License', 'Profile Photo', 'Certificate', 'ID Proof']:
-            return jsonify({"status": False, "message": "Invalid or missing document type."}), 400
+            return jsonify({"status": False, "message": "Invalid or missing document type."}, status=400)
 
         success, err_msg, cloudinary_url = validate_and_upload_id_proof(file, folder="provider-id-proofs")
         if not success:
-            return jsonify({"status": False, "message": err_msg}), 400
+            return jsonify({"status": False, "message": err_msg}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -858,7 +868,7 @@ def upload_document():
                 "file_path": cloudinary_url,
                 "verification_status": "Pending"
             }
-        }), 201
+        }, status=201)
 
 
     except Exception as e:
@@ -866,28 +876,29 @@ def upload_document():
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # PROVIDER SERVICES MAPPING
 # ====================================================
 
-@provider_bp.route("/api/service/provider", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def link_service():
+def link_service(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         service_id = data.get("service_id")
         experience_years = data.get("experience_years", 0)
         service_charge = data.get("service_charge")
 
         if not service_id or service_charge is None:
-            return jsonify({"status": False, "message": "Service ID and Service Charge are required."}), 400
+            return jsonify({"status": False, "message": "Service ID and Service Charge are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -897,7 +908,7 @@ def link_service():
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Service not found."}), 404
+            return jsonify({"status": False, "message": "Service not found."}, status=404)
 
         # Link/Update service mapping
         cursor.execute(
@@ -920,23 +931,24 @@ def link_service():
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Service linked successfully."}), 201
+        return jsonify({"status": True, "message": "Service linked successfully."}, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/service/provider", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def list_linked_services():
+def list_linked_services(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -956,18 +968,19 @@ def list_linked_services():
             if s.get("service_charge"):
                 s["service_charge"] = float(s["service_charge"])
 
-        return jsonify({"status": True, "services": services}), 200
+        return jsonify({"status": True, "services": services}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/service/provider/<int:service_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
-def unlink_service(service_id):
+def unlink_service(request, service_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -980,26 +993,27 @@ def unlink_service(service_id):
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "message": "Service unlinked successfully."}), 200
+        return jsonify({"status": True, "message": "Service unlinked successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # BOOKINGS (PROVIDER OPS)
 # ====================================================
 
-@provider_bp.route("/api/booking/provider/history", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def get_provider_booking_history():
+def get_provider_booking_history(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1039,18 +1053,19 @@ def get_provider_booking_history():
             if b.get("updated_at"):
                 b["updated_at"] = b["updated_at"].isoformat()
 
-        return jsonify({"status": True, "bookings": bookings}), 200
+        return jsonify({"status": True, "bookings": bookings}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/booking/provider/<int:booking_id>/accept", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def accept_booking(booking_id):
+def accept_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1061,12 +1076,12 @@ def accept_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] != 'Pending':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking request cannot be accepted in its current state."}), 400
+            return jsonify({"status": False, "message": "Booking request cannot be accepted in its current state."}, status=400)
 
         # Update Booking
         cursor.execute(
@@ -1087,23 +1102,24 @@ def accept_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking request accepted successfully."}), 200
+        return jsonify({"status": True, "message": "Booking request accepted successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/booking/provider/<int:booking_id>/reject", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def reject_booking(booking_id):
+def reject_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1114,12 +1130,12 @@ def reject_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] != 'Pending':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking request cannot be rejected."}), 400
+            return jsonify({"status": False, "message": "Booking request cannot be rejected."}, status=400)
 
         # Update Booking
         cursor.execute(
@@ -1140,23 +1156,24 @@ def reject_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking request rejected successfully."}), 200
+        return jsonify({"status": True, "message": "Booking request rejected successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/booking/provider/<int:booking_id>/start", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def start_booking(booking_id):
+def start_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1167,12 +1184,12 @@ def start_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] != 'Accepted':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking cannot be started."}), 400
+            return jsonify({"status": False, "message": "Booking cannot be started."}, status=400)
 
         # Update Booking
         cursor.execute(
@@ -1193,25 +1210,26 @@ def start_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking work started successfully."}), 200
+        return jsonify({"status": True, "message": "Booking work started successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/booking/provider/<int:booking_id>/complete", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def complete_booking(booking_id):
+def complete_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         final_price = data.get("final_price")
 
         conn = get_connection()
@@ -1223,12 +1241,12 @@ def complete_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] != 'In Progress':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking cannot be marked complete."}), 400
+            return jsonify({"status": False, "message": "Booking cannot be marked complete."}, status=400)
 
         # Determine price
         price = final_price if final_price is not None else booking["estimated_price"]
@@ -1252,25 +1270,26 @@ def complete_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking marked as finished successfully."}), 200
+        return jsonify({"status": True, "message": "Booking marked as finished successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@provider_bp.route("/api/booking/provider/<int:booking_id>/cancel", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def provider_cancel_booking(booking_id):
+def provider_cancel_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         reason = data.get("reason", "Cancelled by provider")
 
         conn = get_connection()
@@ -1282,12 +1301,12 @@ def provider_cancel_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] in ['Completed', 'Cancelled', 'Rejected']:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking cannot be cancelled in its current state."}), 400
+            return jsonify({"status": False, "message": "Booking cannot be cancelled in its current state."}, status=400)
 
         old_status = booking["booking_status"]
 
@@ -1311,33 +1330,34 @@ def provider_cancel_booking(booking_id):
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "message": "Booking cancelled successfully."}), 200
+        return jsonify({"status": True, "message": "Booking cancelled successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # REVIEWS (PROVIDER OPS)
 # ====================================================
 
-@provider_bp.route("/api/review/<int:review_id>/reply", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def reply_to_review(review_id):
+def reply_to_review(request, review_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "provider":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         reply_text = data.get("reply_text")
 
         if not reply_text:
-            return jsonify({"status": False, "message": "Reply text is required."}), 400
+            return jsonify({"status": False, "message": "Reply text is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1348,7 +1368,7 @@ def reply_to_review(review_id):
         if not review:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Review not found or unauthorized."}), 404
+            return jsonify({"status": False, "message": "Review not found or unauthorized."}, status=404)
 
         cursor.execute(
             "UPDATE reviews SET provider_reply = %s, reply_date = NOW() WHERE review_id = %s",
@@ -1365,11 +1385,11 @@ def reply_to_review(review_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Reply submitted successfully."}), 200
+        return jsonify({"status": True, "message": "Reply submitted successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)

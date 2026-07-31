@@ -1,5 +1,24 @@
+import os
 import mysql.connector
-from config import DB_CONFIG
+from dotenv import load_dotenv
+
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(base_dir, ".env")
+load_dotenv(env_path)
+load_dotenv()
+
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", "root"),
+    "database": os.getenv("DB_NAME", "local_service_db"),
+    "charset": os.getenv("DB_CHARSET", "utf8mb4"),
+}
+
+ssl_ca = os.getenv("DB_SSL_CA")
+if ssl_ca:
+    DB_CONFIG["ssl_ca"] = ssl_ca
 
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)

@@ -1,6 +1,6 @@
 # Backend Architecture & Code Documentation
 
-The backend of the Local Service Booking System is built using Python Flask, interacting with a remote cloud MySQL instance. Authentication is powered by JSON Web Tokens (JWT) with secure access and refresh expiration timelines.
+The backend of the Local Service Booking System is built using Django & Django REST Framework, interacting with a remote cloud MySQL instance. Authentication is powered by JSON Web Tokens (JWT) with secure access and refresh expiration timelines.
 
 ---
 
@@ -23,7 +23,7 @@ backend/
 │   ├── mail_utils.py      # Email verification configurations
 │   └── upload_utils.py    # File upload validation helpers
 ├── .env                   # DB credentials and secret parameters
-├── app.py                 # Core Flask instantiation and CORS setup
+├── manage.py              # Django management entry point
 └── requirements.txt       # Project library packages list
 ```
 
@@ -70,7 +70,7 @@ def token_required(f):
     def decorated(*args, **kwargs):
         # 1. Checks for Authorization header.
         # 2. Decodes JWT using JWT_SECRET_KEY.
-        # 3. Attaches payload data (user_id, role) to flask.g.current_user.
+        # 3. Attaches payload data (user_id, role) to request.current_user.
         # 4. Aborts with 401 Unauthorized if invalid or expired.
         return f(*args, **kwargs)
     return decorated

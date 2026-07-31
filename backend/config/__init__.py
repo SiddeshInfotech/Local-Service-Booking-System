@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(base_dir, ".env")
 load_dotenv(env_path)
 load_dotenv()
 
@@ -13,7 +14,6 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "local_service_db"),
     "charset": os.getenv("DB_CHARSET", "utf8mb4"),
 }
-
 
 ssl_ca = os.getenv("DB_SSL_CA")
 if ssl_ca:

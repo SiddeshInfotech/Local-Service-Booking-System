@@ -1,6 +1,6 @@
 # Local Service Booking System - API Documentation
 
-This document describes all API endpoints implemented in the Flask backend. All endpoints respond with JSON and use standard HTTP status codes.
+This document describes all API endpoints implemented in the Django backend. All endpoints respond with JSON and use standard HTTP status codes.
 
 ## Base Path
 - Local Base URL: `http://127.0.0.1:5000`

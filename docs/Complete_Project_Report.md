@@ -8,10 +8,10 @@ The Local Service Booking System is a full-stack platform built to connect local
 ## 1. Technology Stack
 
 ### Backend API Layer
-* **Core Framework**: Python Flask (REST API)
+* **Core Framework**: Django & Django REST Framework (REST API)
 * **Authentication**: JSON Web Tokens (PyJWT)
 * **Database**: MySQL (hosted on Aiven Cloud)
-* **CORS Middleware**: Flask-CORS
+* **CORS Middleware**: django-cors-headers
 * **Cryptography**: Bcrypt password hashing
 
 ### Frontend UI Layer

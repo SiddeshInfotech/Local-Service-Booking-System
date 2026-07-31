@@ -1,4 +1,8 @@
-from flask import Blueprint, request, jsonify, g
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from utils.compat import jsonify, get_json_data, get_current_user
 from database.db import get_connection
 import bcrypt
 import datetime
@@ -8,18 +12,19 @@ from utils.auth_utils import (
     token_required
 )
 
-admin_bp = Blueprint("admin", __name__)
 
 def admin_required(f):
     """ Helper decorator to check if user role is Admin or Super Admin. """
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not hasattr(g, 'current_user') or not g.current_user:
-            return jsonify({"status": False, "message": "Unauthorized."}), 401
-        role = g.current_user.get("role", "").lower()
+        request = args[0] if args else kwargs.get('request')
+        user = get_current_user(request)
+        if not user:
+            return jsonify({"status": False, "message": "Unauthorized."}, status=401)
+        role = user.get("role", "").lower()
         if "admin" not in role:
-            return jsonify({"status": False, "message": "Forbidden. Admin access required."}), 403
+            return jsonify({"status": False, "message": "Forbidden. Admin access required."}, status=403)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -27,15 +32,16 @@ def admin_required(f):
 # ADMIN LOGIN
 # ====================================================
 
-@admin_bp.route("/api/admin/login", methods=["POST"])
-def login_admin():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_admin(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         password = data.get("password")
 
         if not email or not password:
-            return jsonify({"status": False, "message": "Email and Password are required."}), 400
+            return jsonify({"status": False, "message": "Email and Password are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -46,18 +52,18 @@ def login_admin():
         if not admin:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid email or password."}), 401
+            return jsonify({"status": False, "message": "Invalid email or password."}, status=401)
 
         if admin["status"] == "Inactive":
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Admin account is inactive."}), 403
+            return jsonify({"status": False, "message": "Admin account is inactive."}, status=403)
 
         # Verify password
         if not bcrypt.checkpw(password.encode("utf-8"), admin["password_hash"].encode("utf-8")):
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid email or password."}), 401
+            return jsonify({"status": False, "message": "Invalid email or password."}, status=401)
 
         # Generate tokens
         access_token = generate_access_token(admin["admin_id"], admin["email"], admin["role"])
@@ -82,24 +88,25 @@ def login_admin():
                 "email": admin["email"],
                 "role": admin["role"]
             }
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # PROVIDER APPROVAL & SUSPENSION
 # ====================================================
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>/approve", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def approve_provider(provider_id):
+def approve_provider(request, provider_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -108,7 +115,7 @@ def approve_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         cursor.execute("UPDATE providers SET status = 'Approved' WHERE provider_id = %s", (provider_id,))
         conn.commit()
@@ -122,20 +129,21 @@ def approve_provider(provider_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider approved successfully."}), 200
+        return jsonify({"status": True, "message": "Provider approved successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>/reject", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def reject_provider(provider_id):
+def reject_provider(request, provider_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -144,7 +152,7 @@ def reject_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         cursor.execute("UPDATE providers SET status = 'Rejected' WHERE provider_id = %s", (provider_id,))
         conn.commit()
@@ -158,20 +166,21 @@ def reject_provider(provider_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider rejected successfully."}), 200
+        return jsonify({"status": True, "message": "Provider rejected successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>/suspend", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def suspend_provider(provider_id):
+def suspend_provider(request, provider_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -180,7 +189,7 @@ def suspend_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Use 'Suspended' in the database (mapped to 'Blocked' on read/write boundary)
         cursor.execute("UPDATE providers SET status = 'Suspended' WHERE provider_id = %s", (provider_id,))
@@ -195,24 +204,25 @@ def suspend_provider(provider_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider blocked successfully."}), 200
+        return jsonify({"status": True, "message": "Provider blocked successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # CUSTOMER SUSPENSION
 # ====================================================
 
-@admin_bp.route("/api/admin/customer/<int:customer_id>/suspend", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def suspend_customer(customer_id):
+def suspend_customer(request, customer_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -221,7 +231,7 @@ def suspend_customer(customer_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         cursor.execute("UPDATE customers SET status = 'Blocked' WHERE customer_id = %s", (customer_id,))
         conn.commit()
@@ -235,25 +245,25 @@ def suspend_customer(customer_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Customer suspended successfully."}), 200
+        return jsonify({"status": True, "message": "Customer suspended successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # DASHBOARD STATS, REPORTS & ACTIVITY LOGS
 # ====================================================
 
-@admin_bp.route("/api/admin/stats", methods=["GET"])
-@admin_bp.route("/api/admin/dashboard", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def get_dashboard_stats():
+def get_dashboard_stats(request):
 
     try:
         conn = get_connection()
@@ -287,20 +297,21 @@ def get_dashboard_stats():
                 "total_bookings": total_bookings,
                 "total_revenue": total_revenue
             }
-        }), 200
+        }, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/reports", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def get_aggregate_reports():
+def get_aggregate_reports(request):
     try:
         import datetime as dt
 
         # Parse optional date range: 7d | 30d | ytd
-        date_range = request.args.get("range", "").strip().lower()
+        date_range = request.GET.get("range", "").strip().lower()
         now = dt.datetime.utcnow()
 
         if date_range == "7d":
@@ -472,15 +483,16 @@ def get_aggregate_reports():
                     "active_providers": active_providers
                 }
             }
-        }), 200
+        }, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/activity-logs", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def get_activity_logs():
+def get_activity_logs(request):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -500,27 +512,28 @@ def get_activity_logs():
             if l.get("changed_at"):
                 l["changed_at"] = l["changed_at"].isoformat()
 
-        return jsonify({"status": True, "activity_logs": logs}), 200
+        return jsonify({"status": True, "activity_logs": logs}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # CATEGORY CRUD
 # ====================================================
 
-@admin_bp.route("/api/category", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def create_category():
+def create_category(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         category_name = data.get("category_name")
         category_icon = data.get("category_icon")
         description = data.get("description")
 
         if not category_name:
-            return jsonify({"status": False, "message": "Category Name is required."}), 400
+            return jsonify({"status": False, "message": "Category Name is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -542,22 +555,23 @@ def create_category():
                 "description": description,
                 "status": "Active"
             }
-        }), 201
+        }, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/category/<int:category_id>", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def update_category(category_id):
+def update_category(request, category_id):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         category_name = data.get("category_name")
         category_icon = data.get("category_icon")
         description = data.get("description")
@@ -572,7 +586,7 @@ def update_category(category_id):
         if not category:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Category not found."}), 404
+            return jsonify({"status": False, "message": "Category not found."}, status=404)
 
         name = category_name if category_name is not None else category["category_name"]
         icon = category_icon if category_icon is not None else category["category_icon"]
@@ -591,20 +605,21 @@ def update_category(category_id):
         return jsonify({
             "status": True,
             "message": "Category updated successfully."
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/category/<int:category_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def delete_category(category_id):
+def delete_category(request, category_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -613,7 +628,7 @@ def delete_category(category_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Category not found."}), 404
+            return jsonify({"status": False, "message": "Category not found."}, status=404)
 
         # Set status to Inactive instead of physical delete to preserve constraints
         cursor.execute("UPDATE categories SET status = 'Inactive' WHERE category_id = %s", (category_id,))
@@ -621,26 +636,27 @@ def delete_category(category_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Category deactivated successfully."}), 200
+        return jsonify({"status": True, "message": "Category deactivated successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # SERVICE CRUD
 # ====================================================
 
-@admin_bp.route("/api/service", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def create_service():
+def create_service(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         category_id = data.get("category_id")
         service_name = data.get("service_name")
         description = data.get("description")
@@ -648,7 +664,7 @@ def create_service():
         estimated_duration = data.get("estimated_duration")
 
         if not category_id or not service_name:
-            return jsonify({"status": False, "message": "Category ID and Service Name are required."}), 400
+            return jsonify({"status": False, "message": "Category ID and Service Name are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -658,7 +674,7 @@ def create_service():
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Category not found."}), 404
+            return jsonify({"status": False, "message": "Category not found."}, status=404)
 
         cursor.execute(
             "INSERT INTO services (category_id, service_name, description, estimated_price, estimated_duration, status) VALUES (%s, %s, %s, %s, %s, 'Active')",
@@ -682,22 +698,23 @@ def create_service():
                 "estimated_duration": estimated_duration,
                 "status": "Active"
             }
-        }), 201
+        }, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/service/<int:service_id>", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def update_service(service_id):
+def update_service(request, service_id):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         category_id = data.get("category_id")
         service_name = data.get("service_name")
         description = data.get("description")
@@ -714,7 +731,7 @@ def update_service(service_id):
         if not service:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Service not found."}), 404
+            return jsonify({"status": False, "message": "Service not found."}, status=404)
 
         cat_id = category_id if category_id is not None else service["category_id"]
         name = service_name if service_name is not None else service["service_name"]
@@ -735,20 +752,21 @@ def update_service(service_id):
         return jsonify({
             "status": True,
             "message": "Service updated successfully."
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/service/<int:service_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def delete_service(service_id):
+def delete_service(request, service_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -757,7 +775,7 @@ def delete_service(service_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Service not found."}), 404
+            return jsonify({"status": False, "message": "Service not found."}, status=404)
 
         # Set status to Inactive instead of physical delete
         cursor.execute("UPDATE services SET status = 'Inactive' WHERE service_id = %s", (service_id,))
@@ -765,24 +783,25 @@ def delete_service(service_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Service deactivated successfully."}), 200
+        return jsonify({"status": True, "message": "Service deactivated successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # REFUND PAYMENT
 # ====================================================
 
-@admin_bp.route("/api/payment/<int:booking_id>/refund", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def refund_payment(booking_id):
+def refund_payment(request, booking_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -793,12 +812,12 @@ def refund_payment(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["payment_status"] != 'Paid':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Refund can only be issued for Paid bookings."}), 400
+            return jsonify({"status": False, "message": "Refund can only be issued for Paid bookings."}, status=400)
 
         old_status = booking["booking_status"]
 
@@ -825,26 +844,27 @@ def refund_payment(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Payment refunded successfully."}), 200
+        return jsonify({"status": True, "message": "Payment refunded successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # ADMIN LIST ENDPOINTS
 # ====================================================
 
-@admin_bp.route("/api/admin/providers", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_providers():
+def admin_list_providers(request):
     try:
-        status_filter = request.args.get("status")
+        status_filter = request.GET.get("status")
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -884,16 +904,17 @@ def admin_list_providers():
             # Aliases for frontend
             p["full_name"] = p.get("business_name") or p.get("owner_name") or ""
 
-        return jsonify({"status": True, "providers": providers, "total": len(providers)}), 200
+        return jsonify({"status": True, "providers": providers, "total": len(providers)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider-approval", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_provider_approval_list():
+def admin_provider_approval_list(request):
     """List providers with Pending status for approval queue."""
     try:
         conn = get_connection()
@@ -935,15 +956,16 @@ def admin_provider_approval_list():
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "providers": providers, "total": len(providers)}), 200
+        return jsonify({"status": True, "providers": providers, "total": len(providers)}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_get_provider(provider_id):
+def admin_get_provider(request, provider_id):
     """Get a single provider detail with booking counts."""
     try:
         conn = get_connection()
@@ -960,7 +982,7 @@ def admin_get_provider(provider_id):
         if not provider:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Booking counts
         cursor.execute("SELECT COUNT(*) as total FROM bookings WHERE provider_id = %s", (provider_id,))
@@ -972,7 +994,7 @@ def admin_get_provider(provider_id):
 
         # Services offered
         cursor.execute("""
-            SELECT ps.provider_service_id, ps.sub_service_name, ps.price, s.service_name
+            SELECT ps.provider_service_id, s.service_name, ps.service_charge as price, s.service_name
             FROM provider_services ps
             JOIN services s ON s.service_id = ps.service_id
             WHERE ps.provider_id = %s
@@ -1003,18 +1025,19 @@ def admin_get_provider(provider_id):
             provider["last_login"] = provider["last_login"].isoformat()
         provider["full_name"] = provider.get("business_name") or provider.get("owner_name") or ""
 
-        return jsonify({"status": True, "provider": provider}), 200
+        return jsonify({"status": True, "provider": provider}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_update_provider(provider_id):
+def admin_update_provider(request, provider_id):
     """Update a provider record (admin editing)."""
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -1023,7 +1046,7 @@ def admin_update_provider(provider_id):
         if not provider:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         new_name = data.get("full_name") or data.get("owner_name") or data.get("business_name") or provider.get("business_name") or provider.get("owner_name") or ""
         phone = data.get("phone", provider["phone"])
@@ -1048,19 +1071,20 @@ def admin_update_provider(provider_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider updated successfully."}), 200
+        return jsonify({"status": True, "message": "Provider updated successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_delete_provider(provider_id):
+def admin_delete_provider(request, provider_id):
     """Soft-delete a provider."""
     try:
         conn = get_connection()
@@ -1069,7 +1093,7 @@ def admin_delete_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Soft-delete: use deleted_at if column exists, otherwise set status to Rejected
         try:
@@ -1079,19 +1103,20 @@ def admin_delete_provider(provider_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider deleted successfully."}), 200
+        return jsonify({"status": True, "message": "Provider deleted successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>/block", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def block_provider(provider_id):
+def block_provider(request, provider_id):
     """Block a provider — sets status to 'Blocked'."""
     try:
         conn = get_connection()
@@ -1100,7 +1125,7 @@ def block_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         # Use 'Suspended' in the database (mapped to 'Blocked' on read/write boundary)
         cursor.execute("UPDATE providers SET status = 'Suspended' WHERE provider_id = %s", (provider_id,))
@@ -1111,19 +1136,20 @@ def block_provider(provider_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider blocked successfully."}), 200
+        return jsonify({"status": True, "message": "Provider blocked successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/provider/<int:provider_id>/unblock", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def unblock_provider(provider_id):
+def unblock_provider(request, provider_id):
     """Unblock/Re-approve a suspended provider."""
     try:
         conn = get_connection()
@@ -1132,7 +1158,7 @@ def unblock_provider(provider_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
 
         cursor.execute("UPDATE providers SET status = 'Approved' WHERE provider_id = %s", (provider_id,))
         cursor.execute(
@@ -1142,21 +1168,22 @@ def unblock_provider(provider_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Provider unblocked successfully."}), 200
+        return jsonify({"status": True, "message": "Provider unblocked successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/customers", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_customers():
+def admin_list_customers(request):
     try:
-        status_filter = request.args.get("status")
+        status_filter = request.GET.get("status")
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -1185,16 +1212,17 @@ def admin_list_customers():
             if c.get("date_of_birth"):
                 c["date_of_birth"] = c["date_of_birth"].isoformat() if hasattr(c["date_of_birth"], "isoformat") else str(c["date_of_birth"])
 
-        return jsonify({"status": True, "customers": customers, "total": len(customers)}), 200
+        return jsonify({"status": True, "customers": customers, "total": len(customers)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_get_customer(customer_id):
+def admin_get_customer(request, customer_id):
     """Get a single customer detail with booking counts."""
     try:
         conn = get_connection()
@@ -1210,7 +1238,7 @@ def admin_get_customer(customer_id):
         if not customer:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         cursor.execute("SELECT COUNT(*) as total FROM bookings WHERE customer_id = %s", (customer_id,))
         customer["total_bookings"] = cursor.fetchone()["total"]
@@ -1232,18 +1260,19 @@ def admin_get_customer(customer_id):
         if customer.get("date_of_birth"):
             customer["date_of_birth"] = customer["date_of_birth"].isoformat() if hasattr(customer["date_of_birth"], "isoformat") else str(customer["date_of_birth"])
 
-        return jsonify({"status": True, "customer": customer}), 200
+        return jsonify({"status": True, "customer": customer}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_update_customer(customer_id):
+def admin_update_customer(request, customer_id):
     """Update a customer record (admin editing)."""
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -1252,7 +1281,7 @@ def admin_update_customer(customer_id):
         if not customer:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         full_name = data.get("full_name", customer["full_name"])
         phone = data.get("phone", customer["phone"])
@@ -1271,19 +1300,20 @@ def admin_update_customer(customer_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Customer updated successfully."}), 200
+        return jsonify({"status": True, "message": "Customer updated successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/customer/<int:customer_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_delete_customer(customer_id):
+def admin_delete_customer(request, customer_id):
     """Soft-delete a customer."""
     try:
         conn = get_connection()
@@ -1292,7 +1322,7 @@ def admin_delete_customer(customer_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         # Soft-delete: use deleted_at if column exists, otherwise set status to Blocked
         try:
@@ -1302,19 +1332,20 @@ def admin_delete_customer(customer_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Customer deleted successfully."}), 200
+        return jsonify({"status": True, "message": "Customer deleted successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/customer/<int:customer_id>/unblock", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def unblock_customer(customer_id):
+def unblock_customer(request, customer_id):
     """Unblock a previously blocked customer."""
     try:
         conn = get_connection()
@@ -1323,7 +1354,7 @@ def unblock_customer(customer_id):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         cursor.execute("UPDATE customers SET status = 'Active' WHERE customer_id = %s", (customer_id,))
         cursor.execute(
@@ -1333,19 +1364,20 @@ def unblock_customer(customer_id):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Customer unblocked successfully."}), 200
+        return jsonify({"status": True, "message": "Customer unblocked successfully."}, status=200)
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/categories", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_categories():
+def admin_list_categories(request):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1358,16 +1390,17 @@ def admin_list_categories():
             if c.get("created_at"):
                 c["created_at"] = c["created_at"].isoformat()
 
-        return jsonify({"status": True, "categories": categories, "total": len(categories)}), 200
+        return jsonify({"status": True, "categories": categories, "total": len(categories)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/services", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_services():
+def admin_list_services(request):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1387,18 +1420,19 @@ def admin_list_services():
             if s.get("base_price"):
                 s["base_price"] = float(s["base_price"])
 
-        return jsonify({"status": True, "services": services, "total": len(services)}), 200
+        return jsonify({"status": True, "services": services, "total": len(services)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/bookings", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_bookings():
+def admin_list_bookings(request):
     try:
-        status_filter = request.args.get("status")
+        status_filter = request.GET.get("status")
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -1433,16 +1467,17 @@ def admin_list_bookings():
                 if b.get(key):
                     b[key] = float(b[key])
 
-        return jsonify({"status": True, "bookings": bookings, "total": len(bookings)}), 200
+        return jsonify({"status": True, "bookings": bookings, "total": len(bookings)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@admin_bp.route("/api/admin/reviews", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_list_reviews():
+def admin_list_reviews(request):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1464,22 +1499,23 @@ def admin_list_reviews():
                 if r.get(key) and hasattr(r[key], "isoformat"):
                     r[key] = r[key].isoformat()
 
-        return jsonify({"status": True, "reviews": reviews, "total": len(reviews)}), 200
+        return jsonify({"status": True, "reviews": reviews, "total": len(reviews)}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 # ====================================================
 # ADMIN BOOKING CANCEL
 # ====================================================
 
-@admin_bp.route("/api/admin/booking/<int:booking_id>/cancel", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_cancel_booking(booking_id):
+def admin_cancel_booking(request, booking_id):
     """Admin can cancel any active booking."""
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         reason = data.get("reason", "Cancelled by admin")
 
         conn = get_connection()
@@ -1491,7 +1527,7 @@ def admin_cancel_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] in ("Cancelled", "Completed"):
             cursor.close()
@@ -1499,7 +1535,7 @@ def admin_cancel_booking(booking_id):
             return jsonify({
                 "status": False,
                 "message": f"Booking is already {booking['booking_status']} and cannot be cancelled."
-            }), 400
+            }, status=400)
 
         old_status = booking["booking_status"]
 
@@ -1527,24 +1563,25 @@ def admin_cancel_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking cancelled by admin successfully."}), 200
+        return jsonify({"status": True, "message": "Booking cancelled by admin successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # ADMIN REVIEW DELETE
 # ====================================================
 
-@admin_bp.route("/api/admin/review/<int:review_id>", methods=["DELETE"])
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def admin_delete_review(review_id):
+def admin_delete_review(request, review_id):
     """Admin can delete any review. Recalculates provider rating afterwards."""
     try:
         conn = get_connection()
@@ -1557,7 +1594,7 @@ def admin_delete_review(review_id):
         if not review:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Review not found."}), 404
+            return jsonify({"status": False, "message": "Review not found."}, status=404)
 
         provider_id = review["provider_id"]
 
@@ -1581,24 +1618,25 @@ def admin_delete_review(review_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Review deleted successfully."}), 200
+        return jsonify({"status": True, "message": "Review deleted successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # ADMIN DASHBOARD — Enhanced with Recent Data
 # ====================================================
 
-@admin_bp.route("/api/admin/dashboard/recent", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
 @admin_required
-def get_dashboard_recent():
+def get_dashboard_recent(request):
     """Returns recent bookings and recent registrations for the dashboard."""
     try:
         conn = get_connection()
@@ -1659,8 +1697,8 @@ def get_dashboard_recent():
             "recent_bookings": recent_bookings,
             "recent_customers": recent_customers,
             "recent_providers": recent_providers
-        }), 200
+        }, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 

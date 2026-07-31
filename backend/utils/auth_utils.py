@@ -3,7 +3,7 @@ import datetime
 import secrets
 import jwt
 from functools import wraps
-from flask import request, jsonify, g
+from django.http import JsonResponse
 from dotenv import load_dotenv
 from database.db import get_connection
 
@@ -73,35 +73,44 @@ def generate_and_save_refresh_token(user_id, role):
 
 def token_required(f):
     """
-    Decorator/Middleware to protect endpoints by requiring a valid JWT access token.
+    Decorator/Middleware to protect Django endpoints by requiring a valid JWT access token.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        request = None
+        if args:
+            request = args[0]
+        elif "request" in kwargs:
+            request = kwargs["request"]
+
         token = None
-        if "Authorization" in request.headers:
-            auth_header = request.headers["Authorization"]
-            if auth_header.startswith("Bearer "):
+        if request and hasattr(request, "headers"):
+            auth_header = request.headers.get("Authorization")
+            if not auth_header and hasattr(request, "META"):
+                auth_header = request.META.get("HTTP_AUTHORIZATION")
+            if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header.split(" ")[1]
-                
+
         if not token:
-            return jsonify({
+            return JsonResponse({
                 "status": False,
                 "message": "Token is missing."
-            }), 401
+            }, status=401)
             
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            g.current_user = payload
+            if request:
+                request.current_user = payload
         except jwt.ExpiredSignatureError:
-            return jsonify({
+            return JsonResponse({
                 "status": False,
                 "message": "Token has expired."
-            }), 401
+            }, status=401)
         except jwt.InvalidTokenError:
-            return jsonify({
+            return JsonResponse({
                 "status": False,
                 "message": "Invalid token."
-            }), 401
+            }, status=401)
             
         return f(*args, **kwargs)
     return decorated

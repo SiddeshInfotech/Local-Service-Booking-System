@@ -140,7 +140,7 @@ def main():
 
     # ── 5. Verify booking in DB ────────────────────────────────────────────────
     print("\nStep 5 – Verify booking stored in database")
-    # Commit/reset connection to ensure we read the latest snapshot committed by Flask
+    # Commit/reset connection to ensure we read the latest snapshot committed by backend
     conn.commit()
     cursor.execute("SELECT * FROM bookings WHERE booking_number = %s", (bk_num,))
     db_booking = cursor.fetchone()
@@ -164,7 +164,7 @@ def main():
   DB Status        : {db_booking['booking_status']}
 
   Confirmation email was dispatched to → {form_email}
-  (Check SMTP logs in the Flask server terminal for delivery status.)
+  (Check SMTP logs in the Django server terminal for delivery status.)
 """)
 
     print(f"\n{'='*50}")

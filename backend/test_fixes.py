@@ -90,10 +90,10 @@ def test_flow():
     print(f"  Status in DB: {provider_row['status']}")
     
     if provider_row['category_id'] is None:
-        print("❌ FAILED: category_id is not mapped!")
+        print("[FAIL] FAILED: category_id is not mapped!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: category_id mapped correctly.")
+        print("[PASS] SUCCESS: category_id mapped correctly.")
 
     # 3. Provider Login (Wait, it's auto-approved/verified for example.com)
     prov_login = request_api("Provider Login", f"{BASE_URL}/api/provider/login", "POST", {
@@ -119,10 +119,10 @@ def test_flow():
     api_status = get_prov.get("provider", {}).get("status")
     print(f"API Returned status for blocked provider: {api_status}")
     if api_status != "Blocked":
-        print("❌ FAILED: status not mapped to Blocked on API output!")
+        print("[FAIL] FAILED: status not mapped to Blocked on API output!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: status mapped to Blocked on API output.")
+        print("[PASS] SUCCESS: status mapped to Blocked on API output.")
 
     # 5. Verify Login is Blocked
     prov_login_blocked = request_api("Provider Login while Blocked", f"{BASE_URL}/api/provider/login", "POST", {
@@ -131,10 +131,10 @@ def test_flow():
     })
     print(f"Blocked login response status: {prov_login_blocked.get('status')} - message: {prov_login_blocked.get('message')}")
     if prov_login_blocked.get("status") is not False:
-        print("❌ FAILED: login allowed while blocked!")
+        print("[FAIL] FAILED: login allowed while blocked!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: login blocked correctly.")
+        print("[PASS] SUCCESS: login blocked correctly.")
 
     # 6. Admin Unblock Provider
     unblock_res = request_api("Admin Unblock Provider", f"{BASE_URL}/api/admin/provider/{provider_id}/unblock", "POST", {}, token=admin_token)
@@ -149,31 +149,31 @@ def test_flow():
         "password": "password123"
     })
     if not prov_login_unblocked.get("status"):
-        print("❌ FAILED: login failed after unblocking!")
+        print("[FAIL] FAILED: login failed after unblocking!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: login works after unblock.")
+        print("[PASS] SUCCESS: login works after unblock.")
 
     # 7. Check Admin Reports Date range
     reports_7d = request_api("Admin Reports (7 Days)", f"{BASE_URL}/api/admin/reports?range=7d", "GET", token=admin_token)
     print(f"Reports range parameter returned: {reports_7d.get('range')}")
     if reports_7d.get("range") != "Last 7 Days":
-        print("❌ FAILED: range filtering name did not match!")
+        print("[FAIL] FAILED: range filtering name did not match!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: reports date range filter working.")
+        print("[PASS] SUCCESS: reports date range filter working.")
 
     # 8. Check Admin Dashboard Recent Data
     dashboard_recent = request_api("Admin Dashboard Recent Items", f"{BASE_URL}/api/admin/dashboard/recent", "GET", token=admin_token)
     if not dashboard_recent or not dashboard_recent.get("status"):
-        print("❌ FAILED to get recent items!")
+        print("[FAIL] FAILED to get recent items!")
         sys.exit(1)
     else:
-        print("✅ SUCCESS: dashboard recent items returned.")
+        print("[PASS] SUCCESS: dashboard recent items returned.")
 
     cursor.close()
     conn.close()
-    print("\n🎉 ALL TESTS PASSED SUCCESSFULLY! All fixes verified.")
+    print("\n[SUCCESS] ALL TESTS PASSED SUCCESSFULLY! All fixes verified.")
 
 if __name__ == "__main__":
     test_flow()

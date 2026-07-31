@@ -1,4 +1,8 @@
-from flask import Blueprint, request, jsonify, g
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from utils.compat import jsonify, get_json_data, get_current_user
 from database.db import get_connection
 import bcrypt
 import datetime
@@ -21,16 +25,16 @@ from utils.auth_utils import (
     token_required
 )
 
-customer_bp = Blueprint("customer", __name__)
 
 # ====================================================
 # CUSTOMER AUTHENTICATION
 # ====================================================
 
-@customer_bp.route("/api/customer/register", methods=["POST"])
-def register_customer():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_customer(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         full_name = data.get("full_name")
         email = data.get("email")
         password = data.get("password")
@@ -46,7 +50,7 @@ def register_customer():
             return jsonify({
                 "status": False,
                 "message": "Full Name, Email and Password are required."
-            }), 400
+            }, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -56,7 +60,7 @@ def register_customer():
         if cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email already exists."}), 409
+            return jsonify({"status": False, "message": "Email already exists."}, status=409)
 
         # Check duplicate phone
         if phone:
@@ -64,7 +68,7 @@ def register_customer():
             if cursor.fetchone():
                 cursor.close()
                 conn.close()
-                return jsonify({"status": False, "message": "Phone number already registered."}), 400
+                return jsonify({"status": False, "message": "Phone number already registered."}, status=400)
 
         # Hash Password
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -87,28 +91,29 @@ def register_customer():
         return jsonify({
             "status": True,
             "message": "Customer registered successfully."
-        }), 201
+        }, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/verify-email", methods=["GET", "POST"])
-def verify_customer_email():
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def verify_customer_email(request):
     try:
         token = None
         if request.method == "POST":
-            data = request.get_json() or {}
+            data = get_json_data(request)
             token = data.get("token")
         else:
-            token = request.args.get("token")
+            token = request.GET.get("token")
 
         if not token:
-            return jsonify({"status": False, "message": "Verification token is required."}), 400
+            return jsonify({"status": False, "message": "Verification token is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -122,12 +127,12 @@ def verify_customer_email():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid email verification token."}), 400
+            return jsonify({"status": False, "message": "Invalid email verification token."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email verification token has expired."}), 400
+            return jsonify({"status": False, "message": "Email verification token has expired."}, status=400)
 
         # Mark token as verified
         cursor.execute(
@@ -145,10 +150,9 @@ def verify_customer_email():
         conn.close()
 
         if request.method == "POST":
-            return jsonify({"status": True, "message": "Email verified successfully."}), 200
+            return jsonify({"status": True, "message": "Email verified successfully."}, status=200)
         else:
             frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-            from flask import redirect
             return redirect(f"{frontend_url}/email-verified")
 
     except Exception as e:
@@ -156,18 +160,19 @@ def verify_customer_email():
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/login", methods=["POST"])
-def login_customer():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_customer(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         password = data.get("password")
 
         if not email or not password:
-            return jsonify({"status": False, "message": "Email and Password are required."}), 400
+            return jsonify({"status": False, "message": "Email and Password are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -178,7 +183,7 @@ def login_customer():
         if not user:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "User not found."}), 404
+            return jsonify({"status": False, "message": "User not found."}, status=404)
 
         # Only block suspended customers
         if user["status"] == "Blocked":
@@ -187,7 +192,7 @@ def login_customer():
             return jsonify({
                 "status": False,
                 "message": "Your account has been suspended."
-            }), 403
+            }, status=403)
 
         # Verify password
         if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
@@ -196,7 +201,7 @@ def login_customer():
             return jsonify({
                 "status": False,
                 "message": "Invalid Password."
-            }), 401
+            }, status=401)
 
         access_token = generate_access_token(
             user["customer_id"],
@@ -230,7 +235,7 @@ def login_customer():
                 "full_name": user["full_name"],
                 "email": user["email"]
             }
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
@@ -241,14 +246,15 @@ def login_customer():
         return jsonify({
             "status": False,
             "message": f"Server Error: {str(e)}"
-        }), 500
-@customer_bp.route("/api/customer/forgot-password", methods=["POST"])
-def customer_forgot_password():
+        }, status=500)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_forgot_password(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         if not email:
-            return jsonify({"status": False, "message": "Email is required."}), 400
+            return jsonify({"status": False, "message": "Email is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -259,7 +265,7 @@ def customer_forgot_password():
         if not user:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Email not found."}), 404
+            return jsonify({"status": False, "message": "Email not found."}, status=404)
 
         # Generate Secure 6 Digit OTP
         import random
@@ -286,28 +292,29 @@ def customer_forgot_password():
             return jsonify({
                 "status": False,
                 "message": f"OTP generated, but email delivery failed: {email_msg}"
-            }), 500
+            }, status=500)
 
-        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}), 200
+        return jsonify({"status": True, "message": "OTP sent successfully to your registered email address."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/verify-otp", methods=["POST"])
-def customer_verify_otp():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_verify_otp(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         # Accept both 'otp_code' and 'otp' as field names
         otp_code = data.get("otp_code") or data.get("otp")
 
         if not otp_code:
-            return jsonify({"status": False, "message": "OTP code is required."}), 400
+            return jsonify({"status": False, "message": "OTP code is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -328,32 +335,33 @@ def customer_verify_otp():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid OTP code."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}, status=400)
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}), 200
+        return jsonify({"status": True, "message": "OTP verified successfully.", "email": token_record["email"]}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/reset-password", methods=["POST"])
-def customer_reset_password():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_reset_password(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         email = data.get("email")
         # Accept both 'otp_code' and 'otp' as field names
         otp_code = data.get("otp_code") or data.get("otp")
         new_password = data.get("new_password")
 
         if not otp_code or not new_password:
-            return jsonify({"status": False, "message": "OTP code and new password are required."}), 400
+            return jsonify({"status": False, "message": "OTP code and new password are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -374,12 +382,12 @@ def customer_reset_password():
         if not token_record:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid OTP code or request."}), 400
+            return jsonify({"status": False, "message": "Invalid OTP code or request."}, status=400)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "OTP code has expired."}), 400
+            return jsonify({"status": False, "message": "OTP code has expired."}, status=400)
 
         # Resolve email from token (handles case where email was not passed by frontend)
         email = token_record["email"]
@@ -401,24 +409,25 @@ def customer_reset_password():
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Password reset successfully."}), 200
+        return jsonify({"status": True, "message": "Password reset successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/refresh-token", methods=["POST"])
-def customer_refresh_token():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_refresh_token(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         refresh_token = data.get("refresh_token")
 
         if not refresh_token:
-            return jsonify({"status": False, "message": "Refresh token is required."}), 400
+            return jsonify({"status": False, "message": "Refresh token is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -432,14 +441,14 @@ def customer_refresh_token():
         if not token_record or token_record["revoked"]:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Invalid refresh token."}), 401
+            return jsonify({"status": False, "message": "Invalid refresh token."}, status=401)
 
         if token_record["expires_at"] < datetime.datetime.utcnow():
             cursor.execute("DELETE FROM refresh_tokens WHERE refresh_token = %s", (refresh_token,))
             conn.commit()
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Expired refresh token."}), 401
+            return jsonify({"status": False, "message": "Expired refresh token."}, status=401)
 
         # Fetch customer email
         cursor.execute("SELECT email FROM customers WHERE customer_id = %s", (token_record["customer_id"],))
@@ -449,7 +458,7 @@ def customer_refresh_token():
         conn.close()
 
         if not customer:
-            return jsonify({"status": False, "message": "Customer associated with token not found."}), 401
+            return jsonify({"status": False, "message": "Customer associated with token not found."}, status=401)
 
         access_token = generate_access_token(token_record["customer_id"], customer["email"], "customer")
 
@@ -458,16 +467,17 @@ def customer_refresh_token():
             "message": "Access token refreshed successfully.",
             "access_token": access_token,
             "token": access_token
-        }), 200
+        }, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/logout", methods=["POST"])
-def customer_logout():
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def customer_logout(request):
     try:
-        data = request.get_json() or {}
+        data = get_json_data(request)
         refresh_token = data.get("refresh_token")
         if refresh_token:
             conn = get_connection()
@@ -477,20 +487,21 @@ def customer_logout():
             cursor.close()
             conn.close()
 
-        return jsonify({"status": True, "message": "Logged out successfully."}), 200
+        return jsonify({"status": True, "message": "Logged out successfully."}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # CUSTOMER PROFILE
 # ====================================================
 
-@customer_bp.route("/api/customer/profile", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def get_customer_profile():
+def get_customer_profile(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -503,7 +514,7 @@ def get_customer_profile():
         conn.close()
 
         if not customer:
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         if customer.get("created_at"):
             customer["created_at"] = customer["created_at"].isoformat()
@@ -514,18 +525,19 @@ def get_customer_profile():
             "status": True,
             "message": "Profile fetched successfully.",
             "user": customer
-        }), 200
+        }, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/customer/profile", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
-def update_customer_profile():
+def update_customer_profile(request):
     try:
-        user_payload = g.current_user
-        data = request.get_json() or {}
+        user_payload = get_current_user(request)
+        data = get_json_data(request)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -537,7 +549,7 @@ def update_customer_profile():
         if not customer:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Customer not found."}), 404
+            return jsonify({"status": False, "message": "Customer not found."}, status=404)
 
         full_name = data.get("full_name", customer["full_name"])
         phone = data.get("phone", customer["phone"])
@@ -573,22 +585,23 @@ def update_customer_profile():
             "status": True,
             "message": "Profile updated successfully.",
             "user": updated_customer
-        }), 200
+        }, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # CATEGORIES & SERVICES (PUBLIC)
 # ====================================================
 
-@customer_bp.route("/api/category", methods=["GET"])
-def list_categories():
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_categories(request):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -596,15 +609,16 @@ def list_categories():
         categories = cursor.fetchall()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "categories": categories}), 200
+        return jsonify({"status": True, "categories": categories}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/service", methods=["GET"])
-def list_services():
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_services(request):
     try:
-        category_id = request.args.get("category_id")
+        category_id = request.GET.get("category_id")
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -616,24 +630,25 @@ def list_services():
         services = cursor.fetchall()
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "services": services}), 200
+        return jsonify({"status": True, "services": services}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # BOOKINGS
 # ====================================================
 
-@customer_bp.route("/api/booking", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def create_booking():
+def create_booking(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Only customers can create bookings."}), 403
+            return jsonify({"status": False, "message": "Only customers can create bookings."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         provider_id = data.get("provider_id")
         service_id = data.get("service_id")
         booking_date = data.get("booking_date")
@@ -645,7 +660,7 @@ def create_booking():
         problem_description = data.get("problem_description")
 
         if not provider_id or not service_id or not booking_date or not booking_time or not service_address:
-            return jsonify({"status": False, "message": "Missing required booking details."}), 400
+            return jsonify({"status": False, "message": "Missing required booking details."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -664,7 +679,7 @@ def create_booking():
             if not s:
                 cursor.close()
                 conn.close()
-                return jsonify({"status": False, "message": "Service not found."}), 404
+                return jsonify({"status": False, "message": "Service not found."}, status=404)
             price = s["estimated_price"]
 
         # Generate unique booking number
@@ -794,26 +809,26 @@ def create_booking():
             "status": True,
             "message": "Booking created successfully.",
             "booking": booking_record
-        }), 201
+        }, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ── Service Completed (called from email button – no auth needed) ─────────────
-@customer_bp.route("/api/customer/service-completed/<int:booking_id>", methods=["GET"])
-def mark_service_completed(booking_id):
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def mark_service_completed(request, booking_id):
     """
     Hit when customer clicks "SERVICE COMPLETED" in the email.
     Verifies token, marks booking_status = 'Completed', customer_confirmed = 1, completed_at = NOW(),
-    and redirects to Flask success page (/completed).
+    and redirects to Django success page (/completed).
     """
-    from flask import redirect
-    token = request.args.get("token", "").strip()
+    token = request.GET.get("token", "").strip()
 
     if not token:
         return redirect(f"/completed?booking_id={booking_id}&status=missing_token")
@@ -855,14 +870,14 @@ def mark_service_completed(booking_id):
         return redirect(f"/completed?booking_id={booking_id}&token={token}&status=error")
 
 
-@customer_bp.route("/completed", methods=["GET"])
-def service_completed_success_page():
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def service_completed_success_page(request):
     """
-    Flask route rendering the responsive Fixora Black + Gold completion success page directly.
+    Django view rendering the responsive Fixora Black + Gold completion success page directly.
     """
-    from flask import render_template_string
-    booking_id = request.args.get("booking_id", "").strip()
-    token = request.args.get("token", "").strip()
+    booking_id = request.GET.get("booking_id", "").strip()
+    token = request.GET.get("token", "").strip()
     backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
 
     if booking_id and token:
@@ -987,16 +1002,17 @@ def service_completed_success_page():
   </div>
 </body>
 </html>"""
-    return render_template_string(html)
+    return HttpResponse(html)
 
 
-@customer_bp.route("/api/booking/history", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def get_customer_booking_history():
+def get_customer_booking_history(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1036,20 +1052,21 @@ def get_customer_booking_history():
             if b.get("updated_at"):
                 b["updated_at"] = b["updated_at"].isoformat()
 
-        return jsonify({"status": True, "bookings": bookings}), 200
+        return jsonify({"status": True, "bookings": bookings}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/booking/<int:booking_id>/cancel", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def cancel_booking(booking_id):
+def cancel_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         reason = data.get("reason", "Cancelled by customer")
 
         conn = get_connection()
@@ -1061,12 +1078,12 @@ def cancel_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] in ['Completed', 'Cancelled', 'Rejected']:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking cannot be cancelled in its current state."}), 400
+            return jsonify({"status": False, "message": "Booking cannot be cancelled in its current state."}, status=400)
 
         old_status = booking["booking_status"]
 
@@ -1091,23 +1108,24 @@ def cancel_booking(booking_id):
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "message": "Booking cancelled successfully."}), 200
+        return jsonify({"status": True, "message": "Booking cancelled successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/booking/customer/<int:booking_id>/complete", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def customer_complete_booking(booking_id):
+def customer_complete_booking(request, booking_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1118,12 +1136,12 @@ def customer_complete_booking(booking_id):
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] == 'Completed':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking is already completed."}), 400
+            return jsonify({"status": False, "message": "Booking is already completed."}, status=400)
 
         # Update Booking Status
         cursor.execute(
@@ -1190,36 +1208,37 @@ def customer_complete_booking(booking_id):
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Booking marked as completed successfully."}), 200
+        return jsonify({"status": True, "message": "Booking marked as completed successfully."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # REVIEWS
 # ====================================================
 
-@customer_bp.route("/api/review", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def create_review():
+def create_review(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         booking_id = data.get("booking_id")
         rating = data.get("rating")
         review_text = data.get("review_text")
         review_title = data.get("review_title")
 
         if not booking_id or not rating:
-            return jsonify({"status": False, "message": "Booking ID and Rating are required."}), 400
+            return jsonify({"status": False, "message": "Booking ID and Rating are required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1231,19 +1250,19 @@ def create_review():
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["booking_status"] != 'Completed':
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Reviews can only be written for completed bookings."}), 400
+            return jsonify({"status": False, "message": "Reviews can only be written for completed bookings."}, status=400)
 
         # Check existing review
         cursor.execute("SELECT review_id FROM reviews WHERE booking_id = %s", (booking_id,))
         if cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Review already exists for this booking."}), 400
+            return jsonify({"status": False, "message": "Review already exists for this booking."}, status=400)
 
         # Insert Review
         cursor.execute(
@@ -1288,27 +1307,28 @@ def create_review():
             "data": {
                 "provider": updated_provider
             }
-        }), 201
+        }, status=201)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ── Public Review via Email Link (no auth, uses completion_token) ─────────────
-@customer_bp.route("/api/review/public/<int:booking_id>", methods=["GET", "POST"])
-def public_review(booking_id):
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def public_review(request, booking_id):
     """
     GET  – Verify that a token is valid and return booking + provider name for the review form.
     POST – Submit a review; validated by the completion_token (no login required).
     """
-    token = request.args.get("token", "").strip() or (request.get_json() or {}).get("token", "").strip()
+    token = request.GET.get("token", "").strip() or (get_json_data(request)).get("token", "").strip()
 
     if not token:
-        return jsonify({"status": False, "message": "Missing token."}), 400
+        return jsonify({"status": False, "message": "Missing token."}, status=400)
 
     try:
         conn   = get_connection()
@@ -1327,11 +1347,11 @@ def public_review(booking_id):
 
         if not booking:
             cursor.close(); conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking["completion_token"] != token:
             cursor.close(); conn.close()
-            return jsonify({"status": False, "message": "Invalid or expired link."}), 403
+            return jsonify({"status": False, "message": "Invalid or expired link."}, status=403)
 
         if request.method == "GET":
             cursor.close(); conn.close()
@@ -1343,21 +1363,21 @@ def public_review(booking_id):
                 "provider_name": booking.get("business_name") or booking.get("owner_name") or "Provider",
                 "service_name":  booking["service_name"],
                 "review_given":  bool(booking.get("review_given")),
-            }), 200
+            }, status=200)
 
         # POST — submit the review
-        data = request.get_json() or {}
+        data = get_json_data(request)
         rating       = data.get("rating")
         review_text  = data.get("review_text", "")
         review_title = data.get("review_title", "")
 
         if not rating:
             cursor.close(); conn.close()
-            return jsonify({"status": False, "message": "Rating is required."}), 400
+            return jsonify({"status": False, "message": "Rating is required."}, status=400)
 
         if booking.get("review_given"):
             cursor.close(); conn.close()
-            return jsonify({"status": False, "message": "Review already submitted."}), 400
+            return jsonify({"status": False, "message": "Review already submitted."}, status=400)
 
         cursor.execute(
             "SELECT review_id FROM reviews WHERE booking_id = %s",
@@ -1365,7 +1385,7 @@ def public_review(booking_id):
         )
         if cursor.fetchone():
             cursor.close(); conn.close()
-            return jsonify({"status": False, "message": "Review already submitted."}), 400
+            return jsonify({"status": False, "message": "Review already submitted."}, status=400)
 
         cursor.execute(
             "INSERT INTO reviews (booking_id, customer_id, provider_id, rating, review_text, review_title) VALUES (%s, %s, %s, %s, %s, %s)",
@@ -1385,7 +1405,7 @@ def public_review(booking_id):
         conn.commit()
         cursor.close(); conn.close()
 
-        return jsonify({"status": True, "message": "Review submitted successfully. Thank you!"}), 201
+        return jsonify({"status": True, "message": "Review submitted successfully. Thank you!"}, status=201)
 
     except Exception as e:
         import logging
@@ -1393,22 +1413,22 @@ def public_review(booking_id):
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close(); conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-# ── HTML Review Page (GET) & Submit Review (POST) directly from Flask ────────
-@customer_bp.route("/api/customer/review/<int:booking_id>", methods=["GET", "POST"])
-def customer_review_page(booking_id):
+# ── HTML Review Page (GET) & Submit Review (POST) directly from Django ────────
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def customer_review_page(request, booking_id):
     """
-    GET  - Returns a professional HTML Review Page (Fixora Black + Gold) directly from Flask.
+    GET  - Returns a professional HTML Review Page (Fixora Black + Gold) directly from Django.
     POST - Processes review submission, updates reviews & bookings tables, and shows confirmation.
     """
-    from flask import render_template_string
-    token = request.args.get("token", "").strip() or (request.form.get("token", "").strip() if request.form else "")
+    token = request.GET.get("token", "").strip() or (request.POST.get("token", "").strip() if request.POST else "")
     backend_url = os.environ.get("BACKEND_URL", "https://local-service-booking-system.onrender.com")
 
     if not token:
-        return render_template_string("""<!DOCTYPE html>
+        return HttpResponse("""<!DOCTYPE html>
 <html>
 <head><title>Invalid Request | Fixora</title>
 <style>
@@ -1445,7 +1465,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
 
         if not booking:
             cursor.close(); conn.close()
-            return render_template_string("""<!DOCTYPE html>
+            return HttpResponse("""<!DOCTYPE html>
 <html>
 <head><title>Booking Not Found | Fixora</title>
 <style>
@@ -1465,7 +1485,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
 
         if booking["completion_token"] != token:
             cursor.close(); conn.close()
-            return render_template_string("""<!DOCTYPE html>
+            return HttpResponse("""<!DOCTYPE html>
 <html>
 <head><title>Invalid Link | Fixora</title>
 <style>
@@ -1491,7 +1511,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
         if request.method == "POST":
             if booking.get("review_given") or existing_review:
                 cursor.close(); conn.close()
-                return render_template_string("""<!DOCTYPE html>
+                return HttpResponse("""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1517,9 +1537,9 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
 </body>
 </html>""")
 
-            rating_raw = request.form.get("rating") if request.form else (request.get_json() or {}).get("rating")
-            review_text = (request.form.get("review_text", "").strip() if request.form else (request.get_json() or {}).get("review_text", "").strip())
-            review_title = (request.form.get("review_title", "").strip() if request.form else (request.get_json() or {}).get("review_title", "").strip())
+            rating_raw = request.POST.get("rating") if request.POST else (get_json_data(request)).get("rating")
+            review_text = (request.POST.get("review_text", "").strip() if request.POST else (get_json_data(request)).get("review_text", "").strip())
+            review_title = (request.POST.get("review_title", "").strip() if request.POST else (get_json_data(request)).get("review_title", "").strip())
 
             try:
                 rating = int(rating_raw)
@@ -1547,7 +1567,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
             conn.commit()
             cursor.close(); conn.close()
 
-            return render_template_string("""<!DOCTYPE html>
+            return HttpResponse("""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1625,7 +1645,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
         # GET - Show Review Form or Already Submitted Page
         if booking.get("review_given") or existing_review:
             cursor.close(); conn.close()
-            return render_template_string("""<!DOCTYPE html>
+            return HttpResponse("""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1892,7 +1912,7 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
   </script>
 </body>
 </html>"""
-        return render_template_string(html_review_form)
+        return HttpResponse(html_review_form)
 
     except Exception as e:
         import logging
@@ -1900,11 +1920,12 @@ body { font-family: sans-serif; background: #0A0A0A; color: #FFF; text-align: ce
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close(); conn.close()
-        return render_template_string(f"<h2>Server Error: {str(e)}</h2>"), 500
+        return HttpResponse(f"<h2>Server Error: {str(e)}</h2>", status=500)
 
 
-@customer_bp.route("/api/review/provider/<int:provider_id>", methods=["GET"])
-def get_provider_reviews(provider_id):
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_provider_reviews(request, provider_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1929,28 +1950,29 @@ def get_provider_reviews(provider_id):
             if r.get("reply_date"):
                 r["reply_date"] = r["reply_date"].isoformat()
 
-        return jsonify({"status": True, "reviews": reviews}), 200
+        return jsonify({"status": True, "reviews": reviews}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # PAYMENTS
 # ====================================================
 
-@customer_bp.route("/api/payment/create", methods=["POST"])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @token_required
-def create_payment():
+def create_payment(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         if user_payload["role"] != "customer":
-            return jsonify({"status": False, "message": "Unauthorized."}), 403
+            return jsonify({"status": False, "message": "Unauthorized."}, status=403)
 
-        data = request.get_json() or {}
+        data = get_json_data(request)
         booking_id = data.get("booking_id")
 
         if not booking_id:
-            return jsonify({"status": False, "message": "Booking ID is required."}), 400
+            return jsonify({"status": False, "message": "Booking ID is required."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1961,7 +1983,7 @@ def create_payment():
         if not booking:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         # Update Payment Status to 'Paid'
         cursor.execute(
@@ -1980,18 +2002,19 @@ def create_payment():
         cursor.close()
         conn.close()
 
-        return jsonify({"status": True, "message": "Payment successful."}), 200
+        return jsonify({"status": True, "message": "Payment successful."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/payment/<int:booking_id>/status", methods=["GET"])
-def get_payment_status(booking_id):
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_payment_status(request, booking_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -2002,23 +2025,24 @@ def get_payment_status(booking_id):
         conn.close()
 
         if not booking:
-            return jsonify({"status": False, "message": "Booking not found."}), 404
+            return jsonify({"status": False, "message": "Booking not found."}, status=404)
 
         if booking.get("estimated_price"):
             booking["estimated_price"] = float(booking["estimated_price"])
         if booking.get("final_price"):
             booking["final_price"] = float(booking["final_price"])
 
-        return jsonify({"status": True, "payment": booking}), 200
+        return jsonify({"status": True, "payment": booking}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/payment/history", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def get_payment_history():
+def get_payment_history(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -2060,21 +2084,22 @@ def get_payment_history():
             if p.get("final_price"):
                 p["final_price"] = float(p["final_price"])
 
-        return jsonify({"status": True, "payments": payments}), 200
+        return jsonify({"status": True, "payments": payments}, status=200)
 
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # NOTIFICATIONS
 # ====================================================
 
-@customer_bp.route("/api/notification", methods=["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @token_required
-def list_notifications():
+def list_notifications(request):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -2099,16 +2124,17 @@ def list_notifications():
             if n.get("created_at"):
                 n["created_at"] = n["created_at"].isoformat()
 
-        return jsonify({"status": True, "notifications": notifications}), 200
+        return jsonify({"status": True, "notifications": notifications}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/notification/<int:notification_id>/read", methods=["PUT"])
+@api_view(["PUT"])
+@permission_classes([AllowAny])
 @token_required
-def mark_notification_read(notification_id):
+def mark_notification_read(request, notification_id):
     try:
-        user_payload = g.current_user
+        user_payload = get_current_user(request)
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -2128,32 +2154,33 @@ def mark_notification_read(notification_id):
         if not notification:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Notification not found."}), 404
+            return jsonify({"status": False, "message": "Notification not found."}, status=404)
 
         cursor.execute("UPDATE notifications SET is_read = 1 WHERE notification_id = %s", (notification_id,))
         conn.commit()
 
         cursor.close()
         conn.close()
-        return jsonify({"status": True, "message": "Notification marked as read."}), 200
+        return jsonify({"status": True, "message": "Notification marked as read."}, status=200)
 
     except Exception as e:
         if 'conn' in locals() and conn:
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 # ====================================================
 # CUSTOMER PROVIDER LIST & DETAILS (DIRECTORY)
 # ====================================================
 
-@customer_bp.route("/api/provider", methods=["GET"])
-def customer_list_providers():
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def customer_list_providers(request):
     try:
-        category_id = request.args.get("category_id")
-        city = request.args.get("city")
+        category_id = request.GET.get("category_id")
+        city = request.GET.get("city")
         
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -2182,13 +2209,14 @@ def customer_list_providers():
             if p.get("average_rating"):
                 p["average_rating"] = float(p["average_rating"])
                 
-        return jsonify({"status": True, "providers": providers}), 200
+        return jsonify({"status": True, "providers": providers}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
-@customer_bp.route("/api/provider/<int:provider_id>", methods=["GET"])
-def customer_get_provider_details(provider_id):
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def customer_get_provider_details(request, provider_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -2208,7 +2236,7 @@ def customer_get_provider_details(provider_id):
         if not provider:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Provider not found."}), 404
+            return jsonify({"status": False, "message": "Provider not found."}, status=404)
             
         # Get linked services
         cursor.execute(
@@ -2256,6 +2284,6 @@ def customer_get_provider_details(provider_id):
         if provider.get("average_rating"):
             provider["average_rating"] = float(provider["average_rating"])
             
-        return jsonify({"status": True, "provider": provider}), 200
+        return jsonify({"status": True, "provider": provider}, status=200)
     except Exception as e:
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}), 500
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
