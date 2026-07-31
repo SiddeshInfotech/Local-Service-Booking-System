@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, ShieldCheck, LogIn, Loader2, Sparkles, Sun, Mo
 import InputField from '../../components/InputField';
 import fixoraLogo from '../../assets/images/fixora_logo.png';
 import adminIllustration from '../../assets/images/admin_login_illustration.png';
-import { API_BASE_URL, setAdminTokens } from '../../api';
+import { API_BASE_URL, setAdminTokens, fetchWithTimeout } from '../../api';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const AdminLogin = () => {
@@ -30,7 +30,7 @@ const AdminLogin = () => {
     setFeedbackMsg('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -46,9 +46,9 @@ const AdminLogin = () => {
         setFeedbackType('error');
         setFeedbackMsg(data.message || 'Login failed. Check your credentials.');
       }
-    } catch {
+    } catch (err) {
       setFeedbackType('error');
-      setFeedbackMsg('Unable to connect to the server. Please try again.');
+      setFeedbackMsg(err.message || 'Unable to connect to the server. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

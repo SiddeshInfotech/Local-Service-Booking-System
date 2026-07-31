@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, ShieldCheck, Key, RefreshCw } from 'lucide-react';
 import InputField from '../components/InputField';
 import forgotPasswordIllustration from '../assets/images/forgot_password_illustration.png';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -36,7 +36,7 @@ const ForgotPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/customer/forgot-password`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/customer/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

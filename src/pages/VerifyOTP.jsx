@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck, RefreshCw, Key } from 'lucide-react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 
 const VerifyOTP = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -94,7 +94,7 @@ const VerifyOTP = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/${role}/verify-otp`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/${role}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: otpString }),
@@ -113,8 +113,8 @@ const VerifyOTP = () => {
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
-    } catch {
-      setErrorMsg('Server connection failed. Please try again.');
+    } catch (err) {
+      setErrorMsg(err?.message || 'Server connection failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,7 +125,7 @@ const VerifyOTP = () => {
     setIsResending(true);
     setErrorMsg('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/${role}/forgot-password`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/${role}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -139,8 +139,8 @@ const VerifyOTP = () => {
       } else {
         setErrorMsg(data.message || 'Failed to resend OTP.');
       }
-    } catch {
-      setErrorMsg('Server connection failed. Please try again.');
+    } catch (err) {
+      setErrorMsg(err?.message || 'Server connection failed. Please try again.');
     } finally {
       setIsResending(false);
     }

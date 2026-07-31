@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import InputField from '../components/InputField';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -52,7 +52,7 @@ const ResetPassword = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/${role}/reset-password`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/${role}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp, new_password: newPassword }),
@@ -67,8 +67,8 @@ const ResetPassword = () => {
       } else {
         setErrorMsg(data.message || 'Password reset failed. Please try again.');
       }
-    } catch {
-      setErrorMsg('Server connection failed. Please try again later.');
+    } catch (err) {
+      setErrorMsg(err?.message || 'Server connection failed. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

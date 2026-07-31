@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import fixoraLogo from '../assets/images/fixora_logo.png';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 
 const ReviewPage = () => {
   const { bookingId } = useParams();
@@ -31,7 +31,7 @@ const ReviewPage = () => {
       return;
     }
 
-    fetch(`${API_BASE_URL}/api/review/public/${bookingId}?token=${encodeURIComponent(token)}`)
+    fetchWithTimeout(`${API_BASE_URL}/api/review/public/${bookingId}?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         const data = await res.json();
         if (!data.status) throw new Error(data.message || 'Invalid link.');
@@ -59,7 +59,7 @@ const ReviewPage = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${API_BASE_URL}/api/review/public/${bookingId}?token=${encodeURIComponent(token)}`,
         {
           method: 'POST',

@@ -75,7 +75,7 @@ const ProviderRegister = () => {
       formData.append('description', description);
       if (idProof) formData.append('id_proof', idProof);
 
-      const response = await fetch(`${API_BASE_URL}/api/provider/register`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/provider/register`, {
         method: 'POST',
         body: formData,
       });
@@ -97,7 +97,7 @@ const ProviderRegister = () => {
         setErrorMsg(data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setErrorMsg('Unable to connect to the server. Please try again later.');
+      setErrorMsg(err.message || 'Unable to connect to the server. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

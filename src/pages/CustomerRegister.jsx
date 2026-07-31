@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import InputField from '../components/InputField';
 import customerRegisterIllustration from '../assets/images/customer_register_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 
 const CustomerRegister = () => {
@@ -45,7 +45,7 @@ const CustomerRegister = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/customer/register`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/customer/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,7 +70,7 @@ const CustomerRegister = () => {
         setErrorMsg(data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setErrorMsg('Unable to connect to the server. Please try again later.');
+      setErrorMsg(err.message || 'Unable to connect to the server. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }

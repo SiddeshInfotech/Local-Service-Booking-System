@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Shield, Key, LogIn } from 'lucide-react';
 import InputField from '../components/InputField';
 import providerLoginIllustration from '../assets/images/provider_login_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, fetchWithTimeout } from '../api';
 
 const ProviderLogin = () => {
   const [email, setEmail] = useState('');
@@ -35,7 +35,7 @@ const ProviderLogin = () => {
     setErrorMsg('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/provider/login`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/provider/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
