@@ -2,18 +2,12 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from utils.compat import jsonify, get_json_data, get_current_user
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from utils.compat import jsonify, get_json_data, get_current_user
+from utils.compat import jsonify, get_json_data, get_current_user, secure_filename
 from database.db import get_connection
 import bcrypt
 import datetime
 import os
 import secrets
-from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 import cloudinary_config

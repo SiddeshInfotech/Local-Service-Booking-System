@@ -1,5 +1,7 @@
 import json
+import re
 from django.http import JsonResponse
+from django.utils.text import get_valid_filename
 
 def jsonify(data, status=200):
     if isinstance(status, tuple):
@@ -18,3 +20,14 @@ def get_json_data(request):
 
 def get_current_user(request):
     return getattr(request, 'current_user', {})
+
+def secure_filename(filename):
+    """
+    Sanitizes a filename to prevent path traversal vulnerabilities.
+    Django/Python native replacement for werkzeug.utils.secure_filename.
+    """
+    if not filename:
+        return ""
+    filename = get_valid_filename(filename)
+    filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+    return filename
