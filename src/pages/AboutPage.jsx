@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Users, TrendingUp, Star, Award, Clock, ArrowRight, CheckCircle } from 'lucide-react';
-import MahimImg from '../assets/images/Mahim sir.png';
-import AryanImg from '../assets/images/aryan.png';
+
 
 /* ─── InView hook ─── */
 const useInView = (threshold = 0.15) => {
@@ -33,9 +32,11 @@ const AnimSection = ({ children, className = '', delay = 0, dir = 'up' }) => {
 };
 
 const team = [
-  { name: 'Mahim Dosi', role: 'CEO & Co-Founder', desc: 'Former McKinsey consultant who saw the gap in home service quality. Drives Fixora\'s vision for transparent, premium-tier home care.', img: MahimImg },
-  { name: 'Dhanashree Nerkar', role: 'CTO & Co-Founder', desc: 'Ex-Amazon engineer. Architects the intelligent matching algorithms and SaaS infrastructure that power real-time bookings.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop' },
-  { name: 'Aryan Harwani', role: 'Head of Operations and Design ', desc: 'Led nationwide field operations for UrbanClap. Oversees provider onboarding, vetting protocols, and quality benchmarks.', img: AryanImg },
+  { name: 'Aryan Shankar Harwani', role: '', desc: '', img: '' },
+  { name: 'Saad Hasham Sayyad', role: '', desc: '', img: '' },
+  { name: 'Ujjwal Sandeep Chitte', role: '', desc: '', img: '' },
+  { name: 'Rohit Gorakh Patil', role: '', desc: '', img: '' },
+  { name: 'Lalit Anil Patil', role: '', desc: '', img: '' },
 ];
 
 const values = [
@@ -273,18 +274,16 @@ const AboutPage = () => {
             <span className="about-gold-shimmer">Fixora</span>
           </h2>
         </AnimSection>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 max-w-5xl w-full mx-auto">
+        <div className="flex flex-wrap justify-center gap-6 md:gap-8 max-w-5xl w-full mx-auto">
           {team.map((member, i) => (
-            <AnimSection key={member.name} dir="up" delay={i * 80} className="h-full">
-              <div className="glass-card-about team-card rounded-3xl overflow-hidden flex flex-col h-full w-full">
-                <div className="overflow-hidden h-56 w-full bg-[var(--color-secondary-bg)] shrink-0">
-                  <img src={member.img} alt={member.name} className="w-full h-full object-cover object-[50%_15%]" />
-                </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-[var(--color-text-primary)] font-bold text-sm mb-0.5">{member.name}</h3>
-                  <p className="text-[#D4AF37] text-xs font-semibold uppercase tracking-wider mb-3">{member.role}</p>
-                  <p className="text-[var(--color-text-secondary)] text-xs leading-relaxed flex-grow">{member.desc}</p>
-                </div>
+            <AnimSection key={member.name} dir="up" delay={i * 80} className="w-full sm:w-[calc(50%-1.5rem)] md:w-[calc(33.333%-2rem)]">
+              <div className="glass-card-about team-card rounded-3xl py-10 px-6 flex flex-col items-center justify-center relative overflow-hidden group cursor-default w-full h-full">
+                {/* Subtle yellow accent divider */}
+                <div className="w-12 h-1.5 rounded-full bg-[#D4AF37]/30 group-hover:bg-[#D4AF37] group-hover:w-20 transition-all duration-500 mb-5" />
+                
+                <h3 className="text-[var(--color-text-primary)] font-bold text-lg md:text-xl tracking-wider text-center group-hover:-translate-y-1 transition-transform duration-300">
+                  {member.name}
+                </h3>
               </div>
             </AnimSection>
           ))}

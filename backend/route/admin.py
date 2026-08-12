@@ -885,6 +885,19 @@ def admin_list_providers(request):
 
         cursor.execute(query, tuple(params))
         providers = cursor.fetchall()
+
+        # Fetch documents for each provider so ID proof is available in all tabs
+        for p in providers:
+            cursor.execute(
+                "SELECT document_id, document_type, file_path, verification_status, uploaded_at FROM provider_documents WHERE provider_id = %s",
+                (p["provider_id"],)
+            )
+            docs = cursor.fetchall()
+            for d in docs:
+                if d.get("uploaded_at"):
+                    d["uploaded_at"] = d["uploaded_at"].isoformat()
+            p["documents"] = docs
+
         cursor.close()
         conn.close()
 

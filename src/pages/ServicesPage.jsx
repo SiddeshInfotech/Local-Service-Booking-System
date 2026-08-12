@@ -33,11 +33,11 @@ const categoryColors = {
 
 /* ─── Service Inclusions fallback ─── */
 const serviceInclusions = {
-  'Cleaning':    ['Complete dust vacuuming and sanitization','Eco-friendly deep cleaning agents','Stain spot treatment on floors & tiles','Window pane cleaning & balcony scrubbing','Vetted team of 2–3 trained practitioners'],
-  'Plumbing':    ['Diagnostics and leakage location checks','High-grade washers and sealing tapes','Blockage extraction with industrial snakes','Pressure test validation post repair','30-day Post-Service Guarantee'],
-  'AC Repair':   ['Deep filter flushing and condenser coil cleanup','Gas pressure diagnostics and minor top-ups','Drainage channel leak inspection','Ampere check & performance validation','Transparent quote for spare components'],
-  'Carpenter':   ['Bespoke hardware replacement (hinges, locks, slides)','Precision alignment and leveling','Heavy-duty adhesives and anchors included','Wood shaving cleanup and dust disposal','Premium finishing touch-up'],
-  'Electrician': ['Certified safety audit of local wiring terminal','High-durability insulated wiring replacements','MCB diagnostics to prevent short circuits','Appliance grounding verification','100% compliance with local electrical safety code'],
+  'Cleaning': ['Complete dust vacuuming and sanitization', 'Eco-friendly deep cleaning agents', 'Stain spot treatment on floors & tiles', 'Window pane cleaning & balcony scrubbing', 'Vetted team of 2–3 trained practitioners'],
+  'Plumbing': ['Diagnostics and leakage location checks', 'High-grade washers and sealing tapes', 'Blockage extraction with industrial snakes', 'Pressure test validation post repair', '30-day Post-Service Guarantee'],
+  'AC Repair': ['Deep filter flushing and condenser coil cleanup', 'Gas pressure diagnostics and minor top-ups', 'Drainage channel leak inspection', 'Ampere check & performance validation', 'Transparent quote for spare components'],
+  'Carpenter': ['Bespoke hardware replacement (hinges, locks, slides)', 'Precision alignment and leveling', 'Heavy-duty adhesives and anchors included', 'Wood shaving cleanup and dust disposal', 'Premium finishing touch-up'],
+  'Electrician': ['Certified safety audit of local wiring terminal', 'High-durability insulated wiring replacements', 'MCB diagnostics to prevent short circuits', 'Appliance grounding verification', '100% compliance with local electrical safety code'],
 };
 
 /* ─── Specific Service Image Mapping ─── */
@@ -46,30 +46,30 @@ const getServiceImgUrl = (serviceName, catName) => {
   const name = serviceName.toLowerCase();
 
   // Electrician
-  if (name.includes('wiring')) return 'https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('fan')) return 'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('switchboard')) return 'https://images.unsplash.com/photo-1555626906-f8a00d8811f9?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('wiring')) return 'https://daganghalal.blob.core.windows.net/28781/Product/1000x1000__electricalwiring-1658284853886.png';
+  if (name.includes('fan')) return 'https://cheselectric.com/wp-content/uploads/2024/02/Installing-a-ceiling-fan.jpg';
+  if (name.includes('switchboard')) return 'https://img.freepik.com/premium-photo/troubleshooting-repair-wiring-electrical-switchboard-panel-concept-electrical-wiring-switchboard-panel-troubleshooting-repair-electrical-maintenance_918839-271381.jpg?w=1380';
   if (name.includes('light')) return 'https://images.unsplash.com/photo-1557992260-ec58e38d363c?q=80&w=700&auto=format&fit=crop';
   if (name.includes('socket')) return 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=700&auto=format&fit=crop';
 
   // Plumber
-  if (name.includes('pipe')) return 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('bathroom') && catName === 'Plumbing') return 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('drain')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('pipe')) return 'https://as2.ftcdn.net/v2/jpg/09/76/88/19/1000_F_976881955_xArYzrnjaWVbGcr6lZ17nfCcCNmdJ5YO.jpg';
+  if (name.toLowerCase().includes('bathroom')) { return 'https://plumbingrenewal.com/wp-content/uploads/2025/12/Bathroom-Plumbing-Emergencies.jpg'; }
+  if (name.includes('drain')) return 'https://greaseremove.com/wp-content/uploads/2026/03/hydrojet-drain-cleaning-process.webp';
   if (name.includes('leak')) return 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=700&auto=format&fit=crop';
   if (name.includes('tank')) return 'https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('water') && catName === 'Plumbing') return 'https://images.unsplash.com/photo-1527334134460-f21a05ef62f3?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('water') && catName === 'Plumbing') return 'https://zeve.au/fixedtoday/uploads/2022/08/plumber-working-on-commercial-plumbing.jpg';
 
   // Carpenter
   if (name.includes('furniture')) return 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('door')) return 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('door')) return 'https://bostoncommercialdoorsystems.com/wp-content/uploads/2025/10/Door-Frame-Repair-4.jpg';
   if (name.includes('window')) return 'https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=700&auto=format&fit=crop';
   if (name.includes('cabinet')) return 'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?q=80&w=700&auto=format&fit=crop';
   if (name.includes('shelf') || name.includes('shelv')) return 'https://images.unsplash.com/photo-1497367664687-f8319baee20e?q=80&w=700&auto=format&fit=crop';
 
   // Painter
-  if (name.includes('interior')) return 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('exterior')) return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('interior')) return 'https://images.livspace-cdn.com/w:3840/plain/https://d3gq2merok8n5r.cloudfront.net/abhinav/ond-1634120396-Obfdc/ond-2024-1727950725-vfT46/living-1728890772-3eAJ0/04-1-1-1732692422-rfW1C.jpg';
+  if (name.includes('exterior')) return 'https://5.imimg.com/data5/SELLER/Default/2023/2/FR/OO/DC/54228267/exterior-painting-service-1000x1000.jpg';
   if (name.includes('texture')) return 'https://images.unsplash.com/photo-1563842137996-039c3a372134?q=80&w=700&auto=format&fit=crop';
   if (name.includes('waterproof')) return 'https://images.unsplash.com/photo-1588874020942-0f04746f3453?q=80&w=700&auto=format&fit=crop';
   if (name.includes('paint')) return 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=700&auto=format&fit=crop';
@@ -83,8 +83,8 @@ const getServiceImgUrl = (serviceName, catName) => {
   if (name.includes('clean')) return 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop';
 
   // Mechanic
-  if (name.includes('bike') || name.includes('motorcycle')) return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('car')) return 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('bike') || name.includes('motorcycle')) return 'https://b1944490.smushcdn.com/1944490/wp-content/uploads/sites/46/2022/11/Copy-of-Main_0001_0001.jpg?lossy=2&strip=1&webp=1p';
+  if (name.includes('car')) return 'https://www.avalonvehiclesolutions.co.uk/_next/image?url=%2Fimages%2Fhero-car-servicing.jpg&w=3840&q=75&dpl=dpl_GAa9HQeBEiuqKiDzSXPjJXUbh1Tf';
   if (name.includes('engine')) return 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=700&auto=format&fit=crop';
   if (name.includes('oil')) return 'https://images.unsplash.com/photo-1621373516086-4fc642642d99?q=80&w=700&auto=format&fit=crop';
   if (catName === 'Mechanic') return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=700&auto=format&fit=crop';
@@ -92,8 +92,8 @@ const getServiceImgUrl = (serviceName, catName) => {
   // AC Repair
   if (name.includes('install') && catName === 'AC Repair') return 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop';
   if (name.includes('gas') || name.includes('refill')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('servic')) return 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=700&auto=format&fit=crop';
-  if (name.includes('repair') && catName === 'AC Repair') return 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?q=80&w=700&auto=format&fit=crop';
+  if (name.includes('servic')) return 'https://kolkataservicepoint.com/images/ac-01.png';
+  if (name.includes('repair') && catName === 'AC Repair') return 'https://kolkataservicepoint.com/images/ac-01.png';
 
   // Appliance Repair
   if (name.includes('washing')) return 'https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=700&auto=format&fit=crop';
@@ -101,7 +101,7 @@ const getServiceImgUrl = (serviceName, catName) => {
   if (name.includes('microwave') || name.includes('oven')) return 'https://images.unsplash.com/photo-1586208958839-06c17cacdf08?q=80&w=700&auto=format&fit=crop';
   if (name.includes('tv') || name.includes('television')) return 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=700&auto=format&fit=crop';
   if (name.includes('purifier') || name.includes('ro')) return 'https://images.unsplash.com/photo-1579730598818-a6b68b375b42?q=80&w=700&auto=format&fit=crop';
-  
+
   return null;
 };
 
@@ -388,7 +388,7 @@ const ServicesPage = () => {
   };
 
   const categories = ['All', ...categoriesList.map(c => c.category_name)];
-  
+
   // Transform services list from backend to match frontend cards structure
   const mappedServicesList = servicesList.map(s => {
     const cat = categoriesList.find(c => c.category_id === s.category_id);
@@ -405,11 +405,11 @@ const ServicesPage = () => {
       rating: '4.8',
       reviewsCount: '150',
       imgUrl: getServiceImgUrl(s.service_name, catName) || (
-              catName === 'Cleaning' ? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop' :
-              catName === 'Plumbing' ? 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop' :
-              catName === 'AC Repair' ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop' :
+        catName === 'Cleaning' ? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=700&auto=format&fit=crop' :
+          catName === 'Plumbing' ? 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=700&auto=format&fit=crop' :
+            catName === 'AC Repair' ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=700&auto=format&fit=crop' :
               catName === 'Carpenter' ? 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=700&auto=format&fit=crop' :
-              ELECTRICIAN_IMG
+                ELECTRICIAN_IMG
       ),
       fallbackImgUrl: ELECTRICIAN_FALLBACK,
       accentColor: categoryColors[catName] || '#60a5fa'
@@ -650,11 +650,10 @@ const ServicesPage = () => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategoryTab(cat)}
-                  className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${
-                    activeCategoryTab === cat
-                      ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
-                      : 'bg-[var(--color-secondary-bg)]/80 border border-[#D4AF37]/15 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[#D4AF37]/45 hover:bg-[var(--color-secondary-bg)]'
-                  }`}
+                  className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-300 cursor-pointer ${activeCategoryTab === cat
+                    ? 'gold-btn shadow-lg shadow-[#D4AF37]/20'
+                    : 'bg-[var(--color-secondary-bg)]/80 border border-[#D4AF37]/15 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[#D4AF37]/45 hover:bg-[var(--color-secondary-bg)]'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -798,7 +797,7 @@ const ServicesPage = () => {
                 <ClipboardList size={14} className="text-[#D4AF37]" /> What is Included
               </h4>
               <ul className="space-y-2.5">
-                {(serviceInclusions[detailService.category] || ['Standard safety inspections','Full tools setup and cleanup','Premium components checking','Diagnostics checklist verification']).map((inc, i) => (
+                {(serviceInclusions[detailService.category] || ['Standard safety inspections', 'Full tools setup and cleanup', 'Premium components checking', 'Diagnostics checklist verification']).map((inc, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-[var(--color-text-secondary)]">
                     <span className="text-[#D4AF37] font-black mt-0.5 text-base leading-none">✓</span>
                     <span>{inc}</span>
