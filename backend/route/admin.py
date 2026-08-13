@@ -664,7 +664,17 @@ def create_service(request):
         estimated_duration = data.get("estimated_duration")
 
         if not category_id or not service_name:
-            return jsonify({"status": False, "message": "Category ID and Service Name are required."}, status=400)
+            return jsonify({"status": False, "success": False, "message": "Category ID and Service Name are required."}, status=400)
+
+        if estimated_price is None or str(estimated_price).strip() == "":
+            return jsonify({"status": False, "success": False, "message": "Price is required."}, status=400)
+
+        try:
+            price_val = float(estimated_price)
+            if price_val <= 0:
+                return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+        except (ValueError, TypeError):
+            return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -674,11 +684,11 @@ def create_service(request):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Category not found."}, status=404)
+            return jsonify({"status": False, "success": False, "message": "Category not found."}, status=404)
 
         cursor.execute(
             "INSERT INTO services (category_id, service_name, description, estimated_price, estimated_duration, status) VALUES (%s, %s, %s, %s, %s, 'Active')",
-            (category_id, service_name, description, estimated_price, estimated_duration)
+            (category_id, service_name, description, price_val, estimated_duration)
         )
         srv_id = cursor.lastrowid
         conn.commit()
@@ -688,13 +698,14 @@ def create_service(request):
 
         return jsonify({
             "status": True,
+            "success": True,
             "message": "Service created successfully.",
             "service": {
                 "service_id": srv_id,
                 "category_id": category_id,
                 "service_name": service_name,
                 "description": description,
-                "estimated_price": float(estimated_price) if estimated_price else None,
+                "estimated_price": price_val,
                 "estimated_duration": estimated_duration,
                 "status": "Active"
             }
@@ -705,7 +716,7 @@ def create_service(request):
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
+        return jsonify({"status": False, "success": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 @api_view(["PUT"])
@@ -722,6 +733,16 @@ def update_service(request, service_id):
         estimated_duration = data.get("estimated_duration")
         status = data.get("status")
 
+        if estimated_price is not None:
+            if str(estimated_price).strip() == "":
+                return jsonify({"status": False, "success": False, "message": "Price is required."}, status=400)
+            try:
+                price_val = float(estimated_price)
+                if price_val <= 0:
+                    return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+            except (ValueError, TypeError):
+                return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -731,14 +752,19 @@ def update_service(request, service_id):
         if not service:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Service not found."}, status=404)
+            return jsonify({"status": False, "success": False, "message": "Service not found."}, status=404)
 
         cat_id = category_id if category_id is not None else service["category_id"]
         name = service_name if service_name is not None else service["service_name"]
         desc = description if description is not None else service["description"]
-        price = estimated_price if estimated_price is not None else service["estimated_price"]
+        price = float(estimated_price) if estimated_price is not None else service["estimated_price"]
         duration = estimated_duration if estimated_duration is not None else service["estimated_duration"]
         stat = status if status is not None else service["status"]
+
+        if price is None or float(price) <= 0:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
 
         cursor.execute(
             "UPDATE services SET category_id = %s, service_name = %s, description = %s, estimated_price = %s, estimated_duration = %s, status = %s WHERE service_id = %s",

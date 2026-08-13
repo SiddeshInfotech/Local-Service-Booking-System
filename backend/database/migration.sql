@@ -158,6 +158,15 @@ ALTER TABLE bookings ADD COLUMN completion_token VARCHAR(255) DEFAULT NULL;
 ALTER TABLE bookings ADD COLUMN completed_at DATETIME DEFAULT NULL;
 
 -- -------------------------------------------------------
+-- 6. Ensure positive price check constraints on services
+-- -------------------------------------------------------
+UPDATE services SET estimated_price = 1.00 WHERE estimated_price IS NULL OR estimated_price <= 0;
+UPDATE provider_services SET service_charge = 1.00 WHERE service_charge IS NULL OR service_charge <= 0;
+
+ALTER TABLE services ADD CONSTRAINT chk_service_price_gt_zero CHECK (estimated_price > 0);
+ALTER TABLE provider_services ADD CONSTRAINT chk_provider_service_charge_gt_zero CHECK (service_charge > 0);
+
+-- -------------------------------------------------------
 -- Done. Run: SOURCE migration.sql; inside MySQL CLI
 -- or import via phpMyAdmin / Aiven Console.
 -- -------------------------------------------------------

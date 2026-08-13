@@ -100,6 +100,15 @@ const ManageServices = () => {
       showToast('Category is required', 'error');
       return;
     }
+    if (form.price === '' || form.price === null || form.price === undefined) {
+      showToast('Price is required', 'error');
+      return;
+    }
+    const priceNum = Number(form.price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showToast('Price must be greater than 0.', 'error');
+      return;
+    }
 
     setActionLoading(true);
     try {
@@ -299,22 +308,57 @@ const ManageServices = () => {
               </button>
             </div>
             <div className="space-y-4">
-              {[
-                { label: 'Service Name *', key: 'name', placeholder: 'e.g. Pipe Leak Repair', type: 'text' },
-                { label: 'Price (₹) *', key: 'price', placeholder: 'e.g. 499', type: 'number' },
-                { label: 'Duration', key: 'duration', placeholder: 'e.g. 1–2 hrs', type: 'text' },
-              ].map(({ label, key, placeholder, type }) => (
-                <div key={key}>
-                  <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">{label}</label>
-                  <input
-                    type={type}
-                    value={form[key]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    placeholder={placeholder}
-                    className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Service Name *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Pipe Leak Repair"
+                  className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Price (₹) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.price}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'Minus' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                      e.preventDefault();
+                    }
+                    if (e.key === 'ArrowDown' && (Number(form.price) <= 1 || form.price === '')) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onWheel={(e) => e.target.blur()}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  placeholder="e.g. 499"
+                  className={`w-full bg-[var(--color-overlay-subtle)] border ${
+                    form.price !== '' && (isNaN(Number(form.price)) || Number(form.price) <= 0)
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-[var(--color-border-subtle)] focus:border-blue-500'
+                  } text-[var(--color-text-primary)] text-sm px-4 py-2.5 rounded-xl outline-none placeholder-zinc-500 transition-colors`}
+                />
+                {form.price !== '' && (isNaN(Number(form.price)) || Number(form.price) <= 0) && (
+                  <p className="text-red-500 text-xs mt-1.5 font-medium">Price must be greater than 0.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Duration</label>
+                <input
+                  type="text"
+                  value={form.duration}
+                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
+                  placeholder="e.g. 1–2 hrs"
+                  className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors"
+                />
+              </div>
+
               <div>
                 <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Description</label>
                 <textarea
@@ -325,6 +369,7 @@ const ManageServices = () => {
                   className="w-full bg-[var(--color-overlay-subtle)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] text-sm px-4 py-2.5 rounded-xl outline-none focus:border-blue-500 placeholder-zinc-500 transition-colors resize-none"
                 />
               </div>
+
               <div>
                 <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Category</label>
                 <select
@@ -335,6 +380,7 @@ const ManageServices = () => {
                   {categories.map((c) => <option key={c.category_id} value={c.category_id} className="bg-[var(--color-primary-bg)]">{c.category_name}</option>)}
                 </select>
               </div>
+
               <div>
                 <label className="text-[var(--color-text-secondary)] text-xs font-medium block mb-1.5">Status</label>
                 <select
@@ -351,7 +397,11 @@ const ManageServices = () => {
               <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm font-medium transition-colors cursor-pointer">
                 Cancel
               </button>
-              <button onClick={handleSave} disabled={actionLoading} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--color-text-primary)] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <button
+                onClick={handleSave}
+                disabled={actionLoading || form.price === '' || isNaN(Number(form.price)) || Number(form.price) <= 0 || !form.name.trim() || !form.categoryId}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed text-[var(--color-text-primary)] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
                 {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
               </button>
             </div>

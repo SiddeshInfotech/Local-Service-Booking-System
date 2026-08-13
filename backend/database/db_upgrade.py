@@ -152,9 +152,47 @@ def run_upgrade():
         cursor.execute("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL OR email_verified = 0")
         conn.commit()
         print("Existing users marked as verified successfully.")
-    else:
-        print("'users' table does not exist, skipping users marking verified.")
+    # 8. Add CHECK constraints for price validation
+    print("Sanitizing any invalid legacy prices and adding CHECK constraints...")
+    try:
+        cursor.execute("UPDATE services SET estimated_price = 1.00 WHERE estimated_price IS NULL OR estimated_price <= 0")
+        conn.commit()
+    except Exception as e:
+        print(f"Notice on services price sanitization: {e}")
 
+    try:
+        cursor.execute("UPDATE provider_services SET service_charge = 1.00 WHERE service_charge IS NULL OR service_charge <= 0")
+        conn.commit()
+    except Exception as e:
+        print(f"Notice on provider_services price sanitization: {e}")
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM information_schema.table_constraints 
+        WHERE table_schema = DATABASE() AND table_name = 'services' AND constraint_name = 'chk_service_price_gt_zero'
+    """)
+    if cursor.fetchone()[0] == 0:
+        try:
+            cursor.execute("ALTER TABLE services ADD CONSTRAINT chk_service_price_gt_zero CHECK (estimated_price > 0)")
+            conn.commit()
+            print("CHECK constraint 'chk_service_price_gt_zero' added to 'services'.")
+        except Exception as e:
+            print(f"Could not add CHECK constraint to 'services': {e}")
+    else:
+        print("Constraint 'chk_service_price_gt_zero' already exists on 'services'.")
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM information_schema.table_constraints 
+        WHERE table_schema = DATABASE() AND table_name = 'provider_services' AND constraint_name = 'chk_provider_service_charge_gt_zero'
+    """)
+    if cursor.fetchone()[0] == 0:
+        try:
+            cursor.execute("ALTER TABLE provider_services ADD CONSTRAINT chk_provider_service_charge_gt_zero CHECK (service_charge > 0)")
+            conn.commit()
+            print("CHECK constraint 'chk_provider_service_charge_gt_zero' added to 'provider_services'.")
+        except Exception as e:
+            print(f"Could not add CHECK constraint to 'provider_services': {e}")
+    else:
+        print("Constraint 'chk_provider_service_charge_gt_zero' already exists on 'provider_services'.")
 
     cursor.close()
     conn.close()
