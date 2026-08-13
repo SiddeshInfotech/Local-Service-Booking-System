@@ -28,19 +28,35 @@ MAX_ID_FILE_SIZE = 5 * 1024 * 1024  # 5 MB limit
 def allowed_file(request, filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def validate_and_upload_id_proof(request, file, folder="provider-id-proofs"):
-    if not file or not file.filename:
-        return False, "No file uploaded or selected.", None
+def validate_and_upload_id_proof(file, folder="provider-id-proofs"):
+    """Validate and upload an ID proof image to Cloudinary.
     
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    Works with Django's InMemoryUploadedFile (from request.FILES).
+    Uses .name and .size instead of Flask-style .filename / .seek().
+    """
+    if not file:
+        return False, "No file uploaded or selected.", None
+
+    # Django InMemoryUploadedFile uses .name, not .filename
+    file_name = getattr(file, 'name', '') or ''
+    if not file_name:
+        return False, "No file selected.", None
+
+    ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
     if ext not in ALLOWED_ID_IMAGE_EXTENSIONS:
         return False, f"Invalid file format '.{ext}'. Only JPG, JPEG, PNG, and WEBP image files are allowed.", None
-    
-    # Check file size limit (5 MB)
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0)
-    
+
+    # Django InMemoryUploadedFile exposes .size directly
+    file_size = getattr(file, 'size', None)
+    if file_size is None:
+        # Fallback: seek to end
+        try:
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+        except Exception:
+            file_size = 0
+
     if file_size > MAX_ID_FILE_SIZE:
         return False, "File size exceeds maximum limit of 5 MB.", None
 
@@ -65,7 +81,9 @@ def validate_and_upload_id_proof(request, file, folder="provider-id-proofs"):
 @permission_classes([AllowAny])
 def register_provider(request):
     try:
-        data = get_json_data(request)
+        # request.data works for both JSON and multipart/form-data in DRF.
+        # get_json_data() only works for JSON, so for file uploads (multipart) we must use request.data.
+        data = request.data
         email = data.get("email")
 
 
@@ -193,7 +211,8 @@ def register_provider(request):
             or request.FILES.get("idProof")
         )
         id_proof_url = None
-        if id_proof_file and id_proof_file.filename != "":
+        # Django's InMemoryUploadedFile uses .name (not .filename)
+        if id_proof_file and getattr(id_proof_file, 'name', ''):
             success, err_msg, id_proof_url = validate_and_upload_id_proof(id_proof_file, folder="provider-id-proofs")
             if not success:
                 cursor.close()
@@ -835,7 +854,7 @@ def upload_document(request):
         file = request.FILES["document_file"]
         document_type = request.POST.get("document_type")
 
-        if file.filename == "":
+        if not getattr(file, 'name', ''):
             return jsonify({"status": False, "message": "No file selected."}, status=400)
 
         if not document_type or document_type not in ['Aadhaar', 'PAN', 'License', 'Profile Photo', 'Certificate', 'ID Proof']:

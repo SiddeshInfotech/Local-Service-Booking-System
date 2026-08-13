@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useOutletContext } from 'react-router-dom';
-import { CheckCircle2, XCircle, Ban, ShieldCheck, Star, MapPin, Tag, FileText, X, Eye, Sparkles, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Ban, ShieldCheck, Star, MapPin, Tag, FileText, X, Eye, Sparkles, Loader2, Phone, Mail, Briefcase, User, IdCard } from 'lucide-react';
 import { apiFetchAdmin } from '../../api';
 
 const ProviderApproval = () => {
@@ -10,8 +11,26 @@ const ProviderApproval = () => {
   const [categoriesMap, setCategoriesMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
   const [showConfirmAction, setShowConfirmAction] = useState(null); // { provider, from, to }
   const [actionLoading, setActionLoading] = useState(false);
+
+  const mapProvider = (p, catMap, fallbackDocUrl = '') => ({
+    id: p.provider_id,
+    name: p.full_name || p.business_name || p.owner_name || 'Unnamed Business',
+    email: p.email,
+    phone: p.phone,
+    status: p.status,
+    category: catMap[p.category_id] || 'General Service',
+    location: p.city ? `${p.city}${p.state ? ', ' + p.state : ''}` : 'Location Not Set',
+    city: p.city || '',
+    experience: `${p.experience_years || 0} years`,
+    rating: p.average_rating || null,
+    doc: p.documents && p.documents.length > 0 ? (p.documents[0].verification_status || 'Pending') : (fallbackDocUrl ? 'Verified' : 'No Docs'),
+    docType: p.documents && p.documents.length > 0 ? p.documents[0].document_type : 'ID Proof',
+    docUrl: p.documents && p.documents.length > 0 ? p.documents[0].file_path : fallbackDocUrl,
+    documents: p.documents || []
+  });
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -31,7 +50,7 @@ const ProviderApproval = () => {
       const pendingRes = await apiFetchAdmin('/api/admin/provider-approval');
       const pendingData = await pendingRes.json();
 
-      // 3. Fetch all other providers
+      // 3. Fetch all other providers (now includes documents from updated backend)
       const allRes = await apiFetchAdmin('/api/admin/providers');
       const allData = await allRes.json();
 
@@ -40,41 +59,13 @@ const ProviderApproval = () => {
       let blockedList = [];
 
       if (pendingRes.ok && pendingData.status) {
-        pendingList = pendingData.providers.map(p => ({
-          id: p.provider_id,
-          name: p.full_name || p.business_name || 'Unnamed Business',
-          email: p.email,
-          phone: p.phone,
-          status: p.status,
-          category: catMap[p.category_id] || 'General Service',
-          location: p.city ? `${p.city}, ${p.state || ''}` : 'Location Not Set',
-          experience: `${p.experience_years || 0} years`,
-          rating: p.average_rating || null,
-          doc: p.documents && p.documents.length > 0 ? (p.documents[0].verification_status || 'Pending') : 'No Docs',
-          docType: p.documents && p.documents.length > 0 ? p.documents[0].document_type : 'Verification ID',
-          docUrl: p.documents && p.documents.length > 0 ? p.documents[0].file_path : '',
-          documents: p.documents || []
-        }));
+        pendingList = pendingData.providers.map(p => mapProvider(p, catMap));
       }
 
       if (allRes.ok && allData.status) {
         allData.providers.forEach(p => {
-          const mapped = {
-            id: p.provider_id,
-            name: p.full_name || p.business_name || 'Unnamed Business',
-            email: p.email,
-            phone: p.phone,
-            status: p.status,
-            category: catMap[p.category_id] || 'General Service',
-            location: p.city ? `${p.city}, ${p.state || ''}` : 'Location Not Set',
-            experience: `${p.experience_years || 0} years`,
-            rating: p.average_rating || null,
-            doc: 'Verified',
-            docType: 'Verification ID',
-            docUrl: '',
-            documents: []
-          };
-          if (p.status === 'Active') {
+          const mapped = mapProvider(p, catMap);
+          if (p.status === 'Active' || p.status === 'Approved') {
             approvedList.push(mapped);
           } else if (p.status === 'Blocked' || p.status === 'Suspended') {
             blockedList.push({ ...mapped, status: 'Blocked' });
@@ -152,6 +143,13 @@ const ProviderApproval = () => {
     }[color];
   };
 
+  const statusBadgeStyle = (status) => {
+    if (status === 'Active' || status === 'Approved') return 'bg-green-500/10 text-green-400 border-green-500/20';
+    if (status === 'Pending') return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    if (status === 'Blocked') return 'bg-red-500/10 text-red-400 border-red-500/20';
+    return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
+  };
+
   return (
     <div className="space-y-6 text-left relative z-10 animate-fade-in">
       
@@ -195,7 +193,11 @@ const ProviderApproval = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {current.map((p) => (
-            <div key={p.id} className="rounded-3xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-subtle)] p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:scale-[1.01] transition-all duration-300">
+            <div
+              key={p.id}
+              className="rounded-3xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-subtle)] p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 cursor-pointer"
+              onClick={() => setSelectedProvider(p)}
+            >
               
               <div>
                 {/* Header */}
@@ -232,7 +234,7 @@ const ProviderApproval = () => {
                     <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] col-span-2">
                       <FileText size={12} className="text-amber-400 flex-shrink-0" />
                       <button 
-                        onClick={() => setSelectedDoc(p)}
+                        onClick={(e) => { e.stopPropagation(); setSelectedDoc(p); }}
                         className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <span>{p.docType}</span>
@@ -258,13 +260,13 @@ const ProviderApproval = () => {
                 {tab === 'Pending' && (
                   <>
                     <button
-                      onClick={() => setShowConfirmAction({ provider: p, from: 'Pending', to: 'Approved' })}
+                      onClick={(e) => { e.stopPropagation(); setShowConfirmAction({ provider: p, from: 'Pending', to: 'Approved' }); }}
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-green-500/5"
                     >
                       <CheckCircle2 size={13} /> Approve
                     </button>
                     <button
-                      onClick={() => setShowConfirmAction({ provider: p, from: 'Pending', to: 'Blocked' })}
+                      onClick={(e) => { e.stopPropagation(); setShowConfirmAction({ provider: p, from: 'Pending', to: 'Blocked' }); }}
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-red-500/5"
                     >
                       <XCircle size={13} /> Reject
@@ -273,7 +275,7 @@ const ProviderApproval = () => {
                 )}
                 {tab === 'Approved' && (
                   <button
-                    onClick={() => setShowConfirmAction({ provider: p, from: 'Approved', to: 'Blocked' })}
+                    onClick={(e) => { e.stopPropagation(); setShowConfirmAction({ provider: p, from: 'Approved', to: 'Blocked' }); }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-red-500/5"
                   >
                     <Ban size={13} /> Block Partner
@@ -281,7 +283,7 @@ const ProviderApproval = () => {
                 )}
                 {tab === 'Blocked' && (
                   <button
-                    onClick={() => setShowConfirmAction({ provider: p, from: 'Blocked', to: 'Approved' })}
+                    onClick={(e) => { e.stopPropagation(); setShowConfirmAction({ provider: p, from: 'Blocked', to: 'Approved' }); }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-green-500/5"
                   >
                     <ShieldCheck size={13} /> Unblock Partner
@@ -293,9 +295,132 @@ const ProviderApproval = () => {
         </div>
       )}
 
-      {/* Verification Document Preview Modal */}
-      {selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
+      {/* Provider Details Modal */}
+      {selectedProvider && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md text-left" onClick={() => setSelectedProvider(null)}>
+          <div className="relative w-full max-w-xl bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 p-4">
+              <button 
+                onClick={() => setSelectedProvider(null)}
+                className="p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-[var(--color-text-primary)] font-black text-base flex-shrink-0 shadow-md">
+                {selectedProvider.name[0]?.toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-[var(--color-text-primary)] font-bold text-base leading-tight">{selectedProvider.name}</h3>
+                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusBadgeStyle(selectedProvider.status)}`}>
+                  {selectedProvider.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Provider Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <Mail size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Email</p>
+                  <p className="text-[var(--color-text-primary)] text-xs font-medium mt-0.5 break-all">{selectedProvider.email || '—'}</p>
+                </div>
+              </div>
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <Phone size={13} className="text-green-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Phone</p>
+                  <p className="text-[var(--color-text-primary)] text-xs font-medium mt-0.5">{selectedProvider.phone || '—'}</p>
+                </div>
+              </div>
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <MapPin size={13} className="text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">City</p>
+                  <p className="text-[var(--color-text-primary)] text-xs font-medium mt-0.5">{selectedProvider.city || '—'}</p>
+                </div>
+              </div>
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <Tag size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Service</p>
+                  <p className="text-[var(--color-text-primary)] text-xs font-medium mt-0.5">{selectedProvider.category || '—'}</p>
+                </div>
+              </div>
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <Briefcase size={13} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Experience</p>
+                  <p className="text-[var(--color-text-primary)] text-xs font-medium mt-0.5">{selectedProvider.experience || '—'}</p>
+                </div>
+              </div>
+              <div className="p-3 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex items-start gap-2.5">
+                <User size={13} className="text-pink-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[var(--color-text-secondary)] font-semibold uppercase tracking-wider">Status</p>
+                  <p className={`text-xs font-bold mt-0.5 ${selectedProvider.status === 'Active' || selectedProvider.status === 'Approved' ? 'text-green-400' : selectedProvider.status === 'Pending' ? 'text-amber-400' : 'text-red-400'}`}>
+                    {selectedProvider.status}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ID Proof Section */}
+            <div className="border border-[var(--color-border-subtle)] rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border-subtle)] bg-white/[0.02]">
+                <IdCard size={14} className="text-amber-400 flex-shrink-0" />
+                <p className="text-[var(--color-text-primary)] text-xs font-bold">ID Proof</p>
+                {selectedProvider.docUrl && (
+                  <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {selectedProvider.docType || 'ID Proof'}
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                {selectedProvider.docUrl ? (
+                  <div className="space-y-3">
+                    <img
+                      src={selectedProvider.docUrl}
+                      alt="Provider ID Proof"
+                      className="w-full rounded-xl border border-[var(--color-border-subtle)] object-contain max-h-64 bg-black/20"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="hidden flex-col items-center justify-center py-8 text-center">
+                      <FileText size={32} className="text-zinc-600 mb-2" />
+                      <p className="text-[var(--color-text-secondary)] text-xs">Unable to preview this file.</p>
+                    </div>
+                    <a
+                      href={selectedProvider.docUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-overlay-subtle)] font-bold text-[10px] cursor-pointer transition-colors"
+                    >
+                      <Eye size={11} /> Open Full Image
+                    </a>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <IdCard size={32} className="text-zinc-600 mb-2" />
+                    <p className="text-[var(--color-text-secondary)] text-xs font-semibold">ID Proof not uploaded</p>
+                    <p className="text-zinc-600 text-[10px] mt-1">This provider did not upload an ID proof during registration.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      {/* Verification Document Preview Modal (existing, kept as-is) */}
+      {selectedDoc && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md text-left">
           <div className="relative w-full max-w-lg bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
             <div className="absolute top-0 right-0 p-4">
               <button 
@@ -311,38 +436,53 @@ const ProviderApproval = () => {
             <div className="space-y-4">
               <div className="p-4 bg-white/[0.02] border border-[var(--color-border-subtle)] rounded-2xl flex flex-col gap-2 text-xs">
                 <p className="text-[var(--color-text-secondary)]">Document Type: <span className="text-[var(--color-text-primary)] font-bold ml-1">{selectedDoc.docType}</span></p>
-                <p className="text-[var(--color-text-secondary)]">Resource URL: <span className="text-[var(--color-text-secondary)] font-mono ml-1">{selectedDoc.docUrl || 'No digital URL provided'}</span></p>
                 <p className="text-[var(--color-text-secondary)]">Audit Status: <span className={`ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                   selectedDoc.doc === 'Verified' || selectedDoc.doc === 'Approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                 }`}>{selectedDoc.doc}</span></p>
               </div>
 
-              {/* Document Render */}
-              <div className="h-48 border border-[var(--color-border-subtle)] rounded-2xl bg-[var(--color-secondary-bg)]/35 flex flex-col items-center justify-center p-6 text-center">
-                <FileText size={44} className="text-blue-500/60 mb-3" />
-                <p className="text-[var(--color-text-primary)] text-xs font-bold">{selectedDoc.docType}</p>
-                <p className="text-[var(--color-text-secondary)] text-[10px] mt-1">Audit verification code: PROV-DOC-{selectedDoc.id}</p>
-                {selectedDoc.docUrl && (
-                  <div className="mt-4 flex gap-2">
+              {/* ID Proof Image */}
+              {selectedDoc.docUrl ? (
+                <div className="space-y-3">
+                  <img
+                    src={selectedDoc.docUrl}
+                    alt="ID Proof"
+                    className="w-full rounded-2xl border border-[var(--color-border-subtle)] object-contain max-h-56 bg-black/20"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="hidden h-32 flex-col items-center justify-center text-center">
+                    <FileText size={32} className="text-blue-500/60 mb-2" />
+                    <p className="text-[var(--color-text-secondary)] text-xs">Unable to preview file.</p>
+                  </div>
+                  <div className="flex gap-2">
                     <a
                       href={selectedDoc.docUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 rounded-xl border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-bold text-[10px] cursor-pointer"
+                      className="flex-1 py-1.5 text-center rounded-xl border border-[var(--color-border-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-bold text-[10px] cursor-pointer"
                     >
                       View Original File
                     </a>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="h-48 border border-[var(--color-border-subtle)] rounded-2xl bg-[var(--color-secondary-bg)]/35 flex flex-col items-center justify-center p-6 text-center">
+                  <FileText size={44} className="text-blue-500/60 mb-3" />
+                  <p className="text-[var(--color-text-primary)] text-xs font-bold">{selectedDoc.docType}</p>
+                  <p className="text-[var(--color-text-secondary)] text-[10px] mt-1">Audit verification code: PROV-DOC-{selectedDoc.id}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Confirmation Modal */}
-      {showConfirmAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in text-left">
+      {showConfirmAction && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md text-left">
           <div className="relative w-full max-w-sm bg-[var(--color-card-bg)] border border-[var(--color-border-subtle)] rounded-[32px] p-6 shadow-2xl">
             <h3 className="text-[var(--color-text-primary)] font-bold text-lg mb-1">
               {showConfirmAction.to === 'Approved' ? 'Approve Listing?' : 'Reject / Block Partner?'}
@@ -367,7 +507,7 @@ const ProviderApproval = () => {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
     </div>
   );

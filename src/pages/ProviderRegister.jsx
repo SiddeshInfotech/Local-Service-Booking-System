@@ -4,6 +4,7 @@ import InputField from '../components/InputField';
 import providerRegisterIllustration from '../assets/images/provider_register_illustration.png';
 import fixoraLogo from '../assets/images/fixora_logo.png';
 import { API_BASE_URL } from '../config';
+import { fetchWithTimeout } from '../api';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 
 const ProviderRegister = () => {
