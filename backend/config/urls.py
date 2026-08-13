@@ -136,6 +136,7 @@ urlpatterns = [
     path('api/admin/stats', admin.get_dashboard_stats),
     path('api/admin/dashboard', admin.get_dashboard_stats),
     path('api/admin/dashboard/recent', admin.get_dashboard_recent),
+    path('api/admin/reports/export', admin.export_reports),
     path('api/admin/reports', admin.get_aggregate_reports),
     path('api/admin/activity-logs', admin.get_activity_logs),
     path('api/category/<int:category_id>', category_detail_dispatch),
