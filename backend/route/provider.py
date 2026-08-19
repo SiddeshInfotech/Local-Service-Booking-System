@@ -60,17 +60,55 @@ def validate_and_upload_id_proof(file, folder="provider-id-proofs"):
     if file_size > MAX_ID_FILE_SIZE:
         return False, "File size exceeds maximum limit of 5 MB.", None
 
+    # Ensure Cloudinary SDK is initialized with correct credentials before upload
+    import os
+    from dotenv import dotenv_values
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    env_config = dotenv_values(env_path)
+    
+    cloud_name = env_config.get("CLOUDINARY_CLOUD_NAME")
+    api_key = env_config.get("CLOUDINARY_API_KEY")
+    api_secret = env_config.get("CLOUDINARY_API_SECRET")
+    
+    print(f"DEBUG CLOUDINARY: env_path={env_path}, exists={os.path.exists(env_path)}, has_key={bool(api_key)}")
+    
+    cloudinary.config(
+        cloud_name=cloud_name,
+        api_key=api_key,
+        api_secret=api_secret,
+        secure=True
+    )
+
+    # Fix: Save the file locally first before uploading to Cloudinary
+    # This resolves the "InMemoryUploadedFile has no attribute filename" issue definitively.
+    import tempfile
+    import os
+    temp_file_path = None
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix="." + ext) as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+            temp_file_path = temp_file.name
+
         upload_result = cloudinary.uploader.upload(
-            file,
+            temp_file_path,
             folder=folder,
-            resource_type="image"
+            resource_type="image",
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret
         )
+        
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+            
         url = upload_result.get("secure_url") or upload_result.get("url")
         if not url:
             return False, "Failed to obtain URL from Cloudinary upload.", None
         return True, None, url
     except Exception as upload_err:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
         return False, f"Cloudinary upload error: {str(upload_err)}", None
 
 # ====================================================
@@ -239,7 +277,7 @@ def register_provider(request):
 
         if id_proof_url:
             cursor.execute(
-                "INSERT INTO provider_documents (provider_id, document_type, file_path, verification_status) VALUES (%s, 'ID Proof', %s, 'Pending')",
+                "INSERT INTO provider_documents (provider_id, document_type, file_path, verification_status) VALUES (%s, 'Aadhaar', %s, 'Pending')",
                 (provider_id, id_proof_url)
             )
 
