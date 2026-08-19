@@ -953,8 +953,15 @@ def link_service(request):
         experience_years = data.get("experience_years", 0)
         service_charge = data.get("service_charge")
 
-        if not service_id or service_charge is None:
-            return jsonify({"status": False, "message": "Service ID and Service Charge are required."}, status=400)
+        if not service_id or service_charge is None or str(service_charge).strip() == "":
+            return jsonify({"status": False, "success": False, "message": "Service ID and Service Charge are required."}, status=400)
+
+        try:
+            charge_val = float(service_charge)
+            if charge_val <= 0:
+                return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+        except (ValueError, TypeError):
+            return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)

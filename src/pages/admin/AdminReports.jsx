@@ -116,41 +116,47 @@ const AdminReports = () => {
     fetchReports();
   }, [selectedRange]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
+    const param = getRangeParam(selectedRange);
 
     try {
-      console.log("Report Data:", reportData);
-      console.log("Summary:", reportData.summary);
-
-      if (!reportData.summary || reportData.summary.length === 0) {
-        showToast("No report data available to export.", "warning");
+      const res = await apiFetchAdmin(`/api/admin/reports/export?range=${param}`);
+      if (!res.ok) {
+        let errorMsg = 'Failed to export report.';
+        try {
+          const errData = await res.json();
+          errorMsg = errData.message || errorMsg;
+        } catch {
+          // Non-JSON error
+        }
+        showToast(errorMsg, 'error');
         return;
       }
 
-      const exportData = reportData.summary.map((row) => ({
-        Interval: row.m || "",
-        Bookings: row.b || 0,
-        "Estimated Users": row.u || 0,
-        Revenue:
-          typeof row.r === "string"
-            ? row.r.replace(/[₹,]/g, "")
-            : row.r || 0,
-      }));
+      const blob = await res.blob();
+      let filename = `Fixora_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const disposition = res.headers.get('Content-Disposition');
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
 
-      console.log("Export Data:", exportData);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Admin Report");
-
-      XLSX.writeFile(workbook, "Admin_Report.xlsx");
-
-      showToast("Report downloaded successfully!", "success");
+      showToast('Report exported successfully.', 'success');
     } catch (err) {
-      console.error("EXPORT ERROR:", err);
-      showToast(err.message || "Failed to export report.", "error");
+      console.error('EXPORT ERROR:', err);
+      showToast(err.message || 'Failed to export report.', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -196,7 +202,7 @@ const AdminReports = () => {
           {isExporting ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              <span>Exporting...</span>
+              <span>Exporting Report...</span>
             </>
           ) : (
             <>

@@ -492,6 +492,340 @@ def get_aggregate_reports(request):
 @permission_classes([AllowAny])
 @token_required
 @admin_required
+def export_reports(request):
+    """
+    Generates and returns an Excel report (.xlsx) with live database data across 5 worksheets:
+    - Dashboard Summary
+    - Bookings
+    - Customers
+    - Providers
+    - Revenue
+    Filtered by range parameter: 7d | 30d | ytd | all
+    """
+    try:
+        import io
+        import datetime as dt
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+
+        # Parse date range filter: 7d | 30d | ytd | all
+        date_range = request.GET.get("range", "").strip().lower()
+        now = dt.datetime.utcnow()
+
+        if date_range == "7d":
+            since = now - dt.timedelta(days=7)
+            label = "Last 7 Days"
+        elif date_range == "30d":
+            since = now - dt.timedelta(days=30)
+            label = "Last 30 Days"
+        elif date_range == "ytd":
+            since = dt.datetime(now.year, 1, 1)
+            label = "Year-to-Date"
+        else:
+            since = None
+            label = "All Time"
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # ----------------------------------------------------
+        # 1. FETCH DATA FOR EACH SHEET
+        # ----------------------------------------------------
+
+        # Summary Metrics
+        summary_query = """
+            SELECT
+                COUNT(*) as total_bookings,
+                SUM(CASE WHEN booking_status = 'Completed' THEN 1 ELSE 0 END) as completed_bookings,
+                SUM(CASE WHEN booking_status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_bookings,
+                SUM(CASE WHEN booking_status IN ('Pending', 'Accepted', 'In Progress', 'Finished') THEN 1 ELSE 0 END) as pending_bookings,
+                SUM(CASE WHEN payment_status = 'Paid' THEN COALESCE(final_price, estimated_price, 0) ELSE 0 END) as total_revenue
+            FROM bookings
+            """ + ("WHERE created_at >= %s" if since else "")
+
+        cursor.execute(summary_query, [since] if since else [])
+        summary_row = cursor.fetchone() or {}
+
+        cust_count_query = "SELECT COUNT(DISTINCT customer_id) as active_customers FROM bookings " + ("WHERE created_at >= %s" if since else "")
+        cursor.execute(cust_count_query, [since] if since else [])
+        active_customers = (cursor.fetchone() or {}).get("active_customers", 0)
+
+        prov_count_query = "SELECT COUNT(DISTINCT provider_id) as active_providers FROM bookings " + ("WHERE created_at >= %s" if since else "")
+        cursor.execute(prov_count_query, [since] if since else [])
+        active_providers = (cursor.fetchone() or {}).get("active_providers", 0)
+
+        # 2. Bookings Data
+        bookings_query = """
+            SELECT b.booking_id,
+                   c.full_name AS customer_name,
+                   COALESCE(p.business_name, p.owner_name, 'Unassigned') AS provider_name,
+                   COALESCE(s.service_name, 'N/A') AS service_name,
+                   COALESCE(cat.category_name, 'N/A') AS category_name,
+                   b.created_at AS booking_date,
+                   b.booking_status AS status,
+                   COALESCE(b.final_price, b.estimated_price, 0) AS price
+            FROM bookings b
+            LEFT JOIN customers c ON b.customer_id = c.customer_id
+            LEFT JOIN providers p ON b.provider_id = p.provider_id
+            LEFT JOIN services s ON b.service_id = s.service_id
+            LEFT JOIN categories cat ON s.category_id = cat.category_id
+            """ + ("WHERE b.created_at >= %s" if since else "") + """
+            ORDER BY b.created_at DESC
+        """
+        cursor.execute(bookings_query, [since] if since else [])
+        bookings_rows = cursor.fetchall()
+
+        # 3. Customer Data
+        customers_query = """
+            SELECT c.full_name AS customer_name,
+                   c.email,
+                   COALESCE(c.phone, 'N/A') AS phone,
+                   c.created_at AS registration_date,
+                   (SELECT COUNT(*) FROM bookings b WHERE b.customer_id = c.customer_id) AS total_bookings
+            FROM customers c
+            """ + ("WHERE c.created_at >= %s" if since else "") + """
+            ORDER BY c.created_at DESC
+        """
+        cursor.execute(customers_query, [since] if since else [])
+        customers_rows = cursor.fetchall()
+
+        # 4. Provider Data
+        providers_query = """
+            SELECT COALESCE(p.business_name, p.owner_name) AS provider_name,
+                   p.email,
+                   COALESCE(cat.category_name, 'General') AS category,
+                   COALESCE(p.status, 'Pending') AS approval_status,
+                   (SELECT COUNT(*) FROM provider_services ps WHERE ps.provider_id = p.provider_id) AS total_services,
+                   (SELECT COUNT(*) FROM bookings b WHERE b.provider_id = p.provider_id) AS total_bookings
+            FROM providers p
+            LEFT JOIN categories cat ON p.category_id = cat.category_id
+            """ + ("WHERE p.created_at >= %s" if since else "") + """
+            ORDER BY p.created_at DESC
+        """
+        cursor.execute(providers_query, [since] if since else [])
+        providers_rows = cursor.fetchall()
+
+        # 5. Revenue Data
+        revenue_query = """
+            SELECT b.booking_id,
+                   COALESCE(b.final_price, b.estimated_price, 0) AS amount,
+                   COALESCE(b.payment_status, 'Unpaid') AS payment_status,
+                   b.created_at AS date
+            FROM bookings b
+            """ + ("WHERE b.created_at >= %s" if since else "") + """
+            ORDER BY b.created_at DESC
+        """
+        cursor.execute(revenue_query, [since] if since else [])
+        revenue_rows = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        # ----------------------------------------------------
+        # 2. CREATE EXCEL WORKBOOK & SHEETS
+        # ----------------------------------------------------
+        wb = openpyxl.Workbook()
+
+        # Styles
+        header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        title_font = Font(name="Calibri", size=14, bold=True, color="1F4E78")
+        bold_font = Font(name="Calibri", size=11, bold=True)
+        regular_font = Font(name="Calibri", size=11)
+        thin_border = Border(
+            left=Side(style='thin', color='D9D9D9'),
+            right=Side(style='thin', color='D9D9D9'),
+            top=Side(style='thin', color='D9D9D9'),
+            bottom=Side(style='thin', color='D9D9D9')
+        )
+
+        def style_headers(ws, headers, row_idx=3):
+            for col_idx, header in enumerate(headers, 1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=header)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
+
+        def auto_fit_columns(ws):
+            for col in ws.columns:
+                max_len = 0
+                for cell in col:
+                    val_str = str(cell.value or '')
+                    if val_str:
+                        max_len = max(max_len, len(val_str))
+                col_letter = get_column_letter(col[0].column)
+                ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
+
+        def format_date(val):
+            if isinstance(val, (dt.datetime, dt.date)):
+                return val.strftime("%Y-%m-%d %H:%M")
+            return str(val) if val else ""
+
+        # --- SHEET 1: Dashboard Summary ---
+        ws_summary = wb.active
+        ws_summary.title = "Dashboard Summary"
+
+        ws_summary.cell(row=1, column=1, value=f"Fixora - Platform Executive Summary ({label})").font = title_font
+
+        summary_data = [
+            ("Total Revenue", float(summary_row.get("total_revenue") or 0.0)),
+            ("Total Bookings", int(summary_row.get("total_bookings") or 0)),
+            ("Active Customers", int(active_customers)),
+            ("Active Providers", int(active_providers)),
+            ("Completed Bookings", int(summary_row.get("completed_bookings") or 0)),
+            ("Cancelled Bookings", int(summary_row.get("cancelled_bookings") or 0)),
+            ("Pending Bookings", int(summary_row.get("pending_bookings") or 0)),
+        ]
+
+        style_headers(ws_summary, ["Metric Name", "Value"], row_idx=3)
+        for idx, (metric, val) in enumerate(summary_data, start=4):
+            c1 = ws_summary.cell(row=idx, column=1, value=metric)
+            c2 = ws_summary.cell(row=idx, column=2, value=val)
+            c1.font = bold_font
+            c2.font = regular_font
+            c1.border = thin_border
+            c2.border = thin_border
+            if metric == "Total Revenue":
+                c2.number_format = '₹#,##0.00'
+                c2.alignment = Alignment(horizontal="right")
+            else:
+                c2.alignment = Alignment(horizontal="right")
+
+        auto_fit_columns(ws_summary)
+
+        # --- SHEET 2: Bookings ---
+        ws_bookings = wb.create_sheet(title="Bookings")
+        ws_bookings.cell(row=1, column=1, value=f"Booking Transactions ({label})").font = title_font
+        booking_headers = ["Booking ID", "Customer Name", "Provider Name", "Service", "Category", "Booking Date", "Status", "Price (₹)"]
+        style_headers(ws_bookings, booking_headers, row_idx=3)
+
+        for r_idx, b in enumerate(bookings_rows, start=4):
+            row_vals = [
+                b.get("booking_id"),
+                b.get("customer_name") or "N/A",
+                b.get("provider_name") or "N/A",
+                b.get("service_name") or "N/A",
+                b.get("category_name") or "N/A",
+                format_date(b.get("booking_date")),
+                b.get("status") or "N/A",
+                float(b.get("price") or 0.0)
+            ]
+            for c_idx, val in enumerate(row_vals, start=1):
+                cell = ws_bookings.cell(row=r_idx, column=c_idx, value=val)
+                cell.font = regular_font
+                cell.border = thin_border
+                if c_idx == 8:
+                    cell.number_format = '₹#,##0.00'
+                    cell.alignment = Alignment(horizontal="right")
+                elif c_idx in (1, 6, 7):
+                    cell.alignment = Alignment(horizontal="center")
+
+        auto_fit_columns(ws_bookings)
+
+        # --- SHEET 3: Customers ---
+        ws_cust = wb.create_sheet(title="Customers")
+        ws_cust.cell(row=1, column=1, value=f"Customer Directory ({label})").font = title_font
+        cust_headers = ["Customer Name", "Email", "Phone", "Registration Date", "Total Bookings"]
+        style_headers(ws_cust, cust_headers, row_idx=3)
+
+        for r_idx, c in enumerate(customers_rows, start=4):
+            row_vals = [
+                c.get("customer_name") or "N/A",
+                c.get("email") or "N/A",
+                c.get("phone") or "N/A",
+                format_date(c.get("registration_date")),
+                int(c.get("total_bookings") or 0)
+            ]
+            for c_idx, val in enumerate(row_vals, start=1):
+                cell = ws_cust.cell(row=r_idx, column=c_idx, value=val)
+                cell.font = regular_font
+                cell.border = thin_border
+                if c_idx == 5:
+                    cell.alignment = Alignment(horizontal="right")
+                elif c_idx == 4:
+                    cell.alignment = Alignment(horizontal="center")
+
+        auto_fit_columns(ws_cust)
+
+        # --- SHEET 4: Providers ---
+        ws_prov = wb.create_sheet(title="Providers")
+        ws_prov.cell(row=1, column=1, value=f"Service Provider Roster ({label})").font = title_font
+        prov_headers = ["Provider Name", "Email", "Category", "Approval Status", "Total Services", "Total Bookings"]
+        style_headers(ws_prov, prov_headers, row_idx=3)
+
+        for r_idx, p in enumerate(providers_rows, start=4):
+            row_vals = [
+                p.get("provider_name") or "N/A",
+                p.get("email") or "N/A",
+                p.get("category") or "General",
+                p.get("approval_status") or "Pending",
+                int(p.get("total_services") or 0),
+                int(p.get("total_bookings") or 0)
+            ]
+            for c_idx, val in enumerate(row_vals, start=1):
+                cell = ws_prov.cell(row=r_idx, column=c_idx, value=val)
+                cell.font = regular_font
+                cell.border = thin_border
+                if c_idx in (5, 6):
+                    cell.alignment = Alignment(horizontal="right")
+                elif c_idx == 4:
+                    cell.alignment = Alignment(horizontal="center")
+
+        auto_fit_columns(ws_prov)
+
+        # --- SHEET 5: Revenue ---
+        ws_rev = wb.create_sheet(title="Revenue")
+        ws_rev.cell(row=1, column=1, value=f"Revenue Ledger ({label})").font = title_font
+        rev_headers = ["Booking ID", "Amount (₹)", "Payment Status", "Date"]
+        style_headers(ws_rev, rev_headers, row_idx=3)
+
+        for r_idx, r in enumerate(revenue_rows, start=4):
+            row_vals = [
+                r.get("booking_id"),
+                float(r.get("amount") or 0.0),
+                r.get("payment_status") or "Unpaid",
+                format_date(r.get("date"))
+            ]
+            for c_idx, val in enumerate(row_vals, start=1):
+                cell = ws_rev.cell(row=r_idx, column=c_idx, value=val)
+                cell.font = regular_font
+                cell.border = thin_border
+                if c_idx == 2:
+                    cell.number_format = '₹#,##0.00'
+                    cell.alignment = Alignment(horizontal="right")
+                elif c_idx in (1, 3, 4):
+                    cell.alignment = Alignment(horizontal="center")
+
+        auto_fit_columns(ws_rev)
+
+        # ----------------------------------------------------
+        # 3. SAVE AND RETURN RESPONSE
+        # ----------------------------------------------------
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"Fixora_Report_{now.strftime('%Y-%m-%d')}.xlsx"
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@token_required
+@admin_required
 def get_activity_logs(request):
     try:
         conn = get_connection()
@@ -664,7 +998,17 @@ def create_service(request):
         estimated_duration = data.get("estimated_duration")
 
         if not category_id or not service_name:
-            return jsonify({"status": False, "message": "Category ID and Service Name are required."}, status=400)
+            return jsonify({"status": False, "success": False, "message": "Category ID and Service Name are required."}, status=400)
+
+        if estimated_price is None or str(estimated_price).strip() == "":
+            return jsonify({"status": False, "success": False, "message": "Price is required."}, status=400)
+
+        try:
+            price_val = float(estimated_price)
+            if price_val <= 0:
+                return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+        except (ValueError, TypeError):
+            return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -674,11 +1018,11 @@ def create_service(request):
         if not cursor.fetchone():
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Category not found."}, status=404)
+            return jsonify({"status": False, "success": False, "message": "Category not found."}, status=404)
 
         cursor.execute(
             "INSERT INTO services (category_id, service_name, description, estimated_price, estimated_duration, status) VALUES (%s, %s, %s, %s, %s, 'Active')",
-            (category_id, service_name, description, estimated_price, estimated_duration)
+            (category_id, service_name, description, price_val, estimated_duration)
         )
         srv_id = cursor.lastrowid
         conn.commit()
@@ -688,13 +1032,14 @@ def create_service(request):
 
         return jsonify({
             "status": True,
+            "success": True,
             "message": "Service created successfully.",
             "service": {
                 "service_id": srv_id,
                 "category_id": category_id,
                 "service_name": service_name,
                 "description": description,
-                "estimated_price": float(estimated_price) if estimated_price else None,
+                "estimated_price": price_val,
                 "estimated_duration": estimated_duration,
                 "status": "Active"
             }
@@ -705,7 +1050,7 @@ def create_service(request):
             conn.rollback()
             cursor.close()
             conn.close()
-        return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
+        return jsonify({"status": False, "success": False, "message": f"Server Error: {str(e)}"}, status=500)
 
 
 @api_view(["PUT"])
@@ -722,6 +1067,16 @@ def update_service(request, service_id):
         estimated_duration = data.get("estimated_duration")
         status = data.get("status")
 
+        if estimated_price is not None:
+            if str(estimated_price).strip() == "":
+                return jsonify({"status": False, "success": False, "message": "Price is required."}, status=400)
+            try:
+                price_val = float(estimated_price)
+                if price_val <= 0:
+                    return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+            except (ValueError, TypeError):
+                return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -731,14 +1086,19 @@ def update_service(request, service_id):
         if not service:
             cursor.close()
             conn.close()
-            return jsonify({"status": False, "message": "Service not found."}, status=404)
+            return jsonify({"status": False, "success": False, "message": "Service not found."}, status=404)
 
         cat_id = category_id if category_id is not None else service["category_id"]
         name = service_name if service_name is not None else service["service_name"]
         desc = description if description is not None else service["description"]
-        price = estimated_price if estimated_price is not None else service["estimated_price"]
+        price = float(estimated_price) if estimated_price is not None else service["estimated_price"]
         duration = estimated_duration if estimated_duration is not None else service["estimated_duration"]
         stat = status if status is not None else service["status"]
+
+        if price is None or float(price) <= 0:
+            cursor.close()
+            conn.close()
+            return jsonify({"status": False, "success": False, "message": "Price must be greater than zero."}, status=400)
 
         cursor.execute(
             "UPDATE services SET category_id = %s, service_name = %s, description = %s, estimated_price = %s, estimated_duration = %s, status = %s WHERE service_id = %s",
