@@ -776,6 +776,7 @@ def create_booking(request):
             # Build secure action button URLs
             completion_url = f"{backend_url}/api/customer/service-completed/{booking_id}?token={completion_token}"
             review_url     = f"{backend_url}/api/customer/review/{booking_id}?token={completion_token}"
+            cancel_url     = f"{backend_url}/api/customer/cancel-booking/{booking_id}?token={completion_token}"
 
             html_body = get_booking_confirmation_template(
                 booking_number=bk_num,
@@ -786,7 +787,8 @@ def create_booking(request):
                 price=price,
                 status="Pending Confirmation",
                 completion_url=completion_url,
-                review_url=review_url
+                review_url=review_url,
+                cancel_url=cancel_url
             )
             send_email_async(customer_email, f"Booking Confirmation – {bk_num} | Fixora", html_body)
         except Exception as email_err:
@@ -817,6 +819,526 @@ def create_booking(request):
             cursor.close()
             conn.close()
         return jsonify({"status": False, "message": f"Server Error: {str(e)}"}, status=500)
+
+
+# ── Cancel Booking from Confirmation Email (Token-authenticated) ─────────────
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def customer_cancel_booking_from_email(request, booking_id):
+    """
+    Called when customer clicks "CANCEL BOOKING" in their confirmation email.
+    Verifies the completion_token, asks for confirmation / reason if GET without confirm,
+    or executes cancellation if POST or GET with confirm=1.
+    Updates booking status to 'Cancelled', logs history, and notifies both Provider and Admin.
+    """
+    token = (request.GET.get("token") or request.POST.get("token") or "").strip()
+    if not token and hasattr(request, "data") and isinstance(request.data, dict):
+        token = str(request.data.get("token", "")).strip()
+
+    def render_cancellation_html(title, icon, message, subtitle="", show_home=True, alert_color="#ef4444"):
+        return HttpResponse(f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title} | Fixora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: 'Outfit', sans-serif;
+      background: #0A0A0A;
+      color: #E0E0E0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }}
+    .card {{
+      background: #121212;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 24px;
+      padding: 44px 36px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.1);
+    }}
+    .logo {{
+      color: #D4AF37;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }}
+    .icon-badge {{
+      width: 80px;
+      height: 80px;
+      background: {alert_color}18;
+      border: 2px solid {alert_color};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 0 20px {alert_color}33;
+    }}
+    h1 {{
+      font-size: 24px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }}
+    p.text-main {{
+      font-size: 15px;
+      color: #CCCCCC;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }}
+    p.text-sub {{
+      font-size: 13px;
+      color: #888888;
+      margin-top: 10px;
+      margin-bottom: 24px;
+    }}
+    .btn {{
+      display: inline-block;
+      width: 100%;
+      padding: 14px 28px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+    }}
+    .btn-gold {{
+      background: linear-gradient(135deg, #F4C542 0%, #D4AF37 100%);
+      color: #0D0D0D !important;
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+    }}
+    .footer-copy {{
+      margin-top: 28px;
+      font-size: 11px;
+      color: #555555;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="icon-badge">{icon}</div>
+    <h1>{title}</h1>
+    <p class="text-main">{message}</p>
+    {f'<p class="text-sub">{subtitle}</p>' if subtitle else ''}
+    {f'<a href="/" class="btn btn-gold">🏠 Go to Fixora Home</a>' if show_home else ''}
+    <div class="footer-copy">&copy; {datetime.datetime.now().year} Fixora. All rights reserved.</div>
+  </div>
+</body>
+</html>""")
+
+    if not token:
+        return render_cancellation_html(
+            title="Missing Security Token",
+            icon="🔒",
+            message="This cancellation link is missing its security verification token.",
+            subtitle="Please check your booking confirmation email and click the button again.",
+            alert_color="#ef4444"
+        )
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT b.*,
+                   s.service_name,
+                   c.full_name AS customer_name,
+                   c.email AS customer_email,
+                   COALESCE(p.business_name, p.owner_name) AS provider_name
+            FROM bookings b
+            JOIN services s ON b.service_id = s.service_id
+            JOIN customers c ON b.customer_id = c.customer_id
+            JOIN providers p ON b.provider_id = p.provider_id
+            WHERE b.booking_id = %s
+        """, (booking_id,))
+        booking = cursor.fetchone()
+
+        if not booking:
+            cursor.close(); conn.close()
+            return render_cancellation_html(
+                title="Booking Not Found",
+                icon="❓",
+                message="We could not find a booking matching this link.",
+                subtitle="The booking may have been removed or does not exist.",
+                alert_color="#ef4444"
+            )
+
+        if booking.get("completion_token") != token:
+            cursor.close(); conn.close()
+            return render_cancellation_html(
+                title="Invalid Security Token",
+                icon="🚫",
+                message="This cancellation link is invalid or expired.",
+                subtitle="For security reasons, bookings can only be cancelled using their verified email link.",
+                alert_color="#ef4444"
+            )
+
+        # Check if already cancelled
+        if booking["booking_status"] == "Cancelled":
+            cursor.close(); conn.close()
+            reason_txt = f"Reason: {booking.get('cancellation_reason')}" if booking.get('cancellation_reason') else ""
+            return render_cancellation_html(
+                title="Booking Already Cancelled",
+                icon="ℹ️",
+                message=f"Booking #{booking.get('booking_number', booking_id)} is already cancelled.",
+                subtitle=f"{reason_txt} (Cancelled by {booking.get('cancelled_by', 'Customer')})",
+                alert_color="#f59e0b"
+            )
+
+        # Check if already completed
+        if booking["booking_status"] == "Completed":
+            cursor.close(); conn.close()
+            return render_cancellation_html(
+                title="Booking Already Completed",
+                icon="✅",
+                message=f"Booking #{booking.get('booking_number', booking_id)} was completed and cannot be cancelled.",
+                subtitle="If you need assistance or dispute resolution, please contact Fixora Support.",
+                alert_color="#22c55e"
+            )
+
+        # Check if confirmation requested or POST
+        is_confirmed = request.method == "POST" or request.GET.get("confirm", "").lower() in ("1", "true", "yes")
+
+        if is_confirmed:
+            reason_selected = request.POST.get("reason_select") or request.GET.get("reason_select") or ""
+            reason_custom = request.POST.get("reason_custom") or request.GET.get("reason_custom") or ""
+            if reason_custom.strip():
+                final_reason = f"{reason_selected}: {reason_custom.strip()}" if reason_selected and reason_selected != "Other reason" else reason_custom.strip()
+            elif reason_selected.strip():
+                final_reason = reason_selected.strip()
+            else:
+                final_reason = request.POST.get("reason") or request.GET.get("reason") or "Cancelled by customer via confirmation email"
+
+            old_status = booking["booking_status"]
+
+            # 1. Update bookings table
+            cursor.execute(
+                "UPDATE bookings SET booking_status = 'Cancelled', cancellation_reason = %s, cancelled_by = 'Customer', cancelled_at = NOW() WHERE booking_id = %s",
+                (final_reason, booking_id)
+            )
+
+            # 2. Update booking history
+            cursor.execute(
+                "INSERT INTO booking_history (booking_id, old_status, new_status, remarks, changed_by) VALUES (%s, %s, 'Cancelled', %s, 'Customer')",
+                (booking_id, old_status, final_reason)
+            )
+
+            # 3. Notify Provider
+            cursor.execute(
+                "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'Booking Cancelled', %s, 0)",
+                (booking["provider_id"], f"Booking request #{booking['booking_number']} has been cancelled by the customer.")
+            )
+
+            # 4. Notify all Admins so it reflects in the Admin panel immediately
+            cursor.execute("SELECT admin_id FROM admins")
+            admin_rows = cursor.fetchall()
+            for adm in admin_rows:
+                cursor.execute(
+                    "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Admin', %s, 'Booking', 'Booking Cancelled by Customer', %s, 0)",
+                    (adm["admin_id"], f"Booking #{booking['booking_number']} ({booking['service_name']}) was cancelled by customer {booking['customer_name']}. Reason: {final_reason}")
+                )
+
+            conn.commit()
+            cursor.close(); conn.close()
+
+            # Check if JSON response requested
+            if request.headers.get("Accept") == "application/json" or request.content_type == "application/json":
+                return jsonify({
+                    "status": True,
+                    "message": f"Booking #{booking['booking_number']} cancelled successfully.",
+                    "booking_id": booking_id,
+                    "booking_number": booking["booking_number"]
+                }, status=200)
+
+            return render_cancellation_html(
+                title="Booking Cancelled",
+                icon="✖",
+                message=f"Your booking #{booking['booking_number']} has been successfully cancelled.",
+                subtitle=f"Both your service provider ({booking['provider_name']}) and the administration team have been updated.",
+                alert_color="#ef4444"
+            )
+
+        # ── Otherwise, GET without confirm: Render Confirmation Form Page ───
+        cursor.close(); conn.close()
+
+        price_val = booking.get('final_price') or booking.get('estimated_price') or 0
+        try:
+            price_display = f"₹{float(price_val):,.2f}"
+        except Exception:
+            price_display = f"₹{price_val}"
+
+        booking_date_display = str(booking.get('booking_date', ''))
+        booking_time_display = str(booking.get('booking_time', ''))
+
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cancel Booking #{booking['booking_number']} | Fixora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: 'Outfit', sans-serif;
+      background: #0A0A0A;
+      color: #E0E0E0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }}
+    .card {{
+      background: #121212;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 28px;
+      padding: 40px 32px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.85), 0 0 40px rgba(239, 68, 68, 0.12);
+    }}
+    .logo {{
+      color: #D4AF37;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      text-align: center;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }}
+    .warn-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 0 auto 16px auto;
+    }}
+    .center {{ text-align: center; }}
+    h1 {{
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+      text-align: center;
+    }}
+    p.lead {{
+      font-size: 13px;
+      color: #999999;
+      text-align: center;
+      margin-bottom: 24px;
+    }}
+    .details-box {{
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }}
+    .row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+    }}
+    .row:last-child {{ border-bottom: none; }}
+    .label {{ color: #888888; font-weight: 500; }}
+    .val {{ color: #FFFFFF; font-weight: 600; }}
+    .val.gold {{ color: #D4AF37; }}
+    .form-group {{
+      margin-bottom: 18px;
+      text-align: left;
+    }}
+    label.form-label {{
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #AAAAAA;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }}
+    select, input, textarea {{
+      width: 100%;
+      background: #1A1A1A;
+      border: 1px solid #333333;
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #FFFFFF;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }}
+    select:focus, input:focus, textarea:focus {{
+      border-color: #ef4444;
+    }}
+    .btn-group {{
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }}
+    .btn-cancel {{
+      width: 100%;
+      padding: 14px 28px;
+      border-radius: 30px;
+      border: none;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(239, 68, 68, 0.4);
+      transition: all 0.25s ease;
+    }}
+    .btn-cancel:hover {{
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(239, 68, 68, 0.6);
+    }}
+    .btn-keep {{
+      width: 100%;
+      padding: 13px 28px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: #BBBBBB;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.2s;
+    }}
+    .btn-keep:hover {{
+      background: rgba(255, 255, 255, 0.05);
+      color: #FFFFFF;
+    }}
+    .footer-copy {{
+      margin-top: 28px;
+      font-size: 11px;
+      color: #555555;
+      text-align: center;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">FIXORA</div>
+    <div class="center"><div class="warn-badge">⚠️ Cancel Booking</div></div>
+    <h1>Cancel Booking #{booking['booking_number']}?</h1>
+    <p class="lead">Please verify your booking details below before proceeding with cancellation.</p>
+
+    <div class="details-box">
+      <div class="row">
+        <span class="label">Service</span>
+        <span class="val">{booking['service_name']}</span>
+      </div>
+      <div class="row">
+        <span class="label">Provider</span>
+        <span class="val">{booking['provider_name']}</span>
+      </div>
+      <div class="row">
+        <span class="label">Booking Date</span>
+        <span class="val">{booking_date_display}</span>
+      </div>
+      <div class="row">
+        <span class="label">Time Slot</span>
+        <span class="val">{booking_time_display}</span>
+      </div>
+      <div class="row">
+        <span class="label">Price</span>
+        <span class="val gold">{price_display}</span>
+      </div>
+      <div class="row">
+        <span class="label">Current Status</span>
+        <span class="val" style="color: #F4C542;">{booking['booking_status']}</span>
+      </div>
+    </div>
+
+    <form method="POST" action="">
+      <input type="hidden" name="token" value="{token}">
+      <input type="hidden" name="confirm" value="1">
+
+      <div class="form-group">
+        <label class="form-label" for="reason_select">Reason for Cancellation</label>
+        <select name="reason_select" id="reason_select" required>
+          <option value="Change of schedule / plans">Change of schedule / plans</option>
+          <option value="Found another service provider">Found another service provider</option>
+          <option value="Booked by mistake">Booked by mistake</option>
+          <option value="Price estimate too high">Price estimate too high</option>
+          <option value="Service no longer needed">Service no longer needed</option>
+          <option value="Emergency / personal reasons">Emergency / personal reasons</option>
+          <option value="Other reason">Other reason</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reason_custom">Additional Details (Optional)</label>
+        <input type="text" name="reason_custom" id="reason_custom" placeholder="Tell us more about why you are cancelling..." maxlength="200">
+      </div>
+
+      <div class="btn-group">
+        <button type="submit" class="btn-cancel" onclick="return confirm('Are you sure you want to cancel this booking? This action cannot be undone.');">
+          ✖ Confirm Cancellation
+        </button>
+        <a href="/" class="btn-keep">Keep Booking & Return Home</a>
+      </div>
+    </form>
+
+    <div class="footer-copy">&copy; {datetime.datetime.now().year} Fixora – Local Service Booking</div>
+  </div>
+</body>
+</html>"""
+        return HttpResponse(html)
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"customer_cancel_booking_from_email error: {e}")
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return render_cancellation_html(
+            title="System Error",
+            icon="⚠️",
+            message="An error occurred while processing your cancellation request.",
+            subtitle=str(e),
+            alert_color="#ef4444"
+        )
 
 
 # ── Service Completed (called from email button – no auth needed) ─────────────
@@ -1103,6 +1625,14 @@ def cancel_booking(request, booking_id):
             "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Provider', %s, 'Booking', 'Booking Cancelled', %s, 0)",
             (booking["provider_id"], f"Booking request {booking['booking_number']} has been cancelled by customer.")
         )
+
+        # Notify Admins
+        cursor.execute("SELECT admin_id FROM admins")
+        for adm in cursor.fetchall():
+            cursor.execute(
+                "INSERT INTO notifications (user_type, user_id, notification_type, title, message, is_read) VALUES ('Admin', %s, 'Booking', 'Booking Cancelled by Customer', %s, 0)",
+                (adm["admin_id"], f"Booking #{booking['booking_number']} was cancelled by customer. Reason: {reason}")
+            )
         conn.commit()
 
         cursor.close()

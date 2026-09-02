@@ -281,8 +281,14 @@ const ManageBookings = () => {
               <p className="text-[var(--color-text-secondary)]">Base Price: <span className="text-[var(--color-text-primary)] font-semibold ml-1">₹{selectedBooking.raw.estimated_price || 0}</span></p>
               <p className="text-[var(--color-text-secondary)]">Total Price: <span className="text-green-400 font-bold ml-1">₹{selectedBooking.raw.final_price || selectedBooking.raw.estimated_price || 0}</span></p>
               <p className="text-[var(--color-text-secondary)]">Payment Status: <span className="text-[var(--color-text-primary)] font-semibold ml-1">{selectedBooking.raw.payment_status || 'Pending'}</span></p>
+              {selectedBooking.raw.cancelled_by && (
+                <p className="text-red-400">Cancelled By: <span className="font-semibold ml-1">{selectedBooking.raw.cancelled_by}</span></p>
+              )}
               {selectedBooking.raw.cancellation_reason && (
                 <p className="text-red-400">Cancel Reason: <span className="font-semibold ml-1">{selectedBooking.raw.cancellation_reason}</span></p>
+              )}
+              {selectedBooking.raw.cancelled_at && (
+                <p className="text-red-400">Cancelled At: <span className="font-semibold ml-1">{new Date(selectedBooking.raw.cancelled_at).toLocaleString()}</span></p>
               )}
               <p className="text-[var(--color-text-secondary)]">Status: <span className={`ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusStyle(selectedBooking.status)}`}>{selectedBooking.status}</span></p>
             </div>

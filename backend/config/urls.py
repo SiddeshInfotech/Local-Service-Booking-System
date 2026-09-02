@@ -90,6 +90,7 @@ urlpatterns = [
     path('api/service', service_dispatch),
     path('api/booking', customer.create_booking),
     path('api/customer/service-completed/<int:booking_id>', customer.mark_service_completed),
+    path('api/customer/cancel-booking/<int:booking_id>', customer.customer_cancel_booking_from_email),
     path('completed', customer.service_completed_success_page),
     path('api/booking/history', customer.get_customer_booking_history),
     path('api/booking/<int:booking_id>/cancel', customer.cancel_booking),

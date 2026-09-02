@@ -61,7 +61,7 @@ const AdminReports = () => {
         // 1. Stats Cards
         const stats = [
           { label: 'Total Revenue', value: `₹${Number(sum.total_revenue || 0).toLocaleString('en-IN')}`, sub: 'Net Payments Paid', icon: DollarSign, color: 'green' },
-          { label: 'Total Bookings', value: String(sum.total_bookings || 0), sub: `${sum.completed_bookings || 0} Completed`, icon: CalendarDays, color: 'blue' },
+          { label: 'Total Bookings', value: String(sum.total_bookings || 0), sub: `${sum.completed_bookings || 0} Completed • ${sum.cancelled_bookings || 0} Cancelled`, icon: CalendarDays, color: 'blue' },
           { label: 'Active Customers', value: String(sum.active_customers || 0), sub: 'Unique Customers', icon: Users, color: 'purple' },
           { label: 'Active Providers', value: String(sum.active_providers || 0), sub: 'Serving Partners', icon: Briefcase, color: 'amber' },
         ];

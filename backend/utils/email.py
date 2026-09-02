@@ -262,46 +262,74 @@ def get_password_reset_template(name, reset_link):
 
 def get_booking_confirmation_template(booking_number, customer_name, provider_name,
                                       service_name, booking_date, price, status,
-                                      completion_url=None, review_url=None):
+                                      completion_url=None, review_url=None,
+                                      cancel_url=None):
     # Build optional action buttons section
     buttons_html = ""
-    if completion_url or review_url:
-        buttons_html = """
-    <hr style="border: none; border-top: 1px solid #2A2A2A; margin: 30px 0;" />
-    <p style="color: #AAA; font-size: 13px; text-align: center; margin-bottom: 20px;">
-      Once the service is done, use the buttons below:
-    </p>
-    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
-      <tr>"""
-        if completion_url:
-            buttons_html += f"""
-        <td align="center" style="padding: 6px;">
-          <a href="{completion_url}"
-             style="display:inline-block; padding:14px 28px; border-radius:30px;
-                    background:linear-gradient(135deg,#22c55e,#16a34a);
-                    color:#fff !important; text-decoration:none;
-                    font-weight:700; font-size:13px; letter-spacing:1px;
-                    box-shadow:0 4px 15px rgba(34,197,94,0.35);">
-            ✔ SERVICE COMPLETED
-          </a>
-        </td>"""
-        if review_url:
-            buttons_html += f"""
-        <td align="center" style="padding: 6px;">
-          <a href="{review_url}"
-             style="display:inline-block; padding:14px 28px; border-radius:30px;
-                    background:linear-gradient(135deg,#F4C542,#D4AF37);
-                    color:#0D0D0D !important; text-decoration:none;
-                    font-weight:700; font-size:13px; letter-spacing:1px;
-                    box-shadow:0 4px 15px rgba(212,175,55,0.35);">
-            ⭐ WRITE REVIEW
-          </a>
-        </td>"""
-        buttons_html += """
-      </tr>
-    </table>
+    has_actions = cancel_url or completion_url or review_url
+
+    if has_actions:
+        cancel_btn_html = ""
+        if cancel_url:
+            cancel_btn_html = f"""
+    <div style="margin: 24px 0 16px; text-align: center;">
+      <p style="color: #AAA; font-size: 13px; margin-bottom: 12px;">
+        Need to cancel or change your booking?
+      </p>
+      <a href="{cancel_url}"
+         style="display:inline-block; padding:13px 30px; border-radius:30px;
+                background:linear-gradient(135deg,#ef4444,#dc2626);
+                color:#ffffff !important; text-decoration:none;
+                font-weight:700; font-size:13px; letter-spacing:1px;
+                box-shadow:0 4px 15px rgba(239,68,68,0.35); text-transform:uppercase;">
+        ✖ Cancel Booking
+      </a>
+    </div>"""
+
+        post_service_html = ""
+        if completion_url or review_url:
+            post_service_html = """
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #2A2A2A;">
+      <p style="color: #888; font-size: 12px; text-align: center; margin-bottom: 16px;">
+        Once your service has been completed, use the buttons below:
+      </p>
+      <table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+        <tr>"""
+            if completion_url:
+                post_service_html += f"""
+          <td align="center" style="padding: 6px;">
+            <a href="{completion_url}"
+               style="display:inline-block; padding:13px 26px; border-radius:30px;
+                      background:linear-gradient(135deg,#22c55e,#16a34a);
+                      color:#fff !important; text-decoration:none;
+                      font-weight:700; font-size:12px; letter-spacing:1px;
+                      box-shadow:0 4px 15px rgba(34,197,94,0.35);">
+              ✔ SERVICE COMPLETED
+            </a>
+          </td>"""
+            if review_url:
+                post_service_html += f"""
+          <td align="center" style="padding: 6px;">
+            <a href="{review_url}"
+               style="display:inline-block; padding:13px 26px; border-radius:30px;
+                      background:linear-gradient(135deg,#F4C542,#D4AF37);
+                      color:#0D0D0D !important; text-decoration:none;
+                      font-weight:700; font-size:12px; letter-spacing:1px;
+                      box-shadow:0 4px 15px rgba(212,175,55,0.35);">
+              ⭐ WRITE REVIEW
+            </a>
+          </td>"""
+            post_service_html += """
+        </tr>
+      </table>
+    </div>"""
+
+        buttons_html = f"""
+    <hr style="border: none; border-top: 1px solid #2A2A2A; margin: 28px 0;" />
+    {cancel_btn_html}
+    {post_service_html}
     <p style="color:#666; font-size:11px; text-align:center; margin-top:16px;">
-      These links are secure and tied to your booking. Do not share them.
+      These links are secure and tied to your booking reference. Do not share them.
     </p>"""
 
     html = f"""
