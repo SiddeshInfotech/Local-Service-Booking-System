@@ -4,8 +4,8 @@
 import { API_BASE_URL } from './config';
 export { API_BASE_URL };
 
-/** Helper to fetch with an automatic timeout (default 15s) */
-export async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
+/** Helper to fetch with an automatic timeout (default 60s for Render cold starts) */
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -18,7 +18,7 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   } catch (err) {
     clearTimeout(id);
     if (err.name === 'AbortError') {
-      throw new Error('Connection timed out. The server (Render) may be cold-starting or unavailable. Please try again in a few seconds.');
+      throw new Error('Connection timed out. The server (Render) is waking up from idle state. Please retry in a moment.');
     }
     throw err;
   }

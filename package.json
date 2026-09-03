@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "python backend/manage.py runserver 127.0.0.1:5000",
     "build": "vite build",
     "preview": "vite preview"
   },
